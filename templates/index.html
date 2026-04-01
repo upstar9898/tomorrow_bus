@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tomorrow Bus</title>
+    <style>
+        :root {
+            --bg: #f4efe6;
+            --panel: rgba(255, 252, 246, 0.82);
+            --panel-strong: #fffaf1;
+            --ink: #1f2937;
+            --muted: #5f6b7a;
+            --line: rgba(31, 41, 55, 0.12);
+            --accent: #c95f2d;
+            --accent-deep: #8f3915;
+            --accent-soft: #f3c49d;
+            --shadow: 0 24px 70px rgba(80, 53, 25, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(201, 95, 45, 0.18), transparent 28%),
+                radial-gradient(circle at right 20%, rgba(122, 160, 125, 0.18), transparent 24%),
+                linear-gradient(135deg, #f8f2e8 0%, #efe5d3 52%, #f5efe7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .shell {
+            width: min(1120px, 100%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 28px;
+            overflow: hidden;
+            background: var(--panel);
+            backdrop-filter: blur(18px);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 28px;
+            padding: 56px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.65);
+            color: var(--accent-deep);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        h1 {
+            margin: 20px 0 18px;
+            font-size: clamp(2.5rem, 4vw, 4.6rem);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+        }
+
+        .lead {
+            max-width: 640px;
+            margin: 0 0 28px;
+            color: var(--muted);
+            font-size: 18px;
+            line-height: 1.7;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 22px;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .button.primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(201, 95, 45, 0.28);
+        }
+
+        .button.secondary {
+            border: 1px solid var(--line);
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .stat {
+            padding: 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.58);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .stat strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1.4rem;
+        }
+
+        .stat span {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .board {
+            display: grid;
+            gap: 16px;
+            align-content: start;
+        }
+
+        .card {
+            padding: 22px;
+            border-radius: 24px;
+            background: var(--panel-strong);
+            border: 1px solid var(--line);
+        }
+
+        .signal {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .signal-badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(115, 146, 105, 0.14);
+            color: #47603d;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .arrival {
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .route {
+            display: flex;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+        }
+
+        .route strong {
+            color: var(--ink);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            padding: 0 56px 56px;
+        }
+
+        .feature {
+            padding: 24px;
+            border-radius: 22px;
+            background: rgba(255, 250, 241, 0.9);
+            border: 1px solid var(--line);
+        }
+
+        .feature h2 {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+        }
+
+        .feature p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        @media (max-width: 920px) {
+            .hero,
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .hero,
+            .features {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 14px;
+            }
+
+            .hero,
+            .features {
+                padding: 20px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div>
+                <span class="eyebrow">AI Vision x Smart Transit</span>
+                <h1>내일 버스가 아니라<br>지금 버스를 더 정확하게.</h1>
+                <p class="lead">
+                    Tomorrow Bus는 정류장 현장 데이터와 시각 인식을 바탕으로
+                    버스 도착 흐름을 한눈에 보여주는 Django 기반 대시보드입니다.
+                    복잡한 화면 대신, 바로 확인하고 바로 움직일 수 있게 구성했습니다.
+                </p>
+                <div class="actions">
+                    <a class="button primary" href="/admin/">관리자 화면 열기</a>
+                    <a class="button secondary" href="#features">기능 보기</a>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <strong>12개</strong>
+                        <span>모니터링 중인 주요 정류장</span>
+                    </div>
+                    <div class="stat">
+                        <strong>3초</strong>
+                        <span>실시간 갱신 주기 기준</span>
+                    </div>
+                    <div class="stat">
+                        <strong>24/7</strong>
+                        <span>운영 현황 확인 가능</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="board">
+                <div class="card">
+                    <div class="signal">
+                        <strong>실시간 도착 예측</strong>
+                        <span class="signal-badge">정상 운영</span>
+                    </div>
+                    <div class="arrival">5분 후 도착</div>
+                    <p style="color: var(--muted); line-height: 1.7;">
+                        702A번 버스가 중앙정류장 기준으로 접근 중입니다.
+                        현재 혼잡도는 보통이며 승차 대기 인원은 안정적입니다.
+                    </p>
+                    <div class="route">
+                        <span>노선</span>
+                        <strong>702A 상행</strong>
+                    </div>
+                    <div class="route">
+                        <span>다음 정류장</span>
+                        <strong>시청 앞</strong>
+                    </div>
+                    <div class="route">
+                        <span>신뢰도</span>
+                        <strong>96.4%</strong>
+                    </div>
+                </div>
+                <div class="card">
+                    <strong>운영 메모</strong>
+                    <p style="margin: 12px 0 0; color: var(--muted); line-height: 1.7;">
+                        카메라 기반 감지, 대기열 추정, 운행 흐름 분석을 한 화면에 모아
+                        현장 담당자와 이용자 모두 빠르게 판단할 수 있도록 설계했습니다.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="features" id="features">
+            <article class="feature">
+                <h2>간결한 첫 화면</h2>
+                <p>서비스 소개, 핵심 상태, 주요 이동 버튼을 한 번에 보여주는 홈 화면입니다.</p>
+            </article>
+            <article class="feature">
+                <h2>Django에 바로 연결</h2>
+                <p>루트 URL에서 곧바로 렌더링되도록 구성해 프로젝트 시작 화면으로 쓰기 좋습니다.</p>
+            </article>
+            <article class="feature">
+                <h2>추후 확장 쉬움</h2>
+                <p>실시간 버스 데이터, 로그인, 안내 배너 같은 요소를 이 구조 위에 자연스럽게 추가할 수 있습니다.</p>
+            </article>
+        </section>
+    </main>
+</body>
+</html>
