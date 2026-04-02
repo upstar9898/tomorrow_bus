@@ -83,7 +83,7 @@ class RouteStation(models.Model):
 
     # 노선 FK
     route = models.ForeignKey(
-        'BusRoute',   # 너가 만든 노선 모델 이름
+        'Bus_route',   # 너가 만든 노선 모델 이름
         on_delete=models.CASCADE,
         db_column='routeId',
         related_name='route_stations',
@@ -92,7 +92,7 @@ class RouteStation(models.Model):
 
     # 정류소 FK
     station = models.ForeignKey(
-        'BusStation',
+        'Bus_station',
         on_delete=models.CASCADE,
         db_column='stationId',
         related_name='station_routes',
