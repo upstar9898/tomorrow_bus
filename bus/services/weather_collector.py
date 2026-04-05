@@ -12,8 +12,10 @@ def download_file(file_url, save_path):
         print("다운로드 실패:", response.status_code)
 
 def collect_weather():
+    tmfc1 = '2026030906'
+    tmfc2 = '2026040400'
     api_key = os.environ.get("WEATHER_API_KEY")
-    url = f"https://apihub.kma.go.kr/api/typ01/url/fct_afs_dl.php?reg=&tmfc1=2026031106&tmfc2=2026040400&disp=0&help=1&authKey={api_key}"
+    url = f"https://apihub.kma.go.kr/api/typ01/url/fct_afs_dl.php?reg=&tmfc1={tmfc1}&tmfc2={tmfc2}&disp=0&help=1&authKey={api_key}"
     save_path = "output_file.txt"
 
     download_file(url, save_path)
