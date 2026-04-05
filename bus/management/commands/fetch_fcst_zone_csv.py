@@ -22,7 +22,7 @@ class Command(BaseCommand):
         input_txt_path = os.path.join(base_dir, "reg_id_list.txt")
         output_csv_path = os.path.join(base_dir, "fcst_zone_regid_regname.csv")
 
-        service_key = "여기에_본인_SERVICE_KEY_입력"
+        service_key = os.environ.get("WEATHER_ZONE_API_KEY")
         base_url = "https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcstZoneCd"
 
         # txt에서 REG_ID 읽기
