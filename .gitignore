@@ -84,3 +84,6 @@ htmlcov/
 # 버스 앱 마이그레이션 폴더
 #-----------
 bus/migrations/*
+
+# data 폴더
+data/
