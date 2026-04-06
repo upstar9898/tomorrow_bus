@@ -6,7 +6,7 @@ from django.db import transaction
 import csv
 import io
 
-from .models import Bus_route, Bus_station, Route_Station
+from .models import Bus_route, Bus_station, Route_station
 
 
 @admin.register(Bus_route)
@@ -146,7 +146,7 @@ class BusStationAdmin(admin.ModelAdmin):
         return render(request, "admin/csv_upload.html", context)
 
 
-@admin.register(Route_Station)
+@admin.register(Route_station)
 class RouteStationAdmin(admin.ModelAdmin):
     list_display = ("id", "route", "station", "staOrd")
     search_fields = (
