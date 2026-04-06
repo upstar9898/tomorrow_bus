@@ -79,3 +79,6 @@ htmlcov/
 # ----------------------
 *.bak
 *.tmp
+
+# 마이그레이션
+bus/migrations/*
