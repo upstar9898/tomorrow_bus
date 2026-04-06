@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = "위도/경도로 도시명 추가 후 CSV 저장"
+    help = "위도/경도로 도시명 + 전체 주소 추가 후 CSV 저장"
 
     def handle(self, *args, **kwargs):
         # 프로젝트 루트 경로
@@ -33,6 +33,7 @@ class Command(BaseCommand):
         df = pd.read_csv(input_path)
 
         city_list = []
+        address_list = []   # ✅ 추가
 
         for idx, row in df.iterrows():
             lat = row["위도"]
@@ -55,18 +56,25 @@ class Command(BaseCommand):
                     # 👉 도시 (시/도)
                     city = addr["region_1depth_name"]
 
-                    # 👉 구 (선택)
+                    # 👉 구
                     district = addr["region_2depth_name"]
 
                     city_name = f"{city} {district}"
+
+                    # ✅ 전체 주소 (핵심 추가)
+                    address_name = addr["address_name"]
+
                 else:
                     city_name = "UNKNOWN"
+                    address_name = "UNKNOWN"
 
             except Exception as e:
                 city_name = "ERROR"
+                address_name = "ERROR"
                 print(f"에러: {e}")
 
             city_list.append(city_name)
+            address_list.append(address_name)  # ✅ 추가
 
             # 👉 API 제한 대비
             time.sleep(0.1)
@@ -76,6 +84,7 @@ class Command(BaseCommand):
 
         # 컬럼 추가
         df["city"] = city_list
+        df["address"] = address_list   # ✅ 추가
 
         # 저장
         df.to_csv(output_path, index=False, encoding="utf-8-sig")

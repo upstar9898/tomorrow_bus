@@ -9,11 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # 프로젝트 루트
         base_dir = os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.abspath(__file__))
-                )
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
 
         station_path = os.path.join(base_dir, "bus_station_with_city.csv")
@@ -44,9 +40,7 @@ class Command(BaseCommand):
         }
 
         # 도 단위는 두 번째 단어(시/군)를 사용
-        province_set = {
-            "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남"
-        }
+        province_set = {"경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남"}
 
         def extract_fcst_name(city_value):
             """
@@ -94,8 +88,11 @@ class Command(BaseCommand):
         # regId / regName 붙이기
         station_df["regId"] = station_df["fcst_name"].map(reg_map)
         station_df["regName"] = station_df["fcst_name"]
+        station_df["address"] = station_df["address"]
 
         station_df = station_df.drop(columns=["fcst_name"])
+        station_df = station_df.drop(columns=["regName"])
+        station_df = station_df.drop(columns=["city"])
 
         # 결과 저장
         station_df.to_csv(output_path, index=False, encoding="utf-8-sig")
