@@ -85,6 +85,8 @@ htmlcov/
 #-----------
 bus/migrations/*
 
+# data 폴더
+data/
 # ----------
 # .zip
 # ----------
