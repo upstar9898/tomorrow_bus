@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="default">업로드</button>
+  </form>
+
+  <br>
+  <p><strong>필수 CSV 헤더:</strong> arsId, stNm, 위도, 경도</p>
+{% endblock %}
