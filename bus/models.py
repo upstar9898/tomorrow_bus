@@ -2,7 +2,6 @@ from django.db import models
 
 
 class Bus_route(models.Model):
-
     # 노선 아이디 (NOT NULL)
     routeId = models.CharField(
         max_length=20, null=False, blank=False, verbose_name="노선아이디"
@@ -26,13 +25,9 @@ class Bus_route(models.Model):
 
 
 class Bus_station(models.Model):
-
     # 정류소 고유 ID
     stationId = models.CharField(
-        max_length=20,
-        null=False,
-        blank=False,
-        verbose_name='정류소아이디'
+        max_length=20, null=False, blank=False, verbose_name="정류소아이디"
     )
 
     # 정류소 이름
@@ -55,15 +50,15 @@ class Bus_station(models.Model):
         verbose_name_plural = "정류소 목록"
         ordering = ["stationId"]  # 정류소 ID 기준 정렬
 
-class Route_station(models.Model):
 
+class Route_station(models.Model):
     # 노선 FK
     route = models.ForeignKey(
-        'Bus_route',   # 너가 만든 노선 모델 이름
+        "Bus_route",  # 너가 만든 노선 모델 이름
         on_delete=models.CASCADE,
-        db_column='routeId',
-        related_name='route_stations',
-        verbose_name='노선'
+        db_column="routeId",
+        related_name="route_stations",
+        verbose_name="노선",
     )
 
     # 정류소 FK

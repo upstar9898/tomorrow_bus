@@ -52,14 +52,20 @@ FEATURE_COLS = [
     "is_weekend",
     "is_holiday",
     "is_peak",
-    "month_sin", "month_cos",
-    "day_sin", "day_cos",
-    "hour_sin", "hour_cos",
-    "minute_sin", "minute_cos",
-    "dow_sin", "dow_cos",
+    "month_sin",
+    "month_cos",
+    "day_sin",
+    "day_cos",
+    "hour_sin",
+    "hour_cos",
+    "minute_sin",
+    "minute_cos",
+    "dow_sin",
+    "dow_cos",
     "exps1",
     "remaining_seat",
 ]
+
 
 # =========================================================
 # 2. 유틸
@@ -67,12 +73,15 @@ FEATURE_COLS = [
 def to_int(series, fill_value=0):
     return pd.to_numeric(series, errors="coerce").fillna(fill_value).astype(int)
 
+
 def to_float(series, fill_value=np.nan):
     return pd.to_numeric(series, errors="coerce").fillna(fill_value)
+
 
 def cyclical_encode(series, max_value):
     angle = 2 * np.pi * series / max_value
     return np.sin(angle), np.cos(angle)
+
 
 def normalize_arrmsg(text):
     if pd.isna(text):
@@ -87,6 +96,7 @@ def load_csv(path, use_cols):
     df = pd.read_csv(path, usecols=use_cols, low_memory=False)
     print(f"로드 완료: {path}, shape={df.shape}")
     return df
+
 
 # =========================================================
 # 4. 전처리
@@ -117,8 +127,7 @@ def preprocess(df):
 
     # ETA 범위 제한
     df["exps1"] = df["exps1"].where(
-        (df["exps1"] >= 0) & (df["exps1"] <= MAX_VALID_ETA_SEC),
-        np.nan
+        (df["exps1"] >= 0) & (df["exps1"] <= MAX_VALID_ETA_SEC), np.nan
     )
 
     # -----------------------------
@@ -152,8 +161,8 @@ def preprocess(df):
     df["is_holiday"] = df["date"].apply(lambda d: 1 if d in kr_holidays else 0)
 
     df["is_peak"] = (
-        ((df["hour"] >= 7) & (df["hour"] <= 9)) |
-        ((df["hour"] >= 17) & (df["hour"] <= 20))
+        ((df["hour"] >= 7) & (df["hour"] <= 9))
+        | ((df["hour"] >= 17) & (df["hour"] <= 20))
     ).astype(int)
 
     df["month_sin"], df["month_cos"] = cyclical_encode(df["month"], 12)
@@ -170,14 +179,10 @@ def preprocess(df):
     df["exps1_for_sort"] = df["exps1"].fillna(999999)
     df = df.sort_values(
         ["busRouteId", "stId", "mkTm", "exps1_for_sort", "vehId1"],
-        ascending=[True, True, True, True, True]
+        ascending=[True, True, True, True, True],
     ).copy()
 
-    df = df.drop_duplicates(
-        subset=["busRouteId", "stId", "mkTm"],
-        keep="first"
-    ).copy()
-
+    df = df.drop_duplicates(subset=["busRouteId", "stId", "mkTm"], keep="first").copy()
 
     # -----------------------------
     # 최종 정리
@@ -190,13 +195,11 @@ def preprocess(df):
         "arsId",
         "staOrd",
         "vehId1",
-
         # 원본 기반 현재 정보
         "exps1",
         "arrmsg1",
         "remaining_seat",
         "full_flag",
-
         # 시간 파생
         "year",
         "month",
@@ -207,23 +210,45 @@ def preprocess(df):
         "is_weekend",
         "is_holiday",
         "is_peak",
-        "month_sin", "month_cos",
-        "day_sin", "day_cos",
-        "hour_sin", "hour_cos",
-        "minute_sin", "minute_cos",
-        "dow_sin", "dow_cos",
+        "month_sin",
+        "month_cos",
+        "day_sin",
+        "day_cos",
+        "hour_sin",
+        "hour_cos",
+        "minute_sin",
+        "minute_cos",
+        "dow_sin",
+        "dow_cos",
     ]
 
     df = df[final_cols].copy()
 
     # feature 컬럼 숫자형 보정
     numeric_cols = [
-        "staOrd", "exps1", "remaining_seat", "full_flag",
-        "year", "month", "day", "hour", "minute", "dayofweek",
-        "is_weekend", "is_holiday", "is_peak",
-        "month_sin", "month_cos", "day_sin", "day_cos",
-        "hour_sin", "hour_cos", "minute_sin", "minute_cos",
-        "dow_sin", "dow_cos",
+        "staOrd",
+        "exps1",
+        "remaining_seat",
+        "full_flag",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "dayofweek",
+        "is_weekend",
+        "is_holiday",
+        "is_peak",
+        "month_sin",
+        "month_cos",
+        "day_sin",
+        "day_cos",
+        "hour_sin",
+        "hour_cos",
+        "minute_sin",
+        "minute_cos",
+        "dow_sin",
+        "dow_cos",
     ]
 
     for c in numeric_cols:
@@ -232,6 +257,7 @@ def preprocess(df):
     df = df.replace([np.inf, -np.inf], np.nan)
 
     return df
+
 
 # =========================================================
 # 5. 실행
