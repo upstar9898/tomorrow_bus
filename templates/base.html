@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tomorrow Bus{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #f4efe6;
+            --panel: rgba(255, 252, 246, 0.82);
+            --panel-strong: #fffaf1;
+            --ink: #1f2937;
+            --muted: #5f6b7a;
+            --line: rgba(31, 41, 55, 0.12);
+            --accent: #c95f2d;
+            --accent-deep: #8f3915;
+            --accent-soft: #f3c49d;
+            --shadow: 0 24px 70px rgba(80, 53, 25, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(201, 95, 45, 0.18), transparent 28%),
+                radial-gradient(circle at right 20%, rgba(122, 160, 125, 0.18), transparent 24%),
+                linear-gradient(135deg, #f8f2e8 0%, #efe5d3 52%, #f5efe7 100%);
+        }
+
+        .navbar {
+            width: min(1120px, calc(100% - 48px));
+            margin: 24px auto 0;
+            padding: 18px 24px;
+            border-radius: 20px;
+            background: rgba(255, 252, 246, 0.82);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 12px 28px rgba(80, 53, 25, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .nav-logo {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent-deep);
+            text-decoration: none;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: var(--ink);
+            font-weight: 700;
+            padding: 10px 14px;
+            border-radius: 12px;
+            transition: 0.2s ease;
+        }
+
+        .nav-menu a:hover {
+            background: rgba(201, 95, 45, 0.1);
+            color: var(--accent-deep);
+        }
+
+        .page-wrap {
+            padding: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                width: calc(100% - 28px);
+                margin-top: 14px;
+                padding: 16px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-wrap {
+                padding: 14px;
+            }
+        }
+    </style>
+
+    {% block extra_style %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="nav-logo">Tomorrow Bus</a>
+
+        <div class="nav-menu">
+            <a href="{% url 'home' %}">홈</a>
+            <a href="{% url 'service1' %}">서비스1</a>
+            <a href="{% url 'service2' %}">서비스2</a>
+            <a href="{% url 'favorites' %}">즐겨찾기</a>
+        </div>
+    </nav>
+
+    <div class="page-wrap">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    {% block extra_script %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}즐겨찾기 | Tomorrow Bus{% endblock %}
+
+{% block extra_style %}
+<style>
+    .favorite-shell {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+    }
+
+    .favorite-card {
+        background: rgba(255, 250, 241, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(80, 53, 25, 0.08);
+    }
+
+    .favorite-card h1,
+    .favorite-card h2 {
+        margin-top: 0;
+    }
+
+    .favorite-list {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0 0;
+    }
+
+    .favorite-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        border-radius: 16px;
+        background: white;
+        border: 1px solid rgba(31, 41, 55, 0.08);
+    }
+
+    .empty-text {
+        color: var(--muted);
+        margin-top: 12px;
+    }
+
+    .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .btn {
+        border: none;
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .btn-delete {
+        background: #fbe4e4;
+        color: #9f2020;
+    }
+
+    .btn-clear {
+        background: var(--accent);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: rgba(255,255,255,0.75);
+        border: 1px solid var(--line);
+        color: var(--ink);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="favorite-shell">
+    <div class="favorite-card">
+        <h1>버스 및 정류장 즐겨찾기</h1>
+        <p>브라우저의 localStorage에 저장된 즐겨찾기 목록입니다. 탭을 닫아도 유지됩니다.</p>
+    </div>
+
+    <div class="favorite-card">
+        <h2>즐겨찾기한 버스</h2>
+        <ul id="busList" class="favorite-list"></ul>
+        <p id="busEmpty" class="empty-text" style="display:none;">저장된 버스 즐겨찾기가 없습니다.</p>
+    </div>
+
+    <div class="favorite-card">
+        <h2>즐겨찾기한 정류장</h2>
+        <ul id="stationList" class="favorite-list"></ul>
+        <p id="stationEmpty" class="empty-text" style="display:none;">저장된 정류장 즐겨찾기가 없습니다.</p>
+    </div>
+
+    <div class="favorite-card">
+        <h2>관리</h2>
+        <div class="btn-row">
+            <button class="btn btn-clear" onclick="clearAllFavorites()">전체 삭제</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary" style="text-decoration:none;">홈으로 돌아가기</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+    function getFavorites() {
+        const data = localStorage.getItem('favorites');
+        return data ? JSON.parse(data) : { buses: [], stations: [] };
+    }
+
+    function saveFavorites(favorites) {
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+    }
+
+    function removeFavorite(type, name) {
+        const favorites = getFavorites();
+
+        if (type === 'bus') {
+            favorites.buses = favorites.buses.filter(item => item !== name);
+        }
+
+        if (type === 'station') {
+            favorites.stations = favorites.stations.filter(item => item !== name);
+        }
+
+        saveFavorites(favorites);
+        renderFavorites();
+    }
+
+    function clearAllFavorites() {
+        localStorage.removeItem('favorites');
+        renderFavorites();
+    }
+
+    function renderFavorites() {
+        const favorites = getFavorites();
+
+        const busList = document.getElementById('busList');
+        const stationList = document.getElementById('stationList');
+        const busEmpty = document.getElementById('busEmpty');
+        const stationEmpty = document.getElementById('stationEmpty');
+
+        busList.innerHTML = '';
+        stationList.innerHTML = '';
+
+        if (favorites.buses.length === 0) {
+            busEmpty.style.display = 'block';
+        } else {
+            busEmpty.style.display = 'none';
+            favorites.buses.forEach(bus => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${bus}</span>
+                    <button class="btn btn-delete" onclick="removeFavorite('bus', '${bus}')">삭제</button>
+                `;
+                busList.appendChild(li);
+            });
+        }
+
+        if (favorites.stations.length === 0) {
+            stationEmpty.style.display = 'block';
+        } else {
+            stationEmpty.style.display = 'none';
+            favorites.stations.forEach(station => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${station}</span>
+                    <button class="btn btn-delete" onclick="removeFavorite('station', '${station}')">삭제</button>
+                `;
+                stationList.appendChild(li);
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', renderFavorites);
+</script>
+{% endblock %}
