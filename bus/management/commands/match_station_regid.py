@@ -23,6 +23,13 @@ class Command(BaseCommand):
         station_df["city"] = station_df["city"].astype(str).str.strip()
         zone_df["regName"] = zone_df["regName"].astype(str).str.strip()
 
+        station_df["is_virtual"] = (
+            station_df["stNm"]
+            .astype(str)
+            .str.contains("가상", na=False)  # "가상" 포함 여부
+            .astype(int)  # True → 1, False → 0
+        )
+
         # regName 매핑용 dict
         reg_map = dict(zip(zone_df["regName"], zone_df["regId"]))
 
