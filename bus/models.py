@@ -27,12 +27,12 @@ class Bus_route(models.Model):
 
 class Bus_station(models.Model):
 
-    # 내부 PK (자동 생성)
-    id = models.AutoField(primary_key=True)
-
     # 정류소 고유 ID
     stationId = models.CharField(
-        max_length=20, null=False, blank=False, verbose_name="정류소아이디"
+        max_length=20,
+        null=False,
+        blank=False,
+        verbose_name='정류소아이디'
     )
 
     # 정류소 이름
@@ -59,18 +59,15 @@ class Bus_station(models.Model):
 from django.db import models
 
 
-class Route_Station(models.Model):
-
-    # 내부 PK
-    id = models.AutoField(primary_key=True)
+class Route_station(models.Model):
 
     # 노선 FK
     route = models.ForeignKey(
-        "Bus_route",  # 너가 만든 노선 모델 이름
+        'Bus_route',   # 너가 만든 노선 모델 이름
         on_delete=models.CASCADE,
-        db_column="routeId",
-        related_name="route_stations",
-        verbose_name="노선",
+        db_column='routeId',
+        related_name='route_stations',
+        verbose_name='노선'
     )
 
     # 정류소 FK
