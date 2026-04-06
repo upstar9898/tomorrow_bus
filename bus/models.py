@@ -55,10 +55,6 @@ class Bus_station(models.Model):
         verbose_name_plural = "정류소 목록"
         ordering = ["stationId"]  # 정류소 ID 기준 정렬
 
-
-from django.db import models
-
-
 class Route_station(models.Model):
 
     # 노선 FK
