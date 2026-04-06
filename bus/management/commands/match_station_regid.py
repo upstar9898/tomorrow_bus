@@ -95,6 +95,8 @@ class Command(BaseCommand):
         station_df["regId"] = station_df["fcst_name"].map(reg_map)
         station_df["regName"] = station_df["fcst_name"]
 
+        station_df = station_df.drop(columns=["fcst_name"])
+
         # 결과 저장
         station_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
