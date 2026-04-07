@@ -11,7 +11,7 @@ from .models import Bus_route, Bus_station, Route_station
 
 @admin.register(Bus_route)
 class BusRouteAdmin(admin.ModelAdmin):
-    list_display = ("id", "routeId", "routeName")
+    list_display = ("routeId", "routeName")
     search_fields = ("routeId", "routeName")
     ordering = ("routeId",)
 
@@ -22,7 +22,7 @@ class CsvImportForm(forms.Form):
 
 @admin.register(Bus_station)
 class BusStationAdmin(admin.ModelAdmin):
-    list_display = ("id", "stationId", "stationName", "locationX", "locationY")
+    list_display = ("stationId", "stationName", "locationX", "locationY")
     search_fields = ("stationId", "stationName")
     ordering = ("stationId",)
     change_list_template = "admin/bus_station_changelist.html"
@@ -45,7 +45,6 @@ class BusStationAdmin(admin.ModelAdmin):
             if form.is_valid():
                 csv_file = form.cleaned_data["csv_file"]
 
-                # 확장자 검사
                 if not csv_file.name.endswith(".csv"):
                     self.message_user(
                         request,
@@ -55,12 +54,10 @@ class BusStationAdmin(admin.ModelAdmin):
                     return redirect("..")
 
                 try:
-                    # 파일 읽기
                     decoded_file = csv_file.read().decode("utf-8-sig")
                     io_string = io.StringIO(decoded_file)
                     reader = csv.DictReader(io_string)
 
-                    # 헤더 검사
                     required_headers = ["arsId", "stNm", "위도", "경도"]
                     uploaded_headers = reader.fieldnames
 
@@ -107,18 +104,15 @@ class BusStationAdmin(admin.ModelAdmin):
 
                         station_list.append(
                             Bus_station(
-                                stationId=ars_id,  # arsId -> stationId
-                                stationName=st_nm,  # stNm -> stationName
-                                locationX=lng,  # 경도 -> locationX
-                                locationY=lat,  # 위도 -> locationY
+                                stationId=ars_id,
+                                stationName=st_nm,
+                                locationX=lng,
+                                locationY=lat,
                             )
                         )
 
                     with transaction.atomic():
-                        # 기존 데이터 전체 삭제
                         Bus_station.objects.all().delete()
-
-                        # 새 데이터 일괄 삽입
                         Bus_station.objects.bulk_create(station_list)
 
                     self.message_user(
@@ -148,7 +142,7 @@ class BusStationAdmin(admin.ModelAdmin):
 
 @admin.register(Route_station)
 class RouteStationAdmin(admin.ModelAdmin):
-    list_display = ("id", "route", "station", "staOrd")
+    list_display = ("route", "station", "staOrd")
     search_fields = (
         "route__routeId",
         "route__routeName",
