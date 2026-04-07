@@ -21,11 +21,6 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
-input_filename = "bus_data_2026_03_10.csv"
-output_filename = input_filename.replace(".csv", "_preprocessed.csv")
-INPUT_CSV = os.path.join(DATA_DIR, input_filename)
-OUTPUT_CSV = os.path.join(PREPROCESSED_DIR, output_filename)
-
 TOTAL_SEATS = 45
 MAX_VALID_ETA_SEC = 3600
 
@@ -263,13 +258,22 @@ def preprocess(df):
 # 5. 실행
 # =========================================================
 if __name__ == "__main__":
-    raw_df = load_csv(INPUT_CSV, USE_COLS)
-    processed_df = preprocess(raw_df)
+    # data 폴더 안의 모든 csv 파일 가져오기
+    file_list = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
 
-    processed_df.to_csv(OUTPUT_CSV, index=False, encoding="utf-8-sig")
+    for filename in file_list:
+        input_path = os.path.join(DATA_DIR, filename)
+        output_filename = filename.replace(".csv", "_preprocessed.csv")
+        output_path = os.path.join(PREPROCESSED_DIR, output_filename)
+        # 이미 존재하면 skip
+        if os.path.exists(output_path):
+            print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
+            continue
+        print(f"\n===== 처리 중: {filename} =====")
 
-    print("전처리 완료")
-    print(f"출력 파일: {OUTPUT_CSV}")
-    print("최종 shape:", processed_df.shape)
-    print("컬럼 목록:")
-    print(processed_df.columns.tolist())
+        raw_df = load_csv(input_path, USE_COLS)
+        processed_df = preprocess(raw_df)
+
+        processed_df.to_csv(output_path, index=False, encoding="utf-8-sig")
+
+        print(f"완료 → {output_path}")
