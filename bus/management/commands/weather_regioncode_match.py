@@ -9,15 +9,13 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # 프로젝트 루트
         base_dir = os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.abspath(__file__))
-                )
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
 
-        input_path = os.path.join(base_dir, "weather_regioncode.txt")
-        output_path = os.path.join(base_dir, "weather_regioncode.csv")
+        data_dir = os.path.join(base_dir, "data")
+
+        input_path = os.path.join(data_dir, "weather_regioncode.txt")
+        output_path = os.path.join(data_dir, "weather_regioncode.csv")
 
         rows = []
 

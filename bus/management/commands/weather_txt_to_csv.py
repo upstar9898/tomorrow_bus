@@ -12,15 +12,13 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # 프로젝트 루트
         base_dir = os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.abspath(__file__))
-                )
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
 
+        data_dir = os.path.join(base_dir, "data")
+
         # 최신 txt 파일 찾기
-        pattern = os.path.join(base_dir, self.FILE_NAME_FORMAT)
+        pattern = os.path.join(data_dir, self.FILE_NAME_FORMAT)
         files = glob.glob(pattern)
 
         if not files:
@@ -61,5 +59,3 @@ class Command(BaseCommand):
         df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
         self.stdout.write(self.style.SUCCESS(f"CSV 변환 완료: {csv_path}"))
-
-        

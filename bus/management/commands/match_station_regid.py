@@ -13,19 +13,34 @@ class Command(BaseCommand):
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
 
-        station_path = os.path.join(base_dir, "bus_station_with_city.csv")
-        zone_path = os.path.join(base_dir, "fcst_zone_regid_regname.csv")
+        # ✅ data 폴더
+        data_dir = os.path.join(base_dir, "data")
+        os.makedirs(data_dir, exist_ok=True)
+
+        # ---------------------------
+        # 입력 파일 (전부 data 폴더)
+        # ---------------------------
+        station_path = os.path.join(data_dir, "bus_station_with_city.csv")
+        zone_path = os.path.join(data_dir, "fcst_zone_regid_regname.csv")
         station_id_path = os.path.join(
-            base_dir, "bus_station_coordinate_stationId_260406.csv"
+            data_dir, "bus_station_coordinate_stationId_260406.csv"
         )
 
+        # 날짜
         today_str = datetime.now().strftime("%y%m%d")
 
-        output_path = os.path.join(base_dir, f"bus_station_with_regid_{today_str}.csv")
+        # ---------------------------
+        # 출력 파일 (전부 data 폴더)
+        # ---------------------------
+        output_path = os.path.join(data_dir, f"bus_station_with_regid_{today_str}.csv")
+
         unmatched_path = os.path.join(
-            base_dir, f"bus_station_unmatched_{today_str}.csv"
+            data_dir, f"bus_station_unmatched_{today_str}.csv"
         )
 
+        # ---------------------------
+        # 데이터 로드
+        # ---------------------------
         station_df = pd.read_csv(station_path, encoding="utf-8-sig")
         zone_df = pd.read_csv(zone_path, encoding="utf-8-sig")
         station_id_df = pd.read_csv(station_id_path, encoding="utf-8-sig")
@@ -39,19 +54,17 @@ class Command(BaseCommand):
         station_df["stNm"] = station_df["stNm"].astype(str).str.strip()
         station_id_df["stNm"] = station_id_df["stNm"].astype(str).str.strip()
 
-        # 좌표 컬럼 숫자형 변환
         station_df["위도"] = pd.to_numeric(station_df["위도"], errors="coerce")
         station_df["경도"] = pd.to_numeric(station_df["경도"], errors="coerce")
         station_id_df["위도"] = pd.to_numeric(station_id_df["위도"], errors="coerce")
         station_id_df["경도"] = pd.to_numeric(station_id_df["경도"], errors="coerce")
 
-        # 소수점 오차 방지용 반올림 키
+        # 좌표 매칭 키
         station_df["lat_key"] = station_df["위도"].round(6)
         station_df["lon_key"] = station_df["경도"].round(6)
         station_id_df["lat_key"] = station_id_df["위도"].round(6)
         station_id_df["lon_key"] = station_id_df["경도"].round(6)
 
-        # stationId용 중복 제거
         station_id_df = station_id_df[
             ["stationId", "arsId", "stNm", "lat_key", "lon_key"]
         ].drop_duplicates()
@@ -61,7 +74,7 @@ class Command(BaseCommand):
         )
 
         # ---------------------------
-        # regName -> regId 매핑
+        # regId 매핑
         # ---------------------------
         reg_map = dict(zip(zone_df["regName"], zone_df["regId"]))
 
@@ -94,11 +107,9 @@ class Command(BaseCommand):
 
             first = parts[0]
 
-            # 특별시/광역시/특별자치시/도
             if first in metro_map:
                 return metro_map[first]
 
-            # 도 단위면 두 번째 단어 사용
             if first in province_set:
                 if len(parts) >= 2:
                     second = parts[1]
@@ -108,7 +119,6 @@ class Command(BaseCommand):
                     return second
                 return None
 
-            # 이미 "성남", "서울" 형태면 그대로 사용
             cleaned = text.replace("특별자치시", "").replace("특별자치도", "")
             return cleaned
 
@@ -116,21 +126,18 @@ class Command(BaseCommand):
         station_df["regId"] = station_df["fcst_name"].map(reg_map)
 
         # ---------------------------
-        # stationId 붙이기
-        # stNm + 위도 + 경도 기준 매칭
+        # stationId 매칭
         # ---------------------------
         station_df = station_df.merge(
             station_id_df, how="left", on=["stNm", "lat_key", "lon_key"]
         )
 
-        # arsId 통일 (station_id 기준 우선)
+        # arsId 정리
         if "arsId_x" in station_df.columns and "arsId_y" in station_df.columns:
             station_df["arsId"] = station_df["arsId_y"].combine_first(
                 station_df["arsId_x"]
             )
             station_df = station_df.drop(columns=["arsId_x", "arsId_y"])
-
-        # 혹시 하나만 있을 경우 대비
         elif "arsId_y" in station_df.columns:
             station_df = station_df.rename(columns={"arsId_y": "arsId"})
         elif "arsId_x" in station_df.columns:
@@ -141,35 +148,35 @@ class Command(BaseCommand):
         ).astype("Int64")
 
         # ---------------------------
-        # 정리
+        # 컬럼 정리
         # ---------------------------
         drop_cols = ["fcst_name", "city", "lat_key", "lon_key"]
         station_df = station_df.drop(
             columns=[c for c in drop_cols if c in station_df.columns]
         )
 
-        # stationId를 맨 앞으로 이동
+        # stationId 맨 앞으로
         if "stationId" in station_df.columns:
             cols = ["stationId"] + [c for c in station_df.columns if c != "stationId"]
             station_df = station_df[cols]
-        # 결과 저장
+
+        # ---------------------------
+        # 저장
+        # ---------------------------
         station_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-        # regId 또는 stationId 둘 중 하나라도 없는 것 따로 저장
         unmatched_df = station_df[
             station_df["regId"].isna() | station_df["stationId"].isna()
         ].copy()
+
         unmatched_df.to_csv(unmatched_path, index=False, encoding="utf-8-sig")
 
-        matched_reg_count = station_df["regId"].notna().sum()
-        matched_stationid_count = station_df["stationId"].notna().sum()
+        # 로그
         total_count = len(station_df)
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"전체 행 수: {total_count}\n"
-                f"regId 매칭: {matched_reg_count}/{total_count}\n"
-                f"stationId 매칭: {matched_stationid_count}/{total_count}\n"
                 f"결과 파일: {output_path}\n"
                 f"미매칭 파일: {unmatched_path}"
             )

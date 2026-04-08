@@ -5,8 +5,6 @@ import pandas as pd
 from datetime import datetime
 
 
-
-
 def download_file(file_url, save_path):
     response = requests.get(file_url, timeout=60)
 
@@ -20,12 +18,13 @@ def download_file(file_url, save_path):
 
         print("다운로드 성공 (EUC-KR → UTF-8 변환 완료)")
     else:
-        print("다운로드 실패:", response.status_code)
+        print("다운로드 실패:", response.status_code)S
         print(response.text)
 
 
 def get_latest_station_stn_file(base_dir):
-    pattern = os.path.join(base_dir, "bus_station_with_stn_*.csv")
+    data_dir = os.path.join(base_dir, "data")
+    pattern = os.path.join(data_dir, "bus_station_with_stn_*.csv")
     files = glob.glob(pattern)
 
     if not files:
@@ -59,7 +58,7 @@ def collect_weather():
         os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 
-   
+    data_dir = os.path.join(base_dir, "data")
 
     tm1 = "202603090000"
     tm2 = "202604060000"
@@ -72,7 +71,7 @@ def collect_weather():
         raise ValueError("환경변수 WEATHER_API_KEY가 설정되지 않았습니다.")
 
     # 최신 stn 파일 찾기
-    station_stn_path = get_latest_station_stn_file(base_dir)
+    station_stn_path = get_latest_station_stn_file(data_dir)
     print("사용할 STN 파일:", station_stn_path)
 
     # stn 중복 제거 후 : 형태로 만들기
@@ -83,8 +82,7 @@ def collect_weather():
         "https://apihub.kma.go.kr/api/typ01/url/kma_sfctm3.php"
         f"?tm1={tm1}&tm2={tm2}&stn={stn_param}&help=1&authKey={api_key}"
     )
-    
 
-    save_path = os.path.join(base_dir, f"weather_raw_{today_str}.txt")
+    save_path = os.path.join(data_dir, f"weather_raw_{today_str}.txt")
 
     download_file(url, save_path)
