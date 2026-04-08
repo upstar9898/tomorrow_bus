@@ -18,7 +18,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_test1")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
@@ -38,28 +38,28 @@ USE_COLS = [
     "full1",
 ]
 
-# 최종 학습용 feature 컬럼
-FEATURE_COLS = [
-    "staOrd",
-    "hour",
-    "minute",
-    "dayofweek",
-    "is_weekend",
-    "is_holiday",
-    "is_peak",
-    "month_sin",
-    "month_cos",
-    "day_sin",
-    "day_cos",
-    "hour_sin",
-    "hour_cos",
-    "minute_sin",
-    "minute_cos",
-    "dow_sin",
-    "dow_cos",
-    "exps1",
-    "remaining_seat",
-]
+# # 최종 학습용 feature 컬럼
+# FEATURE_COLS = [
+#     "staOrd",
+#     "hour",
+#     "minute",
+#     "dayofweek",
+#     "is_weekend",
+#     "is_holiday",
+#     "is_peak",
+#     "month_sin",
+#     "month_cos",
+#     "day_sin",
+#     "day_cos",
+#     "hour_sin",
+#     "hour_cos",
+#     "minute_sin",
+#     "minute_cos",
+#     "dow_sin",
+#     "dow_cos",
+#     "exps1",
+#     "remaining_seat",
+# ]
 
 
 # =========================================================
@@ -107,6 +107,10 @@ def preprocess(df):
     df["exps1"] = to_float(df["exps1"])
     df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
     df["arrmsg1"] = df["arrmsg1"].apply(normalize_arrmsg)
+    mask1 = df["arrmsg1"].str.contains("곧", na=False)
+    mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
+
+    df = df[mask1 | mask2].copy()
 
     df["full1"] = df["full1"].astype(str).str.strip()
     df["full_flag"] = df["full1"].isin(["1", "Y", "y", "True", "true"]).astype(int)
@@ -171,13 +175,40 @@ def preprocess(df):
     # -----------------------------
     # 같은 노선-정류소-시각에 중복이 있으면
     # ETA가 더 작고 좌석정보가 있는 쪽을 우선
-    df["exps1_for_sort"] = df["exps1"].fillna(999999)
+    # 그 후 같은 운행 안에서 우선순위를 정해서 하나의 행만 남김
+
+    TIME_GAP_MINUTES = 20
+
+    df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
+
+    df["time_diff"] = (
+        df.groupby(["busRouteId", "vehId1"])["mkTm"].diff().dt.total_seconds().div(60)
+    )
+
+    df["new_trip_flag"] = (
+        df["time_diff"].isna() | (df["time_diff"] > TIME_GAP_MINUTES)
+    ).astype(int)
+
+    df["trip_group"] = df.groupby(["busRouteId", "vehId1"])["new_trip_flag"].cumsum()
+    df["arr_priority"] = 99
+
+    df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 0
+    df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 1
+    df.loc[df["arrmsg1"].str.contains(r"\[1번째 전\]", na=False), "arr_priority"] = 2
+
     df = df.sort_values(
-        ["busRouteId", "stId", "mkTm", "exps1_for_sort", "vehId1"],
-        ascending=[True, True, True, True, True],
+        ["busRouteId", "stId", "vehId1", "trip_group", "arr_priority", "mkTm"],
+        ascending=[True, True, True, True, True, True],
     ).copy()
 
-    df = df.drop_duplicates(subset=["busRouteId", "stId", "mkTm"], keep="first").copy()
+    df = df.drop_duplicates(
+        subset=["busRouteId", "stId", "vehId1", "trip_group"], keep="first"
+    ).copy()
+    
+    df = df.sort_values(
+        ["busRouteId", "vehId1", "trip_group", "staOrd", "mkTm"],
+        ascending=[True, True, True, True, True],
+    ).copy()
 
     # -----------------------------
     # 최종 정리
@@ -260,6 +291,7 @@ def preprocess(df):
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
     file_list = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+    # file_list = ["bus_data_2026_03_10.csv"]
 
     for filename in file_list:
         input_path = os.path.join(DATA_DIR, filename)
