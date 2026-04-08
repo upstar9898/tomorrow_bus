@@ -18,7 +18,7 @@ def download_file(file_url, save_path):
 
         print("다운로드 성공 (EUC-KR → UTF-8 변환 완료)")
     else:
-        print("다운로드 실패:", response.status_code)S
+        print("다운로드 실패:", response.status_code)
         print(response.text)
 
 
