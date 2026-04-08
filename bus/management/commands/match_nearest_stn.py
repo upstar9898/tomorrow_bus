@@ -12,20 +12,20 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # 프로젝트 루트
         base_dir = os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.abspath(__file__))
-                )
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
+        data_dir = os.path.join(base_dir, "data")
+        os.makedirs(data_dir, exist_ok=True)
 
         # 1) 최신 정류소 파일 찾기
-        station_pattern = os.path.join(base_dir, "bus_station_with_regid_*.csv")
+        station_pattern = os.path.join(data_dir, "bus_station_with_regid_*.csv")
         station_files = glob.glob(station_pattern)
 
         if not station_files:
             self.stdout.write(
-                self.style.ERROR("bus_station_with_regid_*.csv 파일이 프로젝트 루트에 없습니다.")
+                self.style.ERROR(
+                    "bus_station_with_regid_*.csv 파일이 프로젝트 루트에 없습니다."
+                )
             )
             return
 
@@ -35,13 +35,18 @@ class Command(BaseCommand):
         weather_path = os.path.join(base_dir, "weather_regioncode.csv")
         if not os.path.exists(weather_path):
             self.stdout.write(
-                self.style.ERROR(f"weather_regioncode.csv 파일이 없습니다: {weather_path}")
+                self.style.ERROR(
+                    f"weather_regioncode.csv 파일이 없습니다: {weather_path}"
+                )
             )
             return
 
         today_str = datetime.now().strftime("%y%m%d")
-        output_path = os.path.join(base_dir, f"bus_station_with_stn_{today_str}.csv")
-        unmatched_path = os.path.join(base_dir, f"bus_station_stn_unmatched_{today_str}.csv")
+
+        output_path = os.path.join(data_dir, f"bus_station_with_stn_{today_str}.csv")
+        unmatched_path = os.path.join(
+            data_dir, f"bus_station_stn_unmatched_{today_str}.csv"
+        )
 
         self.stdout.write(f"사용할 정류소 파일: {station_path}")
         self.stdout.write(f"사용할 weather 파일: {weather_path}")
@@ -77,7 +82,9 @@ class Command(BaseCommand):
 
         if weather_df.empty:
             self.stdout.write(
-                self.style.ERROR("weather_regioncode.csv에서 사용할 좌표 데이터가 없습니다.")
+                self.style.ERROR(
+                    "weather_regioncode.csv에서 사용할 좌표 데이터가 없습니다."
+                )
             )
             return
 
@@ -142,7 +149,9 @@ class Command(BaseCommand):
                     best_stn = w["STN"]
 
             stn_list.append(best_stn)
-            distance_km_list.append(round(best_dist, 4) if best_dist is not None else None)
+            distance_km_list.append(
+                round(best_dist, 4) if best_dist is not None else None
+            )
 
         # 8) 컬럼 추가
         station_df["stn"] = stn_list
