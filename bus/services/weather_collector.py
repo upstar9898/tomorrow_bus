@@ -61,7 +61,7 @@ def collect_weather():
     data_dir = os.path.join(base_dir, "data")
 
     tm1 = "202603090000"
-    tm2 = "202604060000"
+    tm2 = datetime.now().strftime("%Y%m%d") + "0000"
 
     # 오늘 날짜 YYMMDD
     today_str = datetime.now().strftime("%y%m%d")
@@ -71,7 +71,7 @@ def collect_weather():
         raise ValueError("환경변수 WEATHER_API_KEY가 설정되지 않았습니다.")
 
     # 최신 stn 파일 찾기
-    station_stn_path = get_latest_station_stn_file(data_dir)
+    station_stn_path = get_latest_station_stn_file(base_dir)
     print("사용할 STN 파일:", station_stn_path)
 
     # stn 중복 제거 후 : 형태로 만들기
