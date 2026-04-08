@@ -2,6 +2,19 @@ import os
 import pandas as pd
 from django.core.management.base import BaseCommand
 from datetime import datetime
+import glob
+
+
+def get_latest_file(data_dir, prefix):
+    pattern = os.path.join(data_dir, f"{prefix}_*.csv")
+    files = glob.glob(pattern)
+
+    if not files:
+        raise FileNotFoundError(f"{pattern} 파일이 없습니다.")
+
+    latest_file = max(files, key=os.path.getmtime)
+    print(f"[선택된 파일] {prefix}: {latest_file}")
+    return latest_file
 
 
 class Command(BaseCommand):
@@ -22,9 +35,7 @@ class Command(BaseCommand):
         # ---------------------------
         station_path = os.path.join(data_dir, "bus_station_with_city.csv")
         zone_path = os.path.join(data_dir, "fcst_zone_regid_regname.csv")
-        station_id_path = os.path.join(
-            data_dir, "bus_station_coordinate_stationId_260406.csv"
-        )
+        station_id_path = get_latest_file(data_dir, "bus_station_coordinate_stationId")
 
         # 날짜
         today_str = datetime.now().strftime("%y%m%d")
