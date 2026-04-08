@@ -18,7 +18,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_test1")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
