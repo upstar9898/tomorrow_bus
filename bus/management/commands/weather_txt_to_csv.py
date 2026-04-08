@@ -116,9 +116,10 @@ class Command(BaseCommand):
 
         # 숫자형 변환
         # TM은 시간값이므로 문자열 유지 가능
-        numeric_cols = [col for col in self.COLS if col != "TM"]
+        string_cols = ["TM", "STN", "WW"]
+        numeric_cols = [col for col in self.COLS if col not in string_cols]
         df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
-
+        df[string_cols] = df[string_cols].astype(str)
         # csv 저장
         df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
