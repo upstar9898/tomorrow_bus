@@ -4,7 +4,7 @@ from django.db import models
 class Bus_route(models.Model):
     # 노선 아이디 (NOT NULL)
     routeId = models.CharField(
-        max_length=20, primary_key=True, verbose_name="노선아이디"
+        max_length=50, primary_key=True, verbose_name="노선아이디"
     )
 
     # 노선 이름 (NOT NULL)
@@ -28,7 +28,7 @@ class Bus_route(models.Model):
 class Bus_station(models.Model):
     # 정류소 고유 ID
     stationId = models.CharField(
-        max_length=20, primary_key=True, verbose_name="정류소아이디"
+        max_length=50, primary_key=True, verbose_name="정류소고유아이디"
     )
 
     # 정류소 이름
@@ -36,11 +36,27 @@ class Bus_station(models.Model):
         max_length=100, null=False, blank=False, verbose_name="정류소명"
     )
 
+    stn = models.CharField(
+        max_length=50, null=False, blank=False, verbose_name="기상지점번호"
+    )
+
     # 경도 (Longitude)
     locationX = models.FloatField(null=False, verbose_name="경도")
 
     # 위도 (Latitude)
     locationY = models.FloatField(null=False, verbose_name="위도")
+
+    address = models.CharField(
+        max_length=255, null=False, blank=False, verbose_name="주소지")
+    
+    isVirtual = models.CharField(
+        max_length=20, null=False, blank=False, verbose_name="가상정류소 여부")
+    
+
+    # 사용자가 보는 정류소 ID
+    arsId = models.CharField(
+        max_length=100, null=False, blank=False, verbose_name="사용자가 보는 정류소"
+    )
 
     def __str__(self):
         return self.stationName
@@ -53,6 +69,7 @@ class Bus_station(models.Model):
 
 
 class Route_station(models.Model):
+
     # 노선 FK
     route = models.ForeignKey(
         "Bus_route",  # 너가 만든 노선 모델 이름
@@ -77,7 +94,7 @@ class Route_station(models.Model):
     staOrd = models.IntegerField(null=False, verbose_name="정류소 순서")
 
     def __str__(self):
-        return f"{self.route_id} - {self.station_id} ({self.staOrd})"
+        return f"{self.id} - {self.route_id} - {self.station_id} ({self.staOrd})"
 
     class Meta:
         db_table = "route_station"

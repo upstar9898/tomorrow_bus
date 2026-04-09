@@ -218,10 +218,19 @@ class BusRouteAdmin(admin.ModelAdmin):
 @admin.register(Bus_station)
 class BusStationAdmin(admin.ModelAdmin):
     # 관리자 목록 페이지에서 보여줄 컬럼
-    list_display = ("stationId", "stationName", "locationX", "locationY")
+    list_display = (
+        "stationId",
+        "stationName",
+        "stn",
+        "locationX",
+        "locationY",
+        "address",
+        "isVirtual",
+        "arsId",
+    )
 
     # 관리자 검색창에서 검색할 대상 컬럼
-    search_fields = ("stationId", "stationName")
+    search_fields = ("stationId", "stationName", "arsId")
 
     # 기본 정렬 기준
     ordering = ("stationId",)
@@ -286,7 +295,16 @@ class BusStationAdmin(admin.ModelAdmin):
                     reader = csv.DictReader(io_string)
 
                     # CSV에 반드시 있어야 하는 헤더
-                    required_headers = ["arsId", "stNm", "위도", "경도"]
+                    required_headers = [
+                        "stationId",
+                        "stNm",
+                        "stn",
+                        "위도",
+                        "경도",
+                        "address",
+                        "isVirtual",
+                        "arsId",
+                    ]
 
                     # 실제 업로드한 CSV의 헤더 목록
                     uploaded_headers = reader.fieldnames
@@ -321,13 +339,26 @@ class BusStationAdmin(admin.ModelAdmin):
                     # CSV를 한 줄씩 읽어서 모델 객체 생성
                     for row_num, row in enumerate(reader, start=2):
                         # CSV 컬럼값 꺼내기
-                        ars_id = (row.get("arsId") or "").strip()
+                        station_id = (row.get("stationId") or "").strip()
                         st_nm = (row.get("stNm") or "").strip()
+                        stn = (row.get("stn") or "").strip()
                         lat = (row.get("위도") or "").strip()
                         lng = (row.get("경도") or "").strip()
+                        address = (row.get("address") or "").strip()
+                        is_virtual = (row.get("isVirtual") or "").strip()
+                        ars_id = (row.get("arsId") or "").strip()
 
                         # 필수값 검사
-                        if not ars_id or not st_nm or not lat or not lng:
+                        if (
+                            not station_id
+                            or not st_nm
+                            or not stn
+                            or not lat
+                            or not lng
+                            or not address
+                            or not is_virtual
+                            or not ars_id
+                        ):
                             raise ValueError(f"{row_num}행: 필수값이 비어 있습니다.")
 
                         # 위도/경도를 float로 변환 가능한지 검사
@@ -342,10 +373,14 @@ class BusStationAdmin(admin.ModelAdmin):
                         # Django 모델 객체 생성
                         station_list.append(
                             Bus_station(
-                                stationId=ars_id,
+                                stationId=station_id,
                                 stationName=st_nm,
+                                stn=stn,
                                 locationX=lng,  # 경도
                                 locationY=lat,  # 위도
+                                address=address,
+                                isVirtual=is_virtual,
+                                arsId=ars_id,
                             )
                         )
 
@@ -403,7 +438,7 @@ class BusStationAdmin(admin.ModelAdmin):
 @admin.register(Route_station)
 class RouteStationAdmin(admin.ModelAdmin):
     # 관리자 목록 페이지에서 보여줄 컬럼
-    list_display = ("route", "station", "staOrd")
+    list_display = ("id", "route", "station", "staOrd")
 
     # 관리자 검색창에서 검색할 대상 컬럼
     search_fields = (
@@ -477,7 +512,11 @@ class RouteStationAdmin(admin.ModelAdmin):
                     reader = csv.DictReader(io_string)
 
                     # CSV에 반드시 있어야 하는 헤더
-                    required_headers = ["routeId", "stationId", "staOrd"]
+                    required_headers = [
+                        "routeId",
+                        "stationId",
+                        "staOrd",
+                    ]
 
                     # 실제 업로드한 CSV의 헤더 목록
                     uploaded_headers = reader.fieldnames
@@ -527,6 +566,7 @@ class RouteStationAdmin(admin.ModelAdmin):
 
                     # CSV를 한 줄씩 읽어서 모델 객체 생성
                     for row_num, row in enumerate(reader, start=2):
+                        
                         route_id = (row.get("routeId") or "").strip()
                         station_id = (row.get("stationId") or "").strip()
                         sta_ord = (row.get("staOrd") or "").strip()
@@ -560,6 +600,7 @@ class RouteStationAdmin(admin.ModelAdmin):
                         # Django 모델 객체 생성
                         route_station_list.append(
                             Route_station(
+                                
                                 route=route_obj,
                                 station=station_obj,
                                 staOrd=sta_ord,
