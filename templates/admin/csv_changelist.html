@@ -1,0 +1,12 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools %}
+  <div style="margin-bottom: 12px;">
+    <a href="{{ csv_upload_url }}"
+       class="button"
+       style="padding: 8px 12px; background: #417690; color: white; text-decoration: none; border-radius: 4px;">
+      CSV 업로드
+    </a>
+  </div>
+  {{ block.super }}
+{% endblock %}
