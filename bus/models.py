@@ -2,77 +2,110 @@ from django.db import models
 
 
 class Bus_route(models.Model):
-    # 노선 아이디 (NOT NULL)
+    # 노선 아이디를 직접 PK로 사용
     routeId = models.CharField(
-        max_length=50, primary_key=True, verbose_name="노선아이디"
+        max_length=50,
+        primary_key=True,
+        null=False,
+        blank=False,
+        verbose_name="노선아이디",
     )
 
-    # 노선 이름 (NOT NULL)
+    # 노선 이름
     routeName = models.CharField(
-        max_length=20, null=False, blank=False, verbose_name="노선명"
+        max_length=100,
+        null=False,
+        blank=False,
+        verbose_name="노선명",
     )
 
     def __str__(self):
-        return self.routeName
+        return f"{self.routeName} ({self.routeId})"
 
     class Meta:
         db_table = "bus_route"
         verbose_name = "노선"
         verbose_name_plural = "노선 목록"
-        ordering = ["routeId"]  # 노선아이디 기준 정렬
-
-
-# bus_station
+        ordering = ["routeId"]
 
 
 class Bus_station(models.Model):
-    # 정류소 고유 ID
+    # 정류소 ID를 직접 PK로 사용
     stationId = models.CharField(
-        max_length=50, primary_key=True, verbose_name="정류소고유아이디"
+        max_length=50,
+        primary_key=True,
+        null=False,
+        blank=False,
+        verbose_name="정류소아이디",
     )
 
-    # 정류소 이름
+    # 정류소명
     stationName = models.CharField(
-        max_length=100, null=False, blank=False, verbose_name="정류소명"
+        max_length=255,
+        null=False,
+        blank=False,
+        verbose_name="정류소명",
     )
 
+    # 기상 관측소 번호
     stn = models.CharField(
-        max_length=50, null=False, blank=False, verbose_name="기상지점번호"
+        max_length=50,
+        null=False,
+        blank=True,
+        verbose_name="기상지점번호",
     )
 
-    # 경도 (Longitude)
-    locationX = models.FloatField(null=False, verbose_name="경도")
+    # 경도
+    locationX = models.FloatField(
+        null=False,
+        verbose_name="경도",
+    )
 
-    # 위도 (Latitude)
-    locationY = models.FloatField(null=False, verbose_name="위도")
+    # 위도
+    locationY = models.FloatField(
+        null=False,
+        verbose_name="위도",
+    )
 
+    # 주소
     address = models.CharField(
-        max_length=255, null=False, blank=False, verbose_name="주소지")
-    
-    isVirtual = models.CharField(
-        max_length=20, null=False, blank=False, verbose_name="가상정류소 여부")
-    
+        max_length=255,
+        null=False,
+        blank=True,
+        verbose_name="주소",
+    )
 
-    # 사용자가 보는 정류소 ID
+    # 가상 정류소 여부
+    isVirtual = models.CharField(
+        max_length=20,
+        null=False,
+        blank=True,
+        verbose_name="가상정류소여부",
+    )
+
+    # 정류소 번호
     arsId = models.CharField(
-        max_length=100, null=False, blank=False, verbose_name="사용자가 보는 정류소"
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name="정류소번호",
     )
 
     def __str__(self):
-        return self.stationName
+        return f"{self.stationName} ({self.stationId})"
 
     class Meta:
-        db_table = "bus_station"  # 테이블명 명시
+        db_table = "bus_station"
         verbose_name = "정류소"
         verbose_name_plural = "정류소 목록"
-        ordering = ["stationId"]  # 정류소 ID 기준 정렬
+        ordering = ["stationId"]
 
 
 class Route_station(models.Model):
 
     # 노선 FK
     route = models.ForeignKey(
-        "Bus_route",  # 너가 만든 노선 모델 이름
+        Bus_route,
         on_delete=models.CASCADE,
         to_field="routeId",
         db_column="routeId",
@@ -82,7 +115,7 @@ class Route_station(models.Model):
 
     # 정류소 FK
     station = models.ForeignKey(
-        "Bus_station",
+        Bus_station,
         on_delete=models.CASCADE,
         to_field="stationId",
         db_column="stationId",
@@ -91,7 +124,10 @@ class Route_station(models.Model):
     )
 
     # 정류소 순서
-    staOrd = models.IntegerField(null=False, verbose_name="정류소 순서")
+    staOrd = models.IntegerField(
+        null=False,
+        verbose_name="정류소 순서",
+    )
 
     def __str__(self):
         return f"{self.id} - {self.route_id} - {self.station_id} ({self.staOrd})"
@@ -100,7 +136,5 @@ class Route_station(models.Model):
         db_table = "route_station"
         verbose_name = "노선-정류소"
         verbose_name_plural = "노선-정류소 목록"
-        ordering = ["route", "staOrd"]  # 노선별 + 순서 정렬
-
-        # 같은 노선에서 같은 정류소 중복 방지
+        ordering = ["route", "staOrd"]
         unique_together = ("route", "station")

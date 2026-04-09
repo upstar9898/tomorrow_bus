@@ -2,9 +2,124 @@
 
 {% block title %}서비스2 | Tomorrow Bus{% endblock %}
 
+{% block extra_style %}
+<style>
+    .service-hero {
+        overflow: hidden;
+    }
+
+    .service-title {
+        font-size: clamp(1.9rem, 4.2vw, 3rem);
+        font-weight: 800;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+    }
+
+    .service-subcard {
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
+    }
+
+    .service-highlight {
+        border: 0;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+        color: #ffffff;
+        box-shadow: 0 20px 38px rgba(37, 99, 235, 0.18);
+    }
+
+    .feature-mini {
+        border: 1px solid #e8eef7;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        padding: 1.1rem;
+        height: 100%;
+    }
+
+    @media (max-width: 991px) {
+        .service-hero .card-body,
+        .service-subcard .card-body,
+        .service-highlight .card-body {
+            padding: 1.25rem !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="width:min(1120px,100%); margin:0 auto; background:rgba(255,250,241,0.9); border-radius:24px; padding:24px; border:1px solid rgba(31,41,55,0.12);">
-    <h1>서비스 2</h1>
-    <p>여기에 서비스 2 화면을 구현하면 됩니다.</p>
-</div>
+<main class="container-fluid px-0">
+    <section class="glass-card hero-gradient service-hero mb-4 mb-lg-5">
+        <div class="card-body p-4 p-lg-5">
+            <div class="row align-items-center g-4 g-xl-5">
+                <div class="col-lg-12">
+                    <h1 class="service-title mb-3">
+                        원하는 노선과 승차 시간을 선택하면<br>
+                        특정 정류장만이 아니라<br>
+                        전체 노선의 예측 잔여좌석을 보여주는 페이지
+                    </h1>
+                    <p class="soft-note mb-0 fs-6">
+                        현재 페이지는 개발 중입니다. 실제 서비스에서는 노선 전체 정류장에 대한 예측 결과를
+                        지도 또는 리스트 형태로 시각화해, 어느 구간에서 좌석 여유가 있는지 한눈에 확인할 수 있게 됩니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="row g-4">
+        <div class="col-12 col-xl-8">
+            <div class="service-subcard h-100">
+                <div class="card-body p-4 p-lg-4">
+                    <h2 class="h4 fw-bold mb-3">서비스 개요</h2>
+                    <p class="soft-note mb-4" style="line-height: 1.8;">
+                        서비스2는 사용자가 노선 번호와 승차 시간을 입력하면,
+                        해당 노선의 각 정류장별 예상 잔여좌석을 한 번에 보여주는 기능입니다.
+                        단일 정류장 예측보다 넓은 시야를 제공해, 어느 구간에서 혼잡이 심한지,
+                        어느 정류장에서 상대적으로 좌석 여유가 있는지를 비교할 수 있도록 설계합니다.
+                    </p>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="feature-mini">
+                                <div class="fw-bold mb-2">입력</div>
+                                <div class="soft-note">노선 번호, 승차 시간</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="feature-mini">
+                                <div class="fw-bold mb-2">출력</div>
+                                <div class="soft-note">전체 정류장별 잔여좌석 예측</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="feature-mini">
+                                <div class="fw-bold mb-2">표현 방식</div>
+                                <div class="soft-note">지도, 리스트, 상태 배지</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <div class="service-subcard h-100">
+                <div class="card-body p-4 p-lg-4">
+                    <h2 class="h4 fw-bold mb-3">개발 상태</h2>
+                    <div class="alert border-0 mb-3" style="background:#f8fbff; color:#334155;">
+                        현재 페이지는 레이아웃 초안 단계입니다.
+                    </div>
+                    <ul class="soft-note mb-0" style="padding-left: 1.1rem; line-height: 1.8;">
+                        <li>노선 선택 UI 추가 예정</li>
+                        <li>지도 API 연동 예정</li>
+                        <li>정류장별 예측 결과 배지 표시 예정</li>
+                        <li>실제 예측 API 연결 예정</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
 {% endblock %}
