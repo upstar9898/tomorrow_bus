@@ -85,6 +85,9 @@ class Command(BaseCommand):
                 .str.strip()
             )
 
+        # stationId 없는 행 제거
+        result_df = result_df[result_df["stationId"] != ""].copy()
+
         # 위도/경도 숫자 변환
         result_df["위도"] = pd.to_numeric(result_df["위도"], errors="coerce")
         result_df["경도"] = pd.to_numeric(result_df["경도"], errors="coerce")
