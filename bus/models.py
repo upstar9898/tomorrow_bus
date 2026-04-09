@@ -48,7 +48,7 @@ class Bus_station(models.Model):
     )
 
     # 정류소명
-    stNm = models.CharField(
+    stationName = models.CharField(
         max_length=255,
         null=False,
         blank=False,
