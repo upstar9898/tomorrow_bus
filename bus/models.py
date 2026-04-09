@@ -86,7 +86,7 @@ class Bus_station(models.Model):
     # 정류소 번호
     arsId = models.CharField(
         max_length=50,
-        null=False,
+        null=True,
         blank=True,
         verbose_name="정류소번호",
     )
@@ -103,11 +103,6 @@ class Bus_station(models.Model):
 
 
 class Route_station(models.Model):
-    # Django는 복합 PK를 공식 지원하지 않아서 별도 PK를 둠
-    routeStationId = models.BigAutoField(
-        primary_key=True,
-        verbose_name="노선-정류소 PK",
-    )
 
     # 노선 FK
     route = models.ForeignKey(
