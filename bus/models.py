@@ -93,7 +93,7 @@ class Bus_station(models.Model):
 
 
     def __str__(self):
-        return f"{self.stNm} ({self.stationId})"
+        return f"{self.stationName} ({self.stationId})"
 
     class Meta:
         db_table = "bus_station"
