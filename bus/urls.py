@@ -23,4 +23,6 @@ urlpatterns = [
     path("service1/", views.service1, name="service1"),
     path("service2/", views.service2, name="service2"),
     path("favorites/", views.favorites, name="favorites"),
+    path("ajax/stations/", views.get_stations_by_route, name="ajax_stations"),  # 정류장 목록
+    path("ajax/predict/", views.predict_service1, name="ajax_predict"),  # 예측
 ]
