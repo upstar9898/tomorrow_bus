@@ -39,11 +39,12 @@
         margin-bottom: 0;
     }
 
-    .info-list li + li {
+    .info-list li+li {
         margin-top: 0.45rem;
     }
 
     @media (max-width: 991px) {
+
         .service-hero .card-body,
         .section-card .card-body {
             padding: 1.25rem !important;
@@ -78,29 +79,32 @@
                     <h2 class="h4 fw-bold mb-4">입력 조건</h2>
 
                     <form id="predictForm" class="row g-3">
+                        {% csrf_token %}
+
                         <div class="col-12">
                             <label for="routeSelect" class="form-label fw-semibold">노선 선택</label>
                             <select id="routeSelect" class="form-select">
-                                <option value="9408">9408</option>
-                                <option value="500-2">500-2</option>
-                                <option value="M7412">M7412</option>
-                                <option value="1111">1111</option>
+                                <option value="">노선을 선택하세요</option>
+                                {% for route in routes %}
+                                <option value="{{ route.routeId }}">{{ route.routeName }}</option>
+                                {% endfor %}
                             </select>
                         </div>
 
                         <div class="col-12">
                             <label for="stationSelect" class="form-label fw-semibold">정류장 선택</label>
-                            <select id="stationSelect" class="form-select"></select>
+                            <select id="stationSelect" class="form-select" disabled>
+                                <option value="">먼저 노선을 선택하세요</option>
+                            </select>
                         </div>
 
                         <div class="col-12">
-                            <label for="rideTime" class="form-label fw-semibold">승차 시간</label>
-                            <input id="rideTime" type="time" class="form-control" value="08:30">
+                            <label for="rideDateTime" class="form-label fw-semibold">승차 일시</label>
+                            <input id="rideDateTime" type="datetime-local" class="form-control">
                         </div>
 
                         <div class="col-12 d-grid d-sm-flex gap-2 pt-2">
                             <button type="submit" class="btn btn-primary flex-fill">예측하기</button>
-                            <button type="button" id="randomBtn" class="btn btn-outline-secondary">랜덤 예시</button>
                         </div>
                     </form>
 
@@ -111,7 +115,7 @@
                         <ul class="info-list soft-note">
                             <li>노선 및 정류장 목록은 API 또는 DB에서 로딩</li>
                             <li>버튼 클릭 시 예측 API 호출</li>
-                            <li>응답값으로 잔여좌석, 혼잡도, 신뢰도 표시</li>
+                            <li>응답값으로 잔여좌석, 만차확률 표시</li>
                         </ul>
                     </div>
                 </div>
@@ -121,44 +125,25 @@
         <div class="col-12 col-xl-7">
             <div class="section-card mb-4">
                 <div class="card-body p-4 p-lg-4">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-                        <div>
-                            <h2 class="h4 fw-bold mb-1">예측 결과</h2>
-                            <div class="soft-note" id="resultSummary">9408 · 강남역 · 08:30 기준</div>
-                        </div>
-                        <span class="badge text-bg-success rounded-pill px-3 py-2 result-badge" id="crowdBadge">여유</span>
+                    <div class="mb-3">
+                        <h2 class="h4 fw-bold mb-1">예측 결과</h2>
+                        <div id="resultSummary">-</div>
                     </div>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-12 col-md-4">
+                    <div class="row g-3">
+                        <div class="col-6">
                             <div class="metric-box text-center">
-                                <div class="soft-note mb-2">예측 잔여좌석</div>
-                                <div class="seat-number" id="seatPrediction">11</div>
-                                <div class="small text-secondary mt-2">석</div>
+                                <div class="soft-note mb-2">잔여좌석</div>
+                                <div class="seat-number" id="seatPrediction">-</div>
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-4">
-                            <div class="metric-box">
-                                <div class="soft-note mb-2">예상 혼잡도</div>
-                                <div class="fs-4 fw-bold" id="crowdText">여유</div>
-                                <div class="small text-secondary mt-2">더미 추론 결과</div>
+                        <div class="col-6">
+                            <div class="metric-box text-center">
+                                <div class="soft-note mb-2">만차 확률</div>
+                                <div class="fs-4 fw-bold" id="fullProb">-</div>
                             </div>
                         </div>
-
-                        <div class="col-12 col-md-4">
-                            <div class="metric-box">
-                                <div class="soft-note mb-2">모델 신뢰도</div>
-                                <div class="fs-4 fw-bold" id="confidenceText">88%</div>
-                                <div class="small text-secondary mt-2">예시 값</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="alert border-0 mb-0" style="background:#f8fbff; color:#334155;">
-                        <strong>해석 예시</strong><br>
-                        선택한 조건에서 해당 버스는
-                        <span id="interpretationText">비교적 여유가 있어 탑승 가능성이 높습니다.</span>
                     </div>
                 </div>
             </div>
@@ -166,7 +151,7 @@
             <div class="section-card">
                 <div class="card-body p-4 p-lg-4">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                        <h2 class="h4 fw-bold mb-0">최근 예측 예시</h2>
+                        <h2 class="h4 fw-bold mb-0">최근 예측</h2>
                         <span class="soft-note small">더미 기록</span>
                     </div>
 
@@ -176,33 +161,12 @@
                                 <tr>
                                     <th>노선</th>
                                     <th>정류장</th>
-                                    <th>시간</th>
+                                    <th>일시</th>
                                     <th>예측 잔여좌석</th>
-                                    <th>혼잡도</th>
+                                    <th>만차확률</th>
                                 </tr>
                             </thead>
                             <tbody id="historyTable">
-                                <tr>
-                                    <td>9408</td>
-                                    <td>강남역</td>
-                                    <td>08:30</td>
-                                    <td>11석</td>
-                                    <td><span class="badge text-bg-success">여유</span></td>
-                                </tr>
-                                <tr>
-                                    <td>M7412</td>
-                                    <td>서울역버스환승센터</td>
-                                    <td>18:10</td>
-                                    <td>4석</td>
-                                    <td><span class="badge text-bg-warning">보통</span></td>
-                                </tr>
-                                <tr>
-                                    <td>500-2</td>
-                                    <td>판교역서편</td>
-                                    <td>07:50</td>
-                                    <td>1석</td>
-                                    <td><span class="badge text-bg-danger">혼잡</span></td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -215,93 +179,145 @@
 
 {% block extra_script %}
 <script>
-    const stationMap = {
-        "9408": ["강남역", "양재역", "서울역버스환승센터", "신논현역"],
-        "500-2": ["판교역서편", "서현역", "야탑역", "모란역"],
-        "M7412": ["서울역버스환승센터", "광화문", "합정역", "일산동구청"],
-        "1111": ["수유역", "미아사거리", "길음역", "종로5가"]
-    };
-
-    const dummyPredictions = {
-        "9408|강남역|08:30": { seats: 11, crowd: "여유", confidence: 88 },
-        "9408|양재역|18:20": { seats: 3, crowd: "보통", confidence: 81 },
-        "500-2|판교역서편|07:50": { seats: 1, crowd: "혼잡", confidence: 91 },
-        "M7412|서울역버스환승센터|18:10": { seats: 4, crowd: "보통", confidence: 84 },
-        "1111|수유역|09:00": { seats: 9, crowd: "여유", confidence: 86 }
-    };
-
+    // 쿠키 가져오기
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    // 필요한 변수 정의, html에서 가져옴
     const routeSelect = document.getElementById("routeSelect");
     const stationSelect = document.getElementById("stationSelect");
-    const rideTime = document.getElementById("rideTime");
     const predictForm = document.getElementById("predictForm");
-    const randomBtn = document.getElementById("randomBtn");
+    const rideDateTime = document.getElementById("rideDateTime");
 
-    function updateStationOptions() {
-        const selectedRoute = routeSelect.value;
-        const stations = stationMap[selectedRoute] || [];
-        stationSelect.innerHTML = "";
+    // 노선 선택 시 정류장 불러오기
+    routeSelect.addEventListener("change", async function () {
+        const routeId = this.value;
 
-        stations.forEach((station) => {
-            const option = document.createElement("option");
-            option.value = station;
-            option.textContent = station;
-            stationSelect.appendChild(option);
-        });
-    }
+        stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
+        stationSelect.disabled = true;
 
-    function getCrowdMeta(crowd) {
-        if (crowd === "혼잡") {
-            return {
-                badgeClass: "text-bg-danger",
-                text: "좌석이 거의 없거나 매우 혼잡한 상태로 예측됩니다."
-            };
+        if (!routeId) {
+            stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
+            return;
         }
-        if (crowd === "보통") {
-            return {
-                badgeClass: "text-bg-warning",
-                text: "탑승은 가능하지만 좌석 여유가 크지 않을 수 있습니다."
-            };
+
+        try {
+            const response = await fetch(`/ajax/stations/?routeId=${encodeURIComponent(routeId)}`);
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
+                return;
+            }
+
+            const stations = result.stations;
+
+            if (stations.length === 0) {
+                stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
+                return;
+            }
+
+            let options = `<option value="">정류장을 선택하세요</option>`;
+            for (const station of stations) {
+                const label = station.arsId
+                    ? `${station.stationName} (${station.arsId})`
+                    : station.stationName;
+
+                options += `<option value="${station.stationId}">${label}</option>`;
+            }
+
+            stationSelect.innerHTML = options;
+            stationSelect.disabled = false;
+        } catch (error) {
+            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
         }
-        return {
-            badgeClass: "text-bg-success",
-            text: "비교적 여유가 있어 탑승 가능성이 높습니다."
-        };
-    }
+    });
 
-    function fallbackPrediction(timeValue) {
-        const [hour, minute] = timeValue.split(":").map(Number);
-        const total = hour * 60 + minute;
+    // 제출 버튼
+    predictForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
 
-        if ((total >= 420 && total <= 540) || (total >= 1050 && total <= 1170)) {
-            return { seats: 2, crowd: "혼잡", confidence: 79 };
+        const routeId = routeSelect.value;
+        const stationId = stationSelect.value;
+        const dateTime = rideDateTime.value;
+
+        if (!routeId || !stationId || !dateTime) {
+            alert("노선, 정류장, 승차 일시를 모두 선택하세요.");
+            return;
         }
-        if ((total >= 540 && total <= 600) || (total >= 990 && total <= 1050)) {
-            return { seats: 5, crowd: "보통", confidence: 82 };
+
+        const routeName = routeSelect.options[routeSelect.selectedIndex].text;
+        const stationName = stationSelect.options[stationSelect.selectedIndex].text;
+
+        document.getElementById("resultSummary").textContent = "예측 중...";
+        document.getElementById("seatPrediction").textContent = "-";
+        document.getElementById("fullProb").textContent = "-";
+
+        try {
+            const response = await fetch("/ajax/predict/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                },
+                body: JSON.stringify({
+                    routeId: routeId,
+                    stationId: stationId,
+                    date_time: dateTime
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                alert(result.error || "예측 요청에 실패했습니다.");
+                return;
+            }
+
+            renderResult(routeName, stationName, result);
+
+        } catch (error) {
+            alert("서버 요청 중 오류가 발생했습니다.");
         }
-        return { seats: 10, crowd: "여유", confidence: 85 };
-    }
+    });
 
-    function renderResult(route, station, timeValue, result) {
-        const crowdMeta = getCrowdMeta(result.crowd);
 
-        document.getElementById("resultSummary").textContent = `${route} · ${station} · ${timeValue} 기준`;
-        document.getElementById("seatPrediction").textContent = result.seats;
-        document.getElementById("crowdText").textContent = result.crowd;
-        document.getElementById("confidenceText").textContent = `${result.confidence}%`;
-        document.getElementById("interpretationText").textContent = crowdMeta.text;
+    function renderResult(routeName, stationName, result) {
 
-        const badge = document.getElementById("crowdBadge");
-        badge.className = `badge rounded-pill px-3 py-2 result-badge ${crowdMeta.badgeClass}`;
-        badge.textContent = result.crowd;
+        const data = result.data;
 
+
+        // 예측 결과 갱신
+        document.getElementById("resultSummary").textContent =
+            `${routeName} · ${stationName} · ${data.date_time}`;
+
+        document.getElementById("seatPrediction").textContent =
+            data.remaining_seat;
+
+        document.getElementById("fullProb").textContent =
+            `${(data.full_prob * 100).toFixed(1)}%`;
+
+
+        // 최근 예측 테이블 갱신
         const historyTable = document.getElementById("historyTable");
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td>${route}</td>
-            <td>${station}</td>
-            <td>${timeValue}</td>
-            <td>${result.seats}석</td>
-            <td><span class="badge ${crowdMeta.badgeClass}">${result.crowd}</span></td>
+            <td>${routeName}</td>
+            <td>${stationName}</td>
+            <td>${data.date_time}</td>
+            <td>${data.remaining_seat}석</td>
+            <td>${(data.full_prob * 100).toFixed(1)}%</td>
         `;
         historyTable.prepend(row);
 
@@ -309,37 +325,5 @@
             historyTable.removeChild(historyTable.lastElementChild);
         }
     }
-
-    predictForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const route = routeSelect.value;
-        const station = stationSelect.value;
-        const timeValue = rideTime.value;
-        const key = `${route}|${station}|${timeValue}`;
-        const result = dummyPredictions[key] || fallbackPrediction(timeValue);
-
-        renderResult(route, station, timeValue, result);
-    });
-
-    randomBtn.addEventListener("click", () => {
-        const routes = Object.keys(stationMap);
-        const route = routes[Math.floor(Math.random() * routes.length)];
-        routeSelect.value = route;
-        updateStationOptions();
-
-        const stations = stationMap[route];
-        const station = stations[Math.floor(Math.random() * stations.length)];
-        stationSelect.value = station;
-
-        const sampleTimes = ["07:50", "08:30", "09:00", "18:10", "18:20", "21:00"];
-        rideTime.value = sampleTimes[Math.floor(Math.random() * sampleTimes.length)];
-
-        predictForm.requestSubmit();
-    });
-
-    routeSelect.addEventListener("change", updateStationOptions);
-
-    updateStationOptions();
 </script>
 {% endblock %}
