@@ -1,21 +1,31 @@
 # =========================================================
-# [최종본]
-# LightGBM 회귀 + 출퇴근 시간대 전용 혼잡도 분류기
+# [완전 최종본]
+# LightGBM 회귀 + 출퇴근 시간대 전용 4단계 혼잡도 분류기
 # + 패턴 통계 저장 + 서비스 결과 저장 + 모델 저장
 #
+# ---------------------------------------------------------
 # 변경사항 요약
-# 1. 원본 데이터 파일 경로를 상대경로 기반(BASE_DIR + os.path.join)으로 수정
-# 2. 전체 데이터는 잔여좌석 회귀모델로 학습하도록 유지
-# 3. 출퇴근 시간대(is_peak=1) 데이터만 별도로 추출해 5단계 혼잡도 분류모델 추가
-# 4. 서비스 예측 시 비출퇴근은 회귀 기반 혼잡도, 출퇴근은 분류기 결과를 우선 사용하도록 변경
+# 1. 전체 데이터는 잔여좌석 회귀모델로 학습하도록 유지
+# 2. 출퇴근 시간대(is_peak=1) 데이터만 별도로 추출해
+#    4단계 혼잡도 분류모델 추가
+# 3. 혼잡도 기준을 아래와 같이 4단계로 재정의
+#    - 0: 매우 혼잡  (0~5석)
+#    - 1: 혼잡      (6~15석)
+#    - 2: 보통      (16~30석)
+#    - 3: 여유      (31~45석)
+# 4. 서비스 예측 시
+#    - 비출퇴근: 회귀 기반 혼잡도 사용
+#    - 출퇴근: 분류기 결과를 최종 혼잡도로 우선 사용
 # 5. train 기준 패턴 통계(feature) 파일과 meta 정보 저장 기능 추가
-# 6. 테스트 서비스 결과 CSV, 노선별 정류소 순서 CSV, 모델 및 인코더 저장 기능 추가
+# 6. classification report txt 저장 기능 추가
+# 7. 테스트 서비스 결과 CSV, 노선별 정류소 순서 CSV,
+#    모델 및 인코더 저장 기능 포함
 #
 # ---------------------------------------------------------
 # 모델 구조
 # 1) 전체 시간대 데이터로 잔여좌석 회귀모델 학습
 # 2) 출퇴근 시간대(is_peak=1) 데이터만 따로 뽑아
-#    혼잡도 분류모델 학습
+#    4단계 혼잡도 분류모델 학습
 # 3) 서비스 예측 시
 #    - 비출퇴근: 회귀 예측값을 혼잡도로 변환
 #    - 출퇴근: 분류기 결과를 최종 혼잡도로 사용
@@ -23,23 +33,18 @@
 # ---------------------------------------------------------
 # 왜 이렇게 설계했나?
 # - 잔여좌석 수 자체는 전체 데이터로 회귀하는 것이 가장 안정적
-# - 하지만 혼잡도 분류는 전체 시간대로 하면 "여유" 쪽으로 과하게 쏠림
-# - 그래서 실제 혼잡도가 중요한 출퇴근 시간대만 따로 분류
-#
-# ---------------------------------------------------------
-# 추가 포함 내용
-# - train 기준 패턴 통계(feature) 생성
-# - 해당 패턴 통계 CSV 저장
-# - fallback용 meta 정보 JSON 저장
-# - 테스트 서비스 결과 CSV 저장
-# - 모델 / 인코더 저장
+# - 하지만 혼잡도 분류는 전체 시간대로 하면 "여유" 쪽으로 과하게 쏠릴 수 있음
+# - 그래서 실제 혼잡도 판단이 중요한 출퇴근 시간대만 따로 분류
+# - 4단계 기준도 단순 21~45 통합이 아니라
+#   0~5 / 6~15 / 16~30 / 31~45 로 재설정해
+#   중간 구간을 더 잘 구분하도록 설계
 # =========================================================
 
 
 # =========================================================
 # 1. 라이브러리 import
 # =========================================================
-# 파일 경로 잡기
+
 import os
 
 # 표 형태 데이터 처리용
@@ -76,9 +81,10 @@ from lightgbm import LGBMRegressor, LGBMClassifier
 # 2. 설정값
 # =========================================================
 
-# 학습에 사용할 통합 원본 CSV 파일
-# 파일 위치 기준으로 강제 설정(상대경로)
+# 현재 실행 중인 파이썬 파일 위치를 기준으로 절대경로 생성
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 학습에 사용할 통합 원본 CSV 파일 경로
 file_path = os.path.join(BASE_DIR, "..", "data", "bus_all_raw3.csv")
 
 # 광역버스 최대 좌석 수
@@ -93,42 +99,38 @@ LOW_SEAT_THRESHOLD = 10
 # =========================================================
 # 3. 혼잡도 기준 함수
 # =========================================================
-# 출퇴근 시간대 전용 분류기에서 사용할 혼잡도 5단계 기준
+# 출퇴근 시간대 전용 분류기에서 사용할 혼잡도 4단계 기준
 #
-# 0: 매우 혼잡  (0~3석)
-# 1: 혼잡      (4~10석)
-# 2: 보통      (11~20석)
-# 3: 여유      (21~30석)
-# 4: 매우 여유 (31~45석)
+# 0: 매우 혼잡  (0~5석)
+# 1: 혼잡      (6~15석)
+# 2: 보통      (16~30석)
+# 3: 여유      (31~45석)
 #
 # 이 함수는 두 곳에서 사용됨:
 # 1) 분류 타깃(y_cls) 생성
 # 2) 회귀 예측값을 서비스용 혼잡도로 변환할 때
 # =========================================================
-def seat_to_peak_congestion(seat):
+def seat_to_peak_congestion_4(seat):
     # 실수값일 수 있으므로 반올림 후, 0~45 범위 제한
     seat = int(np.clip(np.round(seat), 0, MAX_SEAT))
 
-    if seat <= 3:
+    if seat <= 5:
         return 0   # 매우 혼잡
-    elif seat <= 10:
+    elif seat <= 15:
         return 1   # 혼잡
-    elif seat <= 20:
-        return 2   # 보통
     elif seat <= 30:
-        return 3   # 여유
+        return 2   # 보통
     else:
-        return 4   # 매우 여유
+        return 3   # 여유
 
 
 # 숫자 class를 사람이 읽을 수 있는 한글 라벨로 바꾸는 함수
-def congestion_label_text(cls):
+def congestion_label_text_4(cls):
     mapping = {
         0: "매우 혼잡",
         1: "혼잡",
         2: "보통",
-        3: "여유",
-        4: "매우 여유"
+        3: "여유"
     }
     return mapping.get(cls, "알수없음")
 
@@ -278,11 +280,11 @@ df["is_low_seat"] = (df["remaining_seat"] <= LOW_SEAT_THRESHOLD).astype(int)
 # =========================================================
 # 10. 출퇴근 전용 분류 타깃 생성
 # =========================================================
-# remaining_seat를 5단계 혼잡도로 변환해서 분류 target 생성
+# remaining_seat를 4단계 혼잡도로 변환해서 분류 target 생성
 # =========================================================
-df["peak_congestion_class"] = df["remaining_seat"].apply(seat_to_peak_congestion)
+df["peak_congestion_class"] = df["remaining_seat"].apply(seat_to_peak_congestion_4)
 
-print("\n[peak_congestion_class 전체 분포]")
+print("\n[peak_congestion_class 전체 분포 - 4단계]")
 print(df["peak_congestion_class"].value_counts(normalize=True).sort_index())
 
 
@@ -698,7 +700,7 @@ print("test :", X_test_cls.shape, y_test_cls.shape)
 # =========================================================
 lgbm_peak_cls = LGBMClassifier(
     objective="multiclass",
-    num_class=5,
+    num_class=4,
     n_estimators=800,
     learning_rate=0.05,
     max_depth=10,
@@ -745,6 +747,7 @@ def evaluate_regression(model, X, y, name="dataset"):
 # 22. 분류 평가 함수
 # =========================================================
 # accuracy, macro F1, weighted F1, 혼동행렬, 리포트 출력
+# + 긴 출력이 잘리는 문제를 막기 위해 txt 파일로도 저장
 # =========================================================
 def evaluate_classification(model, X, y, name="dataset"):
     pred = model.predict(X)
@@ -753,12 +756,28 @@ def evaluate_classification(model, X, y, name="dataset"):
     macro_f1 = f1_score(y, pred, average="macro")
     weighted_f1 = f1_score(y, pred, average="weighted")
 
+    cm = confusion_matrix(y, pred)
+    report = classification_report(y, pred, digits=4)
+
     print(f"\n[{name}]")
     print(f"ACC        : {acc:.4f}")
     print(f"Macro F1   : {macro_f1:.4f}")
     print(f"Weighted F1: {weighted_f1:.4f}")
-    print(confusion_matrix(y, pred))
-    print(classification_report(y, pred, digits=4))
+    print(cm)
+    print(report)
+
+    file_name = f"{name.replace(' ', '_').lower()}_report.txt"
+    with open(file_name, "w", encoding="utf-8") as f:
+        f.write(f"[{name}]\n")
+        f.write(f"ACC        : {acc:.4f}\n")
+        f.write(f"Macro F1   : {macro_f1:.4f}\n")
+        f.write(f"Weighted F1: {weighted_f1:.4f}\n\n")
+        f.write("Confusion Matrix\n")
+        f.write(np.array2string(cm))
+        f.write("\n\nClassification Report\n")
+        f.write(report)
+
+    print(f"📄 저장 완료: {file_name}")
 
     return pred
 
@@ -772,8 +791,8 @@ def evaluate_classification(model, X, y, name="dataset"):
 valid_pred_reg = evaluate_regression(lgbm_reg, X_valid_reg, y_valid_reg, "VALID REG")
 test_pred_reg = evaluate_regression(lgbm_reg, X_test_reg, y_test_reg, "TEST REG")
 
-valid_pred_cls = evaluate_classification(lgbm_peak_cls, X_valid_cls, y_valid_cls, "VALID PEAK CLS")
-test_pred_cls = evaluate_classification(lgbm_peak_cls, X_test_cls, y_test_cls, "TEST PEAK CLS")
+valid_pred_cls = evaluate_classification(lgbm_peak_cls, X_valid_cls, y_valid_cls, "VALID PEAK CLS 4CLASS")
+test_pred_cls = evaluate_classification(lgbm_peak_cls, X_test_cls, y_test_cls, "TEST PEAK CLS 4CLASS")
 
 
 # =========================================================
@@ -802,10 +821,10 @@ def predict_service(row_df):
     # 2) 회귀 예측값 기반 기본 혼잡도 생성
     # -----------------------------------------------------
     result["pred_congestion_class_from_reg"] = (
-        pd.Series(pred_seat).apply(seat_to_peak_congestion).values
+        pd.Series(pred_seat).apply(seat_to_peak_congestion_4).values
     )
     result["pred_congestion_label_from_reg"] = (
-        result["pred_congestion_class_from_reg"].apply(congestion_label_text)
+        result["pred_congestion_class_from_reg"].apply(congestion_label_text_4)
     )
 
     # -----------------------------------------------------
@@ -821,7 +840,7 @@ def predict_service(row_df):
         peak_pred = lgbm_peak_cls.predict(result.loc[peak_mask, FEATURE_COLS])
         result.loc[peak_mask, "pred_peak_cls"] = peak_pred
         result.loc[peak_mask, "pred_peak_cls_label"] = (
-            pd.Series(peak_pred).apply(congestion_label_text).values
+            pd.Series(peak_pred).apply(congestion_label_text_4).values
         )
 
     # -----------------------------------------------------
@@ -855,12 +874,12 @@ save_cols = [
 ]
 
 service_result[save_cols].to_csv(
-    "test_service_result_peak_classifier.csv",
+    "test_service_result_peak_classifier_4class.csv",
     index=False,
     encoding="utf-8-sig"
 )
 
-print("\n저장 완료: test_service_result_peak_classifier.csv")
+print("\n저장 완료: test_service_result_peak_classifier_4class.csv")
 print("\n[test_service_result 샘플]")
 print(service_result[save_cols].head(10))
 
@@ -885,17 +904,21 @@ print("\n정류소 순서 저장 완료: route_station_order.csv")
 # 27. 모델 / 인코더 저장
 # =========================================================
 # 나중에 실제 서비스 추론 시 재사용할 수 있도록 저장
+# 실험 버전별로 구분하기 위해 별도 폴더에 저장
 # =========================================================
-joblib.dump(lgbm_reg, "lgbm_point_seat_regressor_final.pkl")
-joblib.dump(lgbm_peak_cls, "lgbm_peak_congestion_classifier.pkl")
+model_dir = os.path.join(BASE_DIR, "models", "4class_0-5_6-15_16-30_31-45")
+os.makedirs(model_dir, exist_ok=True)
 
-joblib.dump(route_le, "route_label_encoder.pkl")
-joblib.dump(stid_le, "stid_label_encoder.pkl")
-joblib.dump(arsid_le, "arsid_label_encoder.pkl")
+joblib.dump(lgbm_reg, os.path.join(model_dir, "reg.pkl"))
+joblib.dump(lgbm_peak_cls, os.path.join(model_dir, "cls.pkl"))
+
+joblib.dump(route_le, os.path.join(model_dir, "route_encoder.pkl"))
+joblib.dump(stid_le, os.path.join(model_dir, "stid_encoder.pkl"))
+joblib.dump(arsid_le, os.path.join(model_dir, "arsid_encoder.pkl"))
 
 print("\n모델 저장 완료")
-print("- lgbm_point_seat_regressor_final.pkl")
-print("- lgbm_peak_congestion_classifier.pkl")
-print("- route_label_encoder.pkl")
-print("- stid_label_encoder.pkl")
-print("- arsid_label_encoder.pkl")
+print(f"- {os.path.join(model_dir, 'reg.pkl')}")
+print(f"- {os.path.join(model_dir, 'cls.pkl')}")
+print(f"- {os.path.join(model_dir, 'route_encoder.pkl')}")
+print(f"- {os.path.join(model_dir, 'stid_encoder.pkl')}")
+print(f"- {os.path.join(model_dir, 'arsid_encoder.pkl')}")
