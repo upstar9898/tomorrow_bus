@@ -50,6 +50,47 @@
             padding: 1.25rem !important;
         }
     }
+
+    .favorite-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .favorite-actions .btn {
+        border-radius: 14px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 767px) {
+        .favorite-actions {
+            flex-direction: column;
+        }
+
+        .favorite-actions .btn {
+            width: 100%;
+        }
+    }
+
+    .toast-ui {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-size: 14px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.25s ease;
+        z-index: 9999;
+    }
+
+    .toast-ui.show {
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
@@ -144,6 +185,17 @@
                                 <div class="fs-4 fw-bold" id="fullProb">-</div>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="favorite-actions mt-3">
+                                <button type="button" class="btn btn-outline-primary" id="favoriteRouteBtn" disabled>
+                                    이 노선 즐겨찾기
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="favoriteStationBtn"
+                                    disabled>
+                                    이 정류장 즐겨찾기
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -179,6 +231,13 @@
 
 {% block extra_script %}
 <script>
+    let currentPrediction = {
+        routeId: "",
+        routeName: "",
+        stationId: "",
+        stationName: ""
+    };
+
     // 쿠키 가져오기
     function getCookie(name) {
         let cookieValue = null;
@@ -199,6 +258,9 @@
     const stationSelect = document.getElementById("stationSelect");
     const predictForm = document.getElementById("predictForm");
     const rideDateTime = document.getElementById("rideDateTime");
+
+    const favoriteRouteBtn = document.getElementById("favoriteRouteBtn");
+    const favoriteStationBtn = document.getElementById("favoriteStationBtn");
 
     // 노선 선택 시 정류장 불러오기
     routeSelect.addEventListener("change", async function () {
@@ -294,11 +356,8 @@
 
 
     function renderResult(routeName, stationName, result) {
-
         const data = result.data;
 
-
-        // 예측 결과 갱신
         document.getElementById("resultSummary").textContent =
             `${routeName} · ${stationName} · ${data.date_time}`;
 
@@ -308,22 +367,110 @@
         document.getElementById("fullProb").textContent =
             `${(data.full_prob * 100).toFixed(1)}%`;
 
+        currentPrediction.routeId = routeSelect.value;
+        currentPrediction.routeName = routeName;
+        currentPrediction.stationId = stationSelect.value;
+        currentPrediction.stationName = stationName;
 
-        // 최근 예측 테이블 갱신
+        favoriteRouteBtn.disabled = false;
+        favoriteStationBtn.disabled = false;
+
         const historyTable = document.getElementById("historyTable");
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td>${routeName}</td>
-            <td>${stationName}</td>
-            <td>${data.date_time}</td>
-            <td>${data.remaining_seat}석</td>
-            <td>${(data.full_prob * 100).toFixed(1)}%</td>
-        `;
+        <td>${routeName}</td>
+        <td>${stationName}</td>
+        <td>${data.date_time}</td>
+        <td>${data.remaining_seat}석</td>
+        <td>${(data.full_prob * 100).toFixed(1)}%</td>
+    `;
         historyTable.prepend(row);
 
         while (historyTable.children.length > 6) {
             historyTable.removeChild(historyTable.lastElementChild);
         }
     }
+
+    function getFavorites() {
+        const data = localStorage.getItem("favorites");
+        return data ? JSON.parse(data) : { buses: [], stations: [] };
+    }
+
+    function saveFavorites(favorites) {
+        localStorage.setItem("favorites", JSON.stringify(favorites));
+    }
+
+    function showToast(message) {
+        let toast = document.getElementById("toast");
+
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "toast";
+            toast.className = "toast-ui";
+            document.body.appendChild(toast);
+        }
+
+        toast.innerText = message;
+        toast.classList.add("show");
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 2000);
+    }
+
+    function addFavorite(type, name) {
+        const favorites = getFavorites();
+        const limit = 5;
+
+        if (type === "bus") {
+            if (favorites.buses.includes(name)) {
+                showToast("이미 즐겨찾기에 있는 버스예요.");
+                return;
+            }
+
+            if (favorites.buses.length >= limit) {
+                showToast("버스 즐겨찾기는 최대 5개까지 저장할 수 있어요.");
+                return;
+            }
+
+            favorites.buses.push(name);
+            saveFavorites(favorites);
+            showToast("버스 즐겨찾기에 추가됐어요.");
+            return;
+        }
+
+        if (type === "station") {
+            if (favorites.stations.includes(name)) {
+                showToast("이미 즐겨찾기에 있는 정류장이에요.");
+                return;
+            }
+
+            if (favorites.stations.length >= limit) {
+                showToast("정류장 즐겨찾기는 최대 5개까지 저장할 수 있어요.");
+                return;
+            }
+
+            favorites.stations.push(name);
+            saveFavorites(favorites);
+            showToast("정류장 즐겨찾기에 추가됐어요.");
+            return;
+        }
+    }
+
+    favoriteRouteBtn.addEventListener("click", function () {
+        if (!currentPrediction.routeId) {
+            showToast("먼저 예측을 실행하세요.");
+            return;
+        }
+        addFavorite("bus", currentPrediction.routeId);
+    });
+
+    favoriteStationBtn.addEventListener("click", function () {
+        if (!currentPrediction.stationName) {
+            showToast("먼저 예측을 실행하세요.");
+            return;
+        }
+        addFavorite("station", currentPrediction.stationName);
+    });
 </script>
 {% endblock %}
