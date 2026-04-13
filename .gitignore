@@ -102,3 +102,6 @@ data/
 /*.csv
 /*.txt
 *.pkl
+
+# training 산출물
+training/artifacts
