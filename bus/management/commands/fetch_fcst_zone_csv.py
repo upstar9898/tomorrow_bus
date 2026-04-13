@@ -12,15 +12,15 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         # commands 폴더 기준 -> 프로젝트 루트 경로
         base_dir = os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.abspath(__file__))
-                )
-            )
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         )
 
-        input_txt_path = os.path.join(base_dir, "reg_id_list.txt")
-        output_csv_path = os.path.join(base_dir, "fcst_zone_regid_regname.csv")
+        # data 폴더
+        data_dir = os.path.join(base_dir, "data")
+        os.makedirs(data_dir, exist_ok=True)
+
+        input_txt_path = os.path.join(data_dir, "reg_id_list.txt")
+        output_csv_path = os.path.join(data_dir, "fcst_zone_regid_regname.csv")
 
         service_key = os.environ.get("WEATHER_ZONE_API_KEY")
         base_url = "https://apis.data.go.kr/1360000/FcstZoneInfoService/getFcstZoneCd"
@@ -69,19 +69,17 @@ class Command(BaseCommand):
                     api_reg_id = item.findtext("regId", default="").strip()
                     reg_name = item.findtext("regName", default="").strip()
 
-                    result_rows.append({
-                        "regId": api_reg_id,
-                        "regName": reg_name,
-                    })
+                    result_rows.append(
+                        {
+                            "regId": api_reg_id,
+                            "regName": reg_name,
+                        }
+                    )
 
-                self.stdout.write(
-                    self.style.SUCCESS(f"[완료] regId={reg_id}")
-                )
+                self.stdout.write(self.style.SUCCESS(f"[완료] regId={reg_id}"))
 
             except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"[오류] regId={reg_id}, error={e}")
-                )
+                self.stdout.write(self.style.ERROR(f"[오류] regId={reg_id}, error={e}"))
 
         # CSV 저장
         with open(output_csv_path, "w", newline="", encoding="utf-8-sig") as f:
