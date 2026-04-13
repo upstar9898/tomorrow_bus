@@ -4,6 +4,14 @@
 
 {% block extra_style %}
 <style>
+    @font-face {
+        font-family: 'Paperlogy';
+        src: url('/static/fonts/Paperlogy-7Bold.ttf') format('opentype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
     .home-hero {
         overflow: hidden;
     }
@@ -60,7 +68,7 @@
     .stat-card {
         border: 1px solid #e8eef7;
         border-radius: 20px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,251,255,0.96) 100%);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.96) 100%);
         padding: 20px;
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
     }
@@ -204,6 +212,7 @@
     }
 
     @media (max-width: 991px) {
+
         .stats-grid,
         .feature-grid {
             grid-template-columns: 1fr;
@@ -216,6 +225,7 @@
     }
 
     @media (max-width: 767px) {
+
         .status-card,
         .feature-card,
         .stat-card {
@@ -234,6 +244,15 @@
             width: 100%;
         }
     }
+
+    .btn-text {
+        display: inline-block;
+        margin-top: 4px;
+    }
+
+    .paperlogy-font {
+        font-family: 'Paperlogy', sans-serif;
+    }
 </style>
 {% endblock %}
 
@@ -245,7 +264,7 @@
                 <div class="col-12 col-xl-7">
                     <span class="eyebrow-chip">AI Prediction · Smart Transit</span>
 
-                    <h1 class="home-title">
+                    <h1 class="home-title paperlogy-font">
                         타기 전에 미리 보는<br>
                         광역버스 잔여좌석 예측
                     </h1>
@@ -257,22 +276,25 @@
                     </p>
 
                     <div class="hero-actions">
-                        <a class="btn btn-primary" href="{% url 'service1' %}">서비스 1 보기</a>
-                        <a class="btn btn-outline-secondary" href="{% url 'service2' %}">서비스 2 보기</a>
-                        <a class="btn btn-outline-secondary" href="{% url 'favorites' %}">즐겨찾기 보기</a>
+                        <a class="btn btn-primary" href="{% url 'service1' %}"><span class="btn-text">서비스 1
+                                보기</span></a>
+                        <a class="btn btn-outline-secondary" href="{% url 'service2' %}"><span class="btn-text">서비스 2
+                                보기</span></a>
+                        <a class="btn btn-outline-secondary" href="{% url 'favorites' %}"><span class="btn-text">즐겨찾기
+                                보기</span></a>
                     </div>
 
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <strong>정류장 단위</strong>
+                            <strong class="paperlogy-font">정류장 단위</strong>
                             <span>노선, 정류장, 승차 시간을 입력해 예상 잔여좌석을 확인할 수 있습니다.</span>
                         </div>
                         <div class="stat-card">
-                            <strong>노선 전체</strong>
+                            <strong class="paperlogy-font">노선 전체</strong>
                             <span>특정 시각 기준으로 각 정류장별 좌석 예측 결과를 한 번에 볼 수 있습니다.</span>
                         </div>
                         <div class="stat-card">
-                            <strong>즐겨찾기</strong>
+                            <strong class="paperlogy-font">즐겨찾기</strong>
                             <span>자주 쓰는 노선과 정류장을 저장해 빠르게 다시 접근할 수 있습니다.</span>
                         </div>
                     </div>
@@ -282,11 +304,11 @@
                     <div class="status-board">
                         <div class="status-card status-highlight">
                             <div class="status-head">
-                                <strong>예시 예측 결과</strong>
+                                <strong class="paperlogy-font">예시 예측 결과</strong>
                                 <span class="status-badge">Demo</span>
                             </div>
 
-                            <div class="arrival-text">08:30 기준 11석</div>
+                            <div class="arrival-text paperlogy-font">08:30 기준 11석</div>
 
                             <p class="status-desc">
                                 9408번 강남역 정류장 기준 예측 결과입니다.
@@ -308,12 +330,13 @@
 
                             <div class="favorite-actions">
                                 <button class="btn btn-light" onclick="addFavorite('bus', '9408')">이 노선 즐겨찾기</button>
-                                <button class="btn btn-outline-light" onclick="addFavorite('station', '강남역')">이 정류장 즐겨찾기</button>
+                                <button class="btn btn-outline-light" onclick="addFavorite('station', '강남역')">이 정류장
+                                    즐겨찾기</button>
                             </div>
                         </div>
 
                         <div class="status-card">
-                            <strong class="d-block mb-2">서비스 소개</strong>
+                            <strong class="d-block mb-2 paperlogy-font">서비스 소개</strong>
                             <p class="mb-0 soft-note" style="line-height: 1.8;">
                                 서울시 버스 도착정보 API 기반 데이터를 수집하고,
                                 광역버스의 잔여좌석 수와 만차 가능성을 예측하는 프로젝트입니다.
@@ -326,21 +349,21 @@
 
             <div class="feature-grid">
                 <article class="feature-card">
-                    <h2>특정 정류장 예측</h2>
+                    <h2 class="paperlogy-font">특정 정류장 예측</h2>
                     <p>
                         사용자가 노선, 정류장, 승차 시간을 선택하면 해당 조건에서의 예상 잔여좌석과 혼잡 상태를 제공합니다.
                     </p>
                 </article>
 
                 <article class="feature-card">
-                    <h2>노선 전체 시각화</h2>
+                    <h2 class="paperlogy-font">노선 전체 시각화</h2>
                     <p>
                         하나의 시각을 기준으로 노선 전체 정류장에 대한 좌석 예측을 지도와 목록 형태로 함께 보여줄 수 있습니다.
                     </p>
                 </article>
 
                 <article class="feature-card">
-                    <h2>Django 확장 구조</h2>
+                    <h2 class="paperlogy-font">Django 확장 구조</h2>
                     <p>
                         공통 레이아웃은 base 템플릿으로 관리하고, 각 서비스는 extend 구조로 분리해 유지보수와 기능 확장이 쉽습니다.
                     </p>
