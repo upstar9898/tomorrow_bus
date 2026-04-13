@@ -18,6 +18,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
+BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
 PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_with1prev")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
@@ -290,11 +291,11 @@ def preprocess(df):
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
-    file_list = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+    file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
     # file_list = ["bus_data_2026_03_10.csv"]
 
     for filename in file_list:
-        input_path = os.path.join(DATA_DIR, filename)
+        input_path = os.path.join(BUS_API_DATA_DIR, filename)
         output_filename = filename.replace(".csv", "_preprocessed_with1prev.csv")
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip

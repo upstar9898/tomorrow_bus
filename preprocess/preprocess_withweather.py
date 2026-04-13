@@ -18,9 +18,9 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
+BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
 PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
 WEATHER_DATA_DIR = os.path.join(DATA_DIR, "data_for_weather_process")
-BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
 STATION_PATH = os.path.join(WEATHER_DATA_DIR, "bus_station_for_admin_260409.csv")
 WEATHER_PATH = os.path.join(WEATHER_DATA_DIR, "weather_260413_first_processed.csv")
 
