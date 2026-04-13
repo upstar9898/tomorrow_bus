@@ -7,8 +7,8 @@ class Command(BaseCommand):
     help = "weather txt 파일을 CSV로 변환"
 
     def handle(self, *args, **kwargs):
-        input_path = "/bus/tomorrow_bus/output_file.txt"
-        output_path = "weather.csv"
+        input_path = "/data/output_file.txt"
+        output_path = "/data/weather.csv"
 
         data = []
         columns = None
@@ -22,7 +22,7 @@ class Command(BaseCommand):
                     continue
 
                 # 여러 공백 → 하나 기준 split
-                parts = re.split(r'\s+', line)
+                parts = re.split(r"\s+", line)
 
                 # 첫 줄 → 컬럼
                 if columns is None:
