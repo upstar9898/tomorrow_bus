@@ -1,55 +1,75 @@
 import os
 import pandas as pd
-from django.core.management.base import BaseCommand
 
 
-class Command(BaseCommand):
-    help = "weather_regioncode.txt를 csv로 변환"
+def main():
+    # 현재 파일 위치: 프로젝트루트/collection/파일.py
+    current_file = os.path.abspath(__file__)
+    collection_dir = os.path.dirname(current_file)
+    base_dir = os.path.dirname(collection_dir)   # 프로젝트 루트
+    data_dir = os.path.join(base_dir, "data")
 
-    def handle(self, *args, **kwargs):
-        # 프로젝트 루트
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        )
+    os.makedirs(data_dir, exist_ok=True)
 
-        data_dir = os.path.join(base_dir, "data")
+    input_path = os.path.join(data_dir, "weather_regioncode.txt")
+    output_path = os.path.join(data_dir, "weather_regioncode.csv")
 
-        input_path = os.path.join(data_dir, "weather_regioncode.txt")
-        output_path = os.path.join(data_dir, "weather_regioncode.csv")
+    print("현재 파일 위치:", current_file)
+    print("프로젝트 루트:", base_dir)
+    print("data 폴더:", data_dir)
+    print("입력 파일:", input_path)
+    print("출력 파일:", output_path)
 
-        rows = []
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"입력 파일이 없습니다: {input_path}")
 
-        with open(input_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                line = line.rstrip()
+    rows = []
 
-                # 주석 제거
-                if not line or line.startswith("#"):
-                    continue
+    with open(input_path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.rstrip()
 
-                parts = line.split()
+            # 주석 제거
+            if not line or line.startswith("#"):
+                continue
 
-                # 최소 길이 체크
-                if len(parts) < 13:
-                    continue
+            parts = line.split()
 
-                try:
-                    row = {
-                        "STN": int(parts[0]),
-                        "LON": float(parts[1]),
-                        "LAT": float(parts[2]),
-                        "STN_KO": parts[10],
-                        "STN_EN": parts[11],
-                        "FCT_ID": parts[12],
-                        "LAW_ID": parts[13] if len(parts) > 13 else None,
-                        "LAW_ADDR": " ".join(parts[15:]) if len(parts) > 15 else None,
-                    }
-                    rows.append(row)
+            # 최소 길이 체크
+            if len(parts) < 13:
+                continue
 
-                except (ValueError, IndexError):
-                    continue
+            try:
+                row = {
+                    "STN": int(parts[0]),
+                    "LON": float(parts[1]),
+                    "LAT": float(parts[2]),
+                    "STN_KO": parts[10],
+                    "STN_EN": parts[11],
+                    "FCT_ID": parts[12],
+                    "LAW_ID": parts[13] if len(parts) > 13 else None,
+                    "LAW_ADDR": " ".join(parts[15:]) if len(parts) > 15 else None,
+                }
+                rows.append(row)
 
-        df = pd.DataFrame(rows)
-        df.to_csv(output_path, index=False, encoding="utf-8-sig")
+            except (ValueError, IndexError):
+                continue
 
-        self.stdout.write(self.style.SUCCESS(f"CSV 변환 완료: {output_path}"))
+    df = pd.DataFrame(rows)
+
+    print("\n[변환 결과]")
+    print("행 개수:", len(df))
+
+    df.to_csv(output_path, index=False, encoding="utf-8-sig")
+
+    print("\n[완료]")
+    print(f"CSV 변환 완료: {output_path}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("\n[ERROR]")
+        print(type(e).__name__, ":", e)
+        raise
