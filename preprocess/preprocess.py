@@ -108,7 +108,7 @@ def preprocess(df):
     df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
     df["arrmsg1"] = df["arrmsg1"].apply(normalize_arrmsg)
     mask1 = df["arrmsg1"].str.contains("곧", na=False)
-    mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
+    mask2 = df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False)
 
     df = df[mask1 | mask2].copy()
 
