@@ -238,6 +238,7 @@
         stationName: ""
     };
 
+
     // 쿠키 가져오기
     function getCookie(name) {
         let cookieValue = null;
@@ -313,9 +314,16 @@
         const routeId = routeSelect.value;
         const stationId = stationSelect.value;
         const dateTime = rideDateTime.value;
+        const nowValue = getNowForDateTimeLocal();
 
         if (!routeId || !stationId || !dateTime) {
             alert("노선, 정류장, 승차 일시를 모두 선택하세요.");
+            return;
+        }
+
+        if (dateTime < nowValue) {
+            alert("현재 시각 이후만 선택할 수 있습니다.");
+            rideDateTime.focus();
             return;
         }
 
@@ -488,5 +496,20 @@
 
         return `${yyyy}-${MM}-${dd} ${hh}:${mm}`;
     }
+
+    function getNowForDateTimeLocal() {
+        const now = new Date();
+
+        const yyyy = now.getFullYear();
+        const MM = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+
+        return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+    }
+
+    rideDateTime.min = getNowForDateTimeLocal();
+    rideDateTime.value = getNowForDateTimeLocal();
 </script>
 {% endblock %}
