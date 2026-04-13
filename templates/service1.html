@@ -358,8 +358,10 @@
     function renderResult(routeName, stationName, result) {
         const data = result.data;
 
+        const formattedDate = formatDateTime(data.date_time);
+
         document.getElementById("resultSummary").textContent =
-            `${routeName} · ${stationName} · ${data.date_time}`;
+            `${routeName} · ${stationName} · ${formattedDate}`;
 
         document.getElementById("seatPrediction").textContent =
             data.remaining_seat;
@@ -375,15 +377,16 @@
         favoriteRouteBtn.disabled = false;
         favoriteStationBtn.disabled = false;
 
+
         const historyTable = document.getElementById("historyTable");
         const row = document.createElement("tr");
         row.innerHTML = `
-        <td>${routeName}</td>
-        <td>${stationName}</td>
-        <td>${data.date_time}</td>
-        <td>${data.remaining_seat}석</td>
-        <td>${(data.full_prob * 100).toFixed(1)}%</td>
-    `;
+    <td>${routeName}</td>
+    <td>${stationName}</td>
+    <td>${formattedDate}</td>
+    <td>${data.remaining_seat}석</td>
+    <td>${(data.full_prob * 100).toFixed(1)}%</td>
+`;
         historyTable.prepend(row);
 
         while (historyTable.children.length > 6) {
@@ -472,5 +475,18 @@
         }
         addFavorite("station", currentPrediction.stationName);
     });
+
+    function formatDateTime(dateStr) {
+        const date = new Date(dateStr);
+
+        const yyyy = date.getFullYear();
+        const MM = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+
+        const hh = String(date.getHours()).padStart(2, "0");
+        const mm = String(date.getMinutes()).padStart(2, "0");
+
+        return `${yyyy}-${MM}-${dd} ${hh}:${mm}`;
+    }
 </script>
 {% endblock %}
