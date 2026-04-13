@@ -3,12 +3,11 @@
 {% block content %}
   <h1>{{ title }}</h1>
 
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" style="margin-top: 20px;">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="default">업로드</button>
-  </form>
 
-  <br>
-  <p><strong>필수 CSV 헤더:</strong> arsId, stNm, 위도, 경도</p>
+    <button type="submit" class="default">업로드</button>
+    <a href="../" style="margin-left: 10px;">취소</a>
+  </form>
 {% endblock %}
