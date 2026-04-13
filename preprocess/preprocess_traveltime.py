@@ -8,7 +8,7 @@
 
 import numpy as np
 import pandas as pd
-import holidays
+# import holidays
 import os
 
 
@@ -18,7 +18,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_traveltime")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
@@ -37,30 +37,6 @@ USE_COLS = [
     "reride_Num1",
     "full1",
 ]
-
-# # 최종 학습용 feature 컬럼
-# FEATURE_COLS = [
-#     "staOrd",
-#     "hour",
-#     "minute",
-#     "dayofweek",
-#     "is_weekend",
-#     "is_holiday",
-#     "is_peak",
-#     "month_sin",
-#     "month_cos",
-#     "day_sin",
-#     "day_cos",
-#     "hour_sin",
-#     "hour_cos",
-#     "minute_sin",
-#     "minute_cos",
-#     "dow_sin",
-#     "dow_cos",
-#     "exps1",
-#     "remaining_seat",
-# ]
-
 
 # =========================================================
 # 2. 유틸
@@ -142,33 +118,8 @@ def preprocess(df):
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
 
-    # -----------------------------
-    # 현재 시점에 알 수 있는 파생 변수만 생성
-    # -----------------------------
-    df["year"] = df["mkTm"].dt.year
-    df["month"] = df["mkTm"].dt.month
-    df["day"] = df["mkTm"].dt.day
-    df["hour"] = df["mkTm"].dt.hour
-    df["minute"] = df["mkTm"].dt.minute
-    df["dayofweek"] = df["mkTm"].dt.dayofweek
-    df["date"] = df["mkTm"].dt.date
-
-    df["is_weekend"] = (df["dayofweek"] >= 5).astype(int)
-
-    years = sorted(df["year"].dropna().unique().tolist())
-    kr_holidays = holidays.KR(years=years)
-    df["is_holiday"] = df["date"].apply(lambda d: 1 if d in kr_holidays else 0)
-
-    df["is_peak"] = (
-        ((df["hour"] >= 7) & (df["hour"] <= 9))
-        | ((df["hour"] >= 17) & (df["hour"] <= 20))
-    ).astype(int)
-
-    df["month_sin"], df["month_cos"] = cyclical_encode(df["month"], 12)
-    df["day_sin"], df["day_cos"] = cyclical_encode(df["day"], 31)
-    df["hour_sin"], df["hour_cos"] = cyclical_encode(df["hour"], 24)
-    df["minute_sin"], df["minute_cos"] = cyclical_encode(df["minute"], 60)
-    df["dow_sin"], df["dow_cos"] = cyclical_encode(df["dayofweek"], 7)
+    # 도착 시간 열 추가
+    df["arrival_time"] = df["mkTm"] + pd.to_timedelta(df["exps1"], unit="s")
 
     # -----------------------------
     # 중복 제거
@@ -204,11 +155,27 @@ def preprocess(df):
     df = df.drop_duplicates(
         subset=["busRouteId", "stId", "vehId1", "trip_group"], keep="first"
     ).copy()
-    
+
     df = df.sort_values(
         ["busRouteId", "vehId1", "trip_group", "staOrd", "mkTm"],
         ascending=[True, True, True, True, True],
     ).copy()
+
+    # -----------------------------
+    # 이전 관측 정류장 기준 이동시간(travel_time) 추가
+    # -----------------------------
+    group_cols = ["busRouteId", "vehId1", "trip_group"]
+
+    df["prev_staOrd"] = df.groupby(group_cols)["staOrd"].shift(1)
+    df["prev_arrival_time"] = df.groupby(group_cols)["arrival_time"].shift(1)
+
+    sta_gap = df["staOrd"] - df["prev_staOrd"]
+    time_gap = (df["arrival_time"] - df["prev_arrival_time"]).dt.total_seconds()
+
+    df["travel_time"] = time_gap / sta_gap
+    df.loc[sta_gap <= 0, "travel_time"] = np.nan
+    # travel_time이 음수인 경우 결측치 처리
+    df.loc[df["travel_time"] < 0, "travel_time"] = np.nan
 
     # -----------------------------
     # 최종 정리
@@ -216,36 +183,15 @@ def preprocess(df):
     final_cols = [
         # 원본/식별
         "mkTm",
+        # 여행 시간
+        "arrival_time",
+        # 원본/식별 - 이어서
         "busRouteId",
         "stId",
         "arsId",
         "staOrd",
         "vehId1",
-        # 원본 기반 현재 정보
-        "exps1",
-        "arrmsg1",
-        "remaining_seat",
-        "full_flag",
-        # 시간 파생
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minute",
-        "dayofweek",
-        "is_weekend",
-        "is_holiday",
-        "is_peak",
-        "month_sin",
-        "month_cos",
-        "day_sin",
-        "day_cos",
-        "hour_sin",
-        "hour_cos",
-        "minute_sin",
-        "minute_cos",
-        "dow_sin",
-        "dow_cos",
+        "travel_time",
     ]
 
     df = df[final_cols].copy()
@@ -253,28 +199,8 @@ def preprocess(df):
     # feature 컬럼 숫자형 보정
     numeric_cols = [
         "staOrd",
-        "exps1",
-        "remaining_seat",
-        "full_flag",
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minute",
-        "dayofweek",
-        "is_weekend",
-        "is_holiday",
-        "is_peak",
-        "month_sin",
-        "month_cos",
-        "day_sin",
-        "day_cos",
-        "hour_sin",
-        "hour_cos",
-        "minute_sin",
-        "minute_cos",
-        "dow_sin",
-        "dow_cos",
+        # 여행 시간 관련
+        "travel_time",
     ]
 
     for c in numeric_cols:
@@ -295,7 +221,7 @@ if __name__ == "__main__":
 
     for filename in file_list:
         input_path = os.path.join(DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed.csv")
+        output_filename = filename.replace(".csv", "_preprocessed_traveltime.csv")
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
         if os.path.exists(output_path):

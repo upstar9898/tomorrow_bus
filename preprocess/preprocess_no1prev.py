@@ -18,7 +18,7 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_no1prev")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
@@ -108,7 +108,7 @@ def preprocess(df):
     df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
     df["arrmsg1"] = df["arrmsg1"].apply(normalize_arrmsg)
     mask1 = df["arrmsg1"].str.contains("곧", na=False)
-    mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
+    mask2 = df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False)
 
     df = df[mask1 | mask2].copy()
 
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
     for filename in file_list:
         input_path = os.path.join(DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed.csv")
+        output_filename = filename.replace(".csv", "_preprocessed_no1prev.csv")
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
         if os.path.exists(output_path):
