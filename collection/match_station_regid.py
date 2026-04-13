@@ -81,7 +81,7 @@ class Command(BaseCommand):
         ].drop_duplicates()
 
         station_df["is_virtual"] = (
-            station_df["stNm"].astype(str).str.contains("가상", na=False).astype(int)
+            station_df["stNm"].astype(str).str.contains("가상|미정차", na=False).astype(int)
         )
 
         # ---------------------------
