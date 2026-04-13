@@ -39,7 +39,7 @@
 # =========================================================
 # 1. 라이브러리 import
 # =========================================================
-
+# 파일 경로 잡기
 import os
 
 # 표 형태 데이터 처리용
@@ -77,6 +77,7 @@ from lightgbm import LGBMRegressor, LGBMClassifier
 # =========================================================
 
 # 학습에 사용할 통합 원본 CSV 파일
+# 파일 위치 기준으로 강제 설정(상대경로)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(BASE_DIR, "..", "data", "bus_all_raw3.csv")
 
