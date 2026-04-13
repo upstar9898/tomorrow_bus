@@ -84,6 +84,10 @@ from lightgbm import LGBMRegressor, LGBMClassifier
 # 현재 실행 중인 파이썬 파일 위치를 기준으로 절대경로 생성
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# 학습 결과 산출물(csv, json, txt 등)을 저장할 폴더
+ARTIFACT_DIR = os.path.join(BASE_DIR, "artifacts")
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
+
 # 학습에 사용할 통합 원본 CSV 파일 경로
 file_path = os.path.join(BASE_DIR, "..", "data", "bus_all_raw3.csv")
 
@@ -132,7 +136,7 @@ def congestion_label_text_4(cls):
         2: "보통",
         3: "여유"
     }
-    return mapping.get(cls, "알수없음")
+    return mapping.get(int(cls), "알수없음")
 
 
 # =========================================================
@@ -559,11 +563,11 @@ route_time_stat = (
 )
 
 # CSV 저장
-route_stat.to_csv("pattern_route_stat.csv", index=False, encoding="utf-8-sig")
-route_stop_stat.to_csv("pattern_route_stop_stat.csv", index=False, encoding="utf-8-sig")
-route_stop_time_stat.to_csv("pattern_route_stop_time_stat.csv", index=False, encoding="utf-8-sig")
-route_staord_stat.to_csv("pattern_route_staord_stat.csv", index=False, encoding="utf-8-sig")
-route_time_stat.to_csv("pattern_route_time_stat.csv", index=False, encoding="utf-8-sig")
+route_stat.to_csv(os.path.join(ARTIFACT_DIR, "pattern_route_stat.csv"), index=False, encoding="utf-8-sig")
+route_stop_stat.to_csv(os.path.join(ARTIFACT_DIR, "pattern_route_stop_stat.csv"), index=False, encoding="utf-8-sig")
+route_stop_time_stat.to_csv(os.path.join(ARTIFACT_DIR, "pattern_route_stop_time_stat.csv"), index=False, encoding="utf-8-sig")
+route_staord_stat.to_csv(os.path.join(ARTIFACT_DIR, "pattern_route_staord_stat.csv"), index=False, encoding="utf-8-sig")
+route_time_stat.to_csv(os.path.join(ARTIFACT_DIR, "pattern_route_time_stat.csv"), index=False, encoding="utf-8-sig")
 
 # fallback용 메타정보 저장
 pattern_meta = {
@@ -572,7 +576,7 @@ pattern_meta = {
     "max_seat": int(MAX_SEAT)
 }
 
-with open("pattern_meta.json", "w", encoding="utf-8") as f:
+with open(os.path.join(ARTIFACT_DIR, "pattern_meta.json"), "w", encoding="utf-8") as f:
     json.dump(pattern_meta, f, ensure_ascii=False, indent=2)
 
 print("\n패턴 통계 저장 완료")
@@ -766,7 +770,7 @@ def evaluate_classification(model, X, y, name="dataset"):
     print(cm)
     print(report)
 
-    file_name = f"{name.replace(' ', '_').lower()}_report.txt"
+    file_name = os.path.join(ARTIFACT_DIR, f"{name.replace(' ', '_').lower()}_report.txt")
     with open(file_name, "w", encoding="utf-8") as f:
         f.write(f"[{name}]\n")
         f.write(f"ACC        : {acc:.4f}\n")
@@ -791,8 +795,12 @@ def evaluate_classification(model, X, y, name="dataset"):
 valid_pred_reg = evaluate_regression(lgbm_reg, X_valid_reg, y_valid_reg, "VALID REG")
 test_pred_reg = evaluate_regression(lgbm_reg, X_test_reg, y_test_reg, "TEST REG")
 
-valid_pred_cls = evaluate_classification(lgbm_peak_cls, X_valid_cls, y_valid_cls, "VALID PEAK CLS 4CLASS")
-test_pred_cls = evaluate_classification(lgbm_peak_cls, X_test_cls, y_test_cls, "TEST PEAK CLS 4CLASS")
+valid_pred_cls = evaluate_classification(
+    lgbm_peak_cls, X_valid_cls, y_valid_cls, "VALID PEAK CLS 4CLASS"
+)
+test_pred_cls = evaluate_classification(
+    lgbm_peak_cls, X_test_cls, y_test_cls, "TEST PEAK CLS 4CLASS"
+)
 
 
 # =========================================================
@@ -874,12 +882,12 @@ save_cols = [
 ]
 
 service_result[save_cols].to_csv(
-    "test_service_result_peak_classifier_4class.csv",
+    os.path.join(ARTIFACT_DIR, "test_service_result_peak_classifier_4class.csv"),
     index=False,
     encoding="utf-8-sig"
 )
 
-print("\n저장 완료: test_service_result_peak_classifier_4class.csv")
+print("\n저장 완료:", os.path.join(ARTIFACT_DIR, "test_service_result_peak_classifier_4class.csv"))
 print("\n[test_service_result 샘플]")
 print(service_result[save_cols].head(10))
 
@@ -896,8 +904,12 @@ route_station_order = (
     .reset_index(drop=True)
 )
 
-route_station_order.to_csv("route_station_order.csv", index=False, encoding="utf-8-sig")
-print("\n정류소 순서 저장 완료: route_station_order.csv")
+route_station_order.to_csv(
+    os.path.join(ARTIFACT_DIR, "route_station_order.csv"),
+    index=False,
+    encoding="utf-8-sig"
+)
+print("\n정류소 순서 저장 완료:", os.path.join(ARTIFACT_DIR, "route_station_order.csv"))
 
 
 # =========================================================
