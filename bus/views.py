@@ -109,8 +109,8 @@ def predict_service1(request):
 @require_GET
 def get_route_seat_chart(request):
     route_id = request.GET.get("routeId")
-    target_date = request.GET.get("date")   # 예: 2026-04-01
-    target_time = request.GET.get("time")   # 예: 06:33
+    target_date = request.GET.get("date")  # 예: 2026-04-01
+    target_time = request.GET.get("time")  # 예: 06:33
 
     if not route_id or not target_date or not target_time:
         return JsonResponse(
@@ -165,8 +165,7 @@ def get_route_seat_chart(request):
         )
 
     snapshot_qs = (
-        Bus_arrival_info.objects
-        .filter(route_id=route_id, mkTm=nearest_mkTm)
+        Bus_arrival_info.objects.filter(route_id=route_id, mkTm=nearest_mkTm)
         .select_related("station", "route")
         .order_by("staOrd")
     )
@@ -186,11 +185,138 @@ def get_route_seat_chart(request):
         {
             "success": True,
             "routeId": route_id,
-            "routeName": snapshot_qs.first().route.routeName if snapshot_qs.exists() else "",
+            "routeName": snapshot_qs.first().route.routeName
+            if snapshot_qs.exists()
+            else "",
             "requestedDate": target_date,
             "requestedTime": target_time,
             "dayType": "weekend" if is_weekend else "weekday",
             "nearestMkTm": nearest_mkTm.strftime("%Y-%m-%d %H:%M:%S"),
             "stations": chart_data,
+        }
+    )
+
+
+@require_GET
+def get_station_week_chart(request):
+    route_id = request.GET.get("routeId")
+    station_id = request.GET.get("stationId")
+    target_date = request.GET.get("date")  # 예: 2026-04-15
+    target_time = request.GET.get("time")  # 예: 07:30
+
+    if not route_id or not station_id or not target_date or not target_time:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "routeId, stationId, date, time은 모두 필요합니다.",
+            },
+            status=400,
+        )
+
+    try:
+        target_date_obj = datetime.strptime(target_date, "%Y-%m-%d").date()
+        target_time_obj = datetime.strptime(target_time, "%H:%M").time()
+    except ValueError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "date 또는 time 형식이 올바르지 않습니다.",
+            },
+            status=400,
+        )
+
+    target_seconds = (
+        target_time_obj.hour * 3600
+        + target_time_obj.minute * 60
+        + target_time_obj.second
+    )
+
+    # ±30분
+    time_window_sec = 30 * 60
+
+    # Python weekday: 월=0 ... 일=6
+    is_weekend = target_date_obj.weekday() >= 5
+
+    if is_weekend:
+        weekday_groups = [
+            ("토", 7),  # Django week_day 기준
+            ("일", 1),
+        ]
+        day_type = "weekend"
+    else:
+        weekday_groups = [
+            ("월", 2),
+            ("화", 3),
+            ("수", 4),
+            ("목", 5),
+            ("금", 6),
+        ]
+        day_type = "weekday"
+
+    base_qs = Bus_arrival_info.objects.filter(
+        route_id=route_id,
+        station_id=station_id,
+    ).select_related("route", "station")
+
+    if not base_qs.exists():
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "해당 노선/정류소 데이터가 없습니다.",
+            },
+            status=404,
+        )
+
+    first_row = base_qs.first()
+    route_name = first_row.route.routeName
+    station_name = first_row.station.stationName
+
+    chart_data = []
+
+    for label, week_day_value in weekday_groups:
+        day_rows = base_qs.filter(mkTm__week_day=week_day_value)
+
+        matched_rows = []
+
+        for row in day_rows:
+            row_seconds = row.mkTm.hour * 3600 + row.mkTm.minute * 60 + row.mkTm.second
+            diff = abs(row_seconds - target_seconds)
+
+            if diff <= time_window_sec:
+                matched_rows.append(row)
+
+        if matched_rows:
+            avg_remaining_seat = round(
+                sum(row.remaining_seat for row in matched_rows) / len(matched_rows), 1
+            )
+
+            chart_data.append(
+                {
+                    "dayLabel": label,
+                    "remaining_seat": avg_remaining_seat,
+                    "sampleCount": len(matched_rows),
+                }
+            )
+        else:
+            chart_data.append(
+                {
+                    "dayLabel": label,
+                    "remaining_seat": 0,
+                    "sampleCount": 0,
+                }
+            )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "routeId": route_id,
+            "routeName": route_name,
+            "stationId": station_id,
+            "stationName": station_name,
+            "requestedDate": target_date,
+            "requestedTime": target_time,
+            "dayType": day_type,
+            "timeWindowMinutes": 30,
+            "bars": chart_data,
         }
     )
