@@ -140,6 +140,9 @@ def preprocess(df):
     # 만차 플래그가 있으면 0석 처리
     df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
 
+    # remaining_seat가 0이면 무조건 만차 처리
+    df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
+
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
 
@@ -178,7 +181,8 @@ def preprocess(df):
     # ETA가 더 작고 좌석정보가 있는 쪽을 우선
     # 그 후 같은 운행 안에서 우선순위를 정해서 하나의 행만 남김
 
-    TIME_GAP_MINUTES = 20
+    TIME_GAP_MINUTES = 40
+    STAORD_BACKWARD_THRESHOLD = 5
 
     df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
 
@@ -186,8 +190,13 @@ def preprocess(df):
         df.groupby(["busRouteId", "vehId1"])["mkTm"].diff().dt.total_seconds().div(60)
     )
 
+    # 같은 노선-차량 내 정류장 순번 차이
+    df["staOrd_diff"] = df.groupby(["busRouteId", "vehId1"])["staOrd"].diff()
+
     df["new_trip_flag"] = (
-        df["time_diff"].isna() | (df["time_diff"] > TIME_GAP_MINUTES)
+        df["time_diff"].isna()
+        | (df["time_diff"] > TIME_GAP_MINUTES)
+        | (df["staOrd_diff"] <= -STAORD_BACKWARD_THRESHOLD)
     ).astype(int)
 
     df["trip_group"] = df.groupby(["busRouteId", "vehId1"])["new_trip_flag"].cumsum()
@@ -195,7 +204,6 @@ def preprocess(df):
 
     df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 0
     df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 1
-    df.loc[df["arrmsg1"].str.contains(r"\[1번째 전\]", na=False), "arr_priority"] = 2
 
     df = df.sort_values(
         ["busRouteId", "stId", "vehId1", "trip_group", "arr_priority", "mkTm"],
@@ -205,7 +213,7 @@ def preprocess(df):
     df = df.drop_duplicates(
         subset=["busRouteId", "stId", "vehId1", "trip_group"], keep="first"
     ).copy()
-    
+
     df = df.sort_values(
         ["busRouteId", "vehId1", "trip_group", "staOrd", "mkTm"],
         ascending=[True, True, True, True, True],
