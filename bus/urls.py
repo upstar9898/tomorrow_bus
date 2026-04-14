@@ -25,4 +25,5 @@ urlpatterns = [
     path("favorites/", views.favorites, name="favorites"),
     path("ajax/stations/", views.get_stations_by_route, name="ajax_stations"),  # 정류장 목록
     path("ajax/predict/", views.predict_service1, name="ajax_predict"),  # 예측
+    path("api/route-seat-chart/", views.get_route_seat_chart, name="get_route_seat_chart"), # 도착 정보 차트 
 ]
