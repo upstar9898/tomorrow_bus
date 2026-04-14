@@ -24,15 +24,18 @@ urlpatterns = [
     path("service2/", views.service2, name="service2"),
     path("favorites/", views.favorites, name="favorites"),
     path(
-        "ajax/stations/", views.get_stations_by_route, name="ajax_stations"
-    ),  # 정류장 목록
-    path("ajax/predict/", views.predict_service1, name="ajax_predict"),  # 예측
-    path(
         "api/route-seat-chart/", views.get_route_seat_chart, name="get_route_seat_chart"
     ),  # 노선 도착 정보 차트
     path(
         "ajax/station-week-chart/",
         views.get_station_week_chart,
         name="get_station_week_chart",
-    ), # 정류소 도착 정보 차트
+    ),  # 정류소 도착 정보 차트
+    path(
+        "ajax/stations/", views.get_stations_by_route, name="ajax_stations"
+    ),  # 정류장 목록
+    path("ajax/predict/service1/", views.predict_service1, name="ajax_predict"),  # 예측
+    path(
+        "ajax/predict/service2/", views.predict_service2, name="ajax_predict_service2"
+    ),  # 예측2
 ]
