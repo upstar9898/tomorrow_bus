@@ -395,7 +395,7 @@
         document.getElementById("chartInfo").innerHTML = "차트 불러오는 중...";
 
         try {
-            const response = await fetch("/ajax/predict/service1/", {
+            const predictPromise = await fetch("/ajax/predict/service1/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
