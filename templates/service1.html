@@ -265,7 +265,7 @@
         document.getElementById("fullProb").textContent = "-";
 
         try {
-            const response = await fetch("/ajax/predict/", {
+            const response = await fetch("/ajax/predict/service1/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
