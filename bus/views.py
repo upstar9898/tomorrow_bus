@@ -5,7 +5,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 import json
 
-from service_test.backend_test import dummy_service1  # 실제 서비스로 변경 필요
+from service_test.backend_test import dummy_service1, dummy_service2  # 실제 서비스로 변경 필요
 
 from .models import Bus_route, Route_station, Bus_arrival_info
 
@@ -24,7 +24,8 @@ def service1(request):
 
 
 def service2(request):
-    return render(request, "service2.html")
+    routes = Bus_route.objects.all().order_by("routeName")
+    return render(request, "service2.html", {"routes": routes})
 
 
 def favorites(request):
@@ -320,3 +321,36 @@ def get_station_week_chart(request):
             "bars": chart_data,
         }
     )
+        
+@require_POST
+def predict_service2(request):
+    try:
+        data = json.loads(request.body)
+
+        route_id = data.get("routeId")
+        station_id = data.get("stationId")
+        date_time = data.get("date_time")
+
+        if not route_id or not station_id or not date_time:
+            return JsonResponse(
+                {"success": False, "error": "routeId, stationId, date_time은 필수입니다."},
+                status=400,
+            )
+
+        result = dummy_service2(route_id, station_id, date_time)  # 실제 서비스로 변경 필요
+
+        return JsonResponse({
+            "success": True,
+            "data": result,
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"success": False, "error": "잘못된 JSON 요청입니다."},
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)},
+            status=500,
+        )

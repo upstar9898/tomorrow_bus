@@ -4,122 +4,705 @@
 
 {% block extra_style %}
 <style>
-    .service-hero {
-        overflow: hidden;
+    .route-list-empty::before {
+        display: none;
     }
 
-    .service-title {
-        font-size: clamp(1.9rem, 4.2vw, 3rem);
+    .route-empty-message {
+        padding: 72px 20px;
+        text-align: center;
+        color: var(--text-sub);
+        font-size: 0.98rem;
+        border: 1px dashed #dbe4f0;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.72);
+    }
+
+    .stop-dot {
+        width: 22px;
+        height: 22px;
+        margin-top: 12px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        z-index: 1;
+    }
+
+    .stop-dot::before {
+        content: "V";
+    }
+
+    .stop-dot.status-green {
+        background: #22c55e;
+    }
+
+    .stop-dot.status-yellow {
+        background: #f59e0b;
+    }
+
+    .stop-dot.status-red {
+        background: #ef4444;
+    }
+
+    .stop-dot.status-gray {
+        background: #94a3b8;
+        box-shadow: 0 0 0 2px #cbd5e1;
+    }
+
+    .stop-card.virtual {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+    }
+
+    .stop-card.virtual .stop-name,
+    .stop-card.virtual .stop-meta,
+    .stop-card.virtual .stop-bottom {
+        color: #94a3b8;
+    }
+
+    .state-badge.state-gray {
+        background: rgba(148, 163, 184, 0.14);
+        color: #64748b;
+    }
+
+
+    .route-page {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .route-sidebar,
+    .route-main {
+        border-radius: var(--radius-xl);
+    }
+
+    .summary-card {
+        padding: 24px;
+    }
+
+    .summary-label {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-sub);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .route-number {
+        font-size: 2.2rem;
         font-weight: 800;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
+        color: var(--primary);
+        line-height: 1.1;
     }
 
-    .service-subcard {
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
+    .summary-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 6px;
     }
 
-    .service-highlight {
-        border: 0;
-        border-radius: 24px;
-        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
-        color: #ffffff;
-        box-shadow: 0 20px 38px rgba(37, 99, 235, 0.18);
+    .summary-meta {
+        color: var(--text-sub);
+        font-size: 0.95rem;
     }
 
-    .feature-mini {
+    .summary-section+.summary-section {
+        margin-top: 22px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+    }
+
+    .mini-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .mini-stat {
+        padding: 14px;
+        border: 1px solid #e8eef7;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    .mini-stat-label {
+        font-size: 0.82rem;
+        color: var(--text-sub);
+        margin-bottom: 6px;
+    }
+
+    .mini-stat-value {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .route-main-card {
+        padding: 20px;
+    }
+
+    .route-main-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .route-main-title {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 800;
+    }
+
+    .route-main-sub {
+        margin-top: 4px;
+        color: var(--text-sub);
+        font-size: 0.95rem;
+    }
+
+    .route-list-wrap {
+        position: relative;
+        max-height: 72vh;
+        overflow-y: auto;
+        padding-right: 6px;
+    }
+
+    .route-list {
+        position: relative;
+        margin: 0;
+        padding: 8px 0 8px 0;
+        list-style: none;
+    }
+
+    .route-list::before {
+        content: "";
+        position: absolute;
+        left: 18px;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #93c5fd 0%, #60a5fa 100%);
+        opacity: 0.55;
+    }
+
+    .stop-item {
+        position: relative;
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 14px;
+        padding: 10px 0;
+    }
+
+    .stop-marker {
+        position: relative;
+        display: flex;
+        justify-content: center;
+    }
+
+
+    .stop-card {
         border: 1px solid #e8eef7;
         border-radius: 20px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        padding: 1.1rem;
-        height: 100%;
+        background: #fff;
+        padding: 16px 18px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .stop-card.selected {
+        background: linear-gradient(180deg, #f5f9ff 0%, #edf5ff 100%);
+        border-color: #bfdbfe;
+        box-shadow: 0 16px 34px rgba(37, 99, 235, 0.10);
+    }
+
+    .stop-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .stop-name {
+        font-size: 1.08rem;
+        font-weight: 800;
+        line-height: 1.35;
+        margin-bottom: 6px;
+    }
+
+    .stop-meta {
+        color: var(--text-sub);
+        font-size: 0.92rem;
+    }
+
+    .stop-badges {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .seat-badge,
+    .state-badge,
+    .selected-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.86rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .seat-badge {
+        background: rgba(37, 99, 235, 0.10);
+        color: var(--primary-deep);
+    }
+
+    .state-badge.state-green {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+    }
+
+    .state-badge.state-yellow {
+        background: rgba(245, 158, 11, 0.14);
+        color: #b45309;
+    }
+
+    .state-badge.state-red {
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+    }
+
+    .selected-badge {
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--primary-deep);
+    }
+
+    .stop-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid #eef2f7;
+        color: var(--text-sub);
+        font-size: 0.9rem;
     }
 
     @media (max-width: 991px) {
-        .service-hero .card-body,
-        .service-subcard .card-body,
-        .service-highlight .card-body {
-            padding: 1.25rem !important;
+        .route-page {
+            grid-template-columns: 1fr;
+        }
+
+        .route-list-wrap {
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 575px) {
+
+        .route-main-head,
+        .stop-top,
+        .stop-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .stop-badges {
+            justify-content: flex-start;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-0">
-    <section class="glass-card hero-gradient service-hero mb-4 mb-lg-5">
-        <div class="card-body p-4 p-lg-5">
-            <div class="row align-items-center g-4 g-xl-5">
-                <div class="col-lg-12">
-                    <h1 class="service-title mb-3">
-                        원하는 노선과 승차 시간을 선택하면<br>
-                        특정 정류장만이 아니라<br>
-                        전체 노선의 예측 잔여좌석을 보여주는 페이지
-                    </h1>
-                    <p class="soft-note mb-0 fs-6">
-                        현재 페이지는 개발 중입니다. 실제 서비스에서는 노선 전체 정류장에 대한 예측 결과를
-                        지도 또는 리스트 형태로 시각화해, 어느 구간에서 좌석 여유가 있는지 한눈에 확인할 수 있게 됩니다.
-                    </p>
-                </div>
+<main class="route-page">
+    <aside class="route-sidebar">
+        <section class="glass-card summary-card">
+            <div class="summary-section">
+                <h2 class="h5 fw-bold mb-3">입력 조건</h2>
+
+                <form id="predictForm" class="row g-3">
+                    {% csrf_token %}
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">노선 선택</label>
+                        <select id="routeSelect" class="form-select">
+                            <option value="">노선을 선택하세요</option>
+                            {% for route in routes %}
+                            <option value="{{ route.routeId }}">{{ route.routeName }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">정류장 선택</label>
+                        <select id="stationSelect" class="form-select" disabled>
+                            <option value="">먼저 노선을 선택하세요</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="rideDateTime" class="form-label fw-semibold">승차 일시</label>
+                        <input id="rideDateTime" type="datetime-local" class="form-control">
+                    </div>
+
+                    <div class="col-12 d-grid pt-2">
+                        <button type="submit" class="btn btn-primary">
+                            예측하기
+                        </button>
+                    </div>
+                </form>
             </div>
-        </div>
-    </section>
 
-    <section class="row g-4">
-        <div class="col-12 col-xl-8">
-            <div class="service-subcard h-100">
-                <div class="card-body p-4 p-lg-4">
-                    <h2 class="h4 fw-bold mb-3">서비스 개요</h2>
-                    <p class="soft-note mb-4" style="line-height: 1.8;">
-                        서비스2는 사용자가 노선 번호와 승차 시간을 입력하면,
-                        해당 노선의 각 정류장별 예상 잔여좌석을 한 번에 보여주는 기능입니다.
-                        단일 정류장 예측보다 넓은 시야를 제공해, 어느 구간에서 혼잡이 심한지,
-                        어느 정류장에서 상대적으로 좌석 여유가 있는지를 비교할 수 있도록 설계합니다.
-                    </p>
 
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <div class="feature-mini">
-                                <div class="fw-bold mb-2">입력</div>
-                                <div class="soft-note">노선 번호, 승차 시간</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="feature-mini">
-                                <div class="fw-bold mb-2">출력</div>
-                                <div class="soft-note">전체 정류장별 잔여좌석 예측</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="feature-mini">
-                                <div class="fw-bold mb-2">표현 방식</div>
-                                <div class="soft-note">지도, 리스트, 상태 배지</div>
-                            </div>
-                        </div>
+            <div class="summary-section">
+                <div class="summary-label mb-2">기준 정보</div>
+
+                <div class="summary-meta mb-2">기준 정류소</div>
+                <div id="selectedStopName" class="fw-bold">-</div>
+
+                <div class="summary-meta mt-3 mb-2">예기준 정류소 승차 일시</div>
+                <div id="selectedDateTime" class="fw-bold">-</div>
+            </div>
+
+        </section>
+    </aside>
+
+    <section class="route-main">
+        <div class="glass-card route-main-card">
+            <div class="route-main-head">
+                <div>
+                    <h2 class="route-main-title">정류소별 예측 좌석수</h2>
+                    <div id="resultSummary" class="route-main-sub">
+                        노선, 기준 정류소, 승차 일시를 선택한 뒤 예측을 실행하세요.
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-12 col-xl-4">
-            <div class="service-subcard h-100">
-                <div class="card-body p-4 p-lg-4">
-                    <h2 class="h4 fw-bold mb-3">개발 상태</h2>
-                    <div class="alert border-0 mb-3" style="background:#f8fbff; color:#334155;">
-                        현재 페이지는 레이아웃 초안 단계입니다.
-                    </div>
-                    <ul class="soft-note mb-0" style="padding-left: 1.1rem; line-height: 1.8;">
-                        <li>노선 선택 UI 추가 예정</li>
-                        <li>지도 API 연동 예정</li>
-                        <li>정류장별 예측 결과 배지 표시 예정</li>
-                        <li>실제 예측 API 연결 예정</li>
-                    </ul>
-                </div>
+            <div class="route-list-wrap">
+                <ul id="routeList" class="route-list route-list-empty">
+                    <li class="route-empty-message">
+                        아직 예측 결과가 없습니다. 입력 조건을 선택하고 예측하기 버튼을 눌러주세요.
+                    </li>
+                </ul>
             </div>
         </div>
     </section>
 </main>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const routeSelect = document.getElementById("routeSelect");
+    const stationSelect = document.getElementById("stationSelect");
+    const predictForm = document.getElementById("predictForm");
+    const rideDateTime = document.getElementById("rideDateTime");
+
+    const resultSummary = document.getElementById("resultSummary");
+    const routeList = document.getElementById("routeList");
+
+    const selectedStopName = document.getElementById("selectedStopName");
+    const selectedDateTime = document.getElementById("selectedDateTime");
+    const selectedSeatPrediction = document.getElementById("selectedSeatPrediction");
+    const summaryTotalStops = document.getElementById("summaryTotalStops");
+    const summaryBusyStops = document.getElementById("summaryBusyStops");
+
+    routeSelect.addEventListener("change", async function () {
+        const routeId = this.value;
+
+        stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
+        stationSelect.disabled = true;
+
+        if (!routeId) {
+            stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
+            return;
+        }
+
+        try {
+            const response = await fetch(`/ajax/stations/?routeId=${encodeURIComponent(routeId)}`);
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
+                return;
+            }
+
+            const stations = result.stations;
+
+            if (stations.length === 0) {
+                stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
+                return;
+            }
+
+            let options = `<option value="">정류장을 선택하세요</option>`;
+            for (const station of stations) {
+                const label = station.arsId
+                    ? `${station.stationName} (${station.arsId})`
+                    : station.stationName;
+
+                options += `<option value="${station.stationId}">${label}</option>`;
+            }
+
+            stationSelect.innerHTML = options;
+            stationSelect.disabled = false;
+        } catch (error) {
+            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
+        }
+    });
+
+    predictForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        console.log(routeSelect, stationSelect, rideDateTime)
+        const routeId = routeSelect.value;
+        const stationId = stationSelect.value;
+        const dateTime = rideDateTime.value;
+
+        if (!routeId || !stationId || !dateTime) {
+            alert("노선, 정류장, 승차 일시를 모두 선택하세요.");
+            return;
+        }
+
+        const routeName = routeSelect.options[routeSelect.selectedIndex].text;
+        const stationName = stationSelect.options[stationSelect.selectedIndex].text;
+
+        resultSummary.textContent = "예측 중...";
+        routeList.innerHTML = `
+            <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
+        `;
+
+        try {
+            const response = await fetch("/ajax/predict/service2/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken"),
+                },
+                body: JSON.stringify({
+                    routeId: routeId,
+                    stationId: stationId,
+                    date_time: dateTime
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                alert(result.error || "예측 요청에 실패했습니다.");
+                return;
+            }
+
+            renderRouteResult(routeName, stationName, result.data);
+
+        } catch (error) {
+            alert("서버 요청 중 오류가 발생했습니다.");
+        }
+    });
+
+    function getSeatState(stop) {
+        if (stop.is_virtual === 1) {
+            return {
+                text: "가상 정류소",
+                dotClass: "status-gray",
+                badgeClass: "state-gray"
+            };
+        }
+
+        const seat = stop.remaining_seat;
+
+        if (seat <= 2) {
+            return {
+                text: "만차임박",
+                dotClass: "status-red",
+                badgeClass: "state-red"
+            };
+        }
+        if (seat <= 12) {
+            return {
+                text: "혼잡",
+                dotClass: "status-yellow",
+                badgeClass: "state-yellow"
+            };
+        }
+        return {
+            text: "여유",
+            dotClass: "status-green",
+            badgeClass: "state-green"
+        };
+    }
+
+    function renderRouteResult(routeName, stationName, data) {
+        // 상단 요약
+        resultSummary.textContent = `${routeName} · ${stationName} · ${data.date_time}`;
+
+        if (selectedStopName) {
+            selectedStopName.textContent =
+                data.selected_station_name || stationName;
+        }
+
+        if (selectedDateTime) {
+            selectedDateTime.textContent = data.date_time;
+        }
+
+        if (summaryTotalStops) {
+            summaryTotalStops.textContent = data.stops.length;
+        }
+
+        // 기준 정류소 찾기
+        const selectedStop = data.stops.find(stop => stop.is_selected);
+
+        if (selectedSeatPrediction) {
+            if (!selectedStop || selectedStop.is_virtual === 1) {
+                selectedSeatPrediction.textContent = "-";
+            } else {
+                selectedSeatPrediction.textContent =
+                    `${selectedStop.remaining_seat}석`;
+            }
+        }
+
+        // 혼잡 정류소 수
+        if (summaryBusyStops) {
+            const busyCount = data.stops.filter(
+                stop => stop.is_virtual !== 1 && stop.remaining_seat <= 12
+            ).length;
+            summaryBusyStops.textContent = busyCount;
+        }
+
+        // 가상 정류소 수
+        const summaryVirtualStops = document.getElementById("summaryVirtualStops");
+        if (summaryVirtualStops) {
+            const virtualCount = data.stops.filter(
+                stop => stop.is_virtual === 1
+            ).length;
+            summaryVirtualStops.textContent = virtualCount;
+        }
+
+        // 리스트 초기화
+        routeList.classList.remove("route-list-empty");
+        routeList.innerHTML = "";
+
+        // 상태 판단 함수
+        function getSeatState(stop) {
+            if (stop.is_virtual === 1) {
+                return {
+                    text: "가상 정류소",
+                    dotClass: "status-gray",
+                    badgeClass: "state-gray"
+                };
+            }
+
+            const seat = stop.remaining_seat;
+
+            if (seat <= 2) {
+                return {
+                    text: "만차임박",
+                    dotClass: "status-red",
+                    badgeClass: "state-red"
+                };
+            }
+            if (seat <= 12) {
+                return {
+                    text: "혼잡",
+                    dotClass: "status-yellow",
+                    badgeClass: "state-yellow"
+                };
+            }
+            return {
+                text: "여유",
+                dotClass: "status-green",
+                badgeClass: "state-green"
+            };
+        }
+
+        // 리스트 렌더링
+        for (const stop of data.stops) {
+            const state = getSeatState(stop);
+            const isVirtual = stop.is_virtual === 1;
+
+            const li = document.createElement("li");
+            li.className = "stop-item";
+
+            li.innerHTML = `
+            <div class="stop-marker">
+                <span class="stop-dot ${state.dotClass}"></span>
+            </div>
+
+            <div class="stop-card 
+                ${stop.is_selected ? "selected" : ""} 
+                ${isVirtual ? "virtual" : ""}">
+                
+                <div class="stop-top">
+                    <div>
+                        <div class="stop-name">${stop.station_name}</div>
+                        <div class="stop-meta">
+                            ${stop.ars_id ? `${stop.ars_id}` : ""}
+                            ${stop.predicted_time ? ` · 예측 도착 ${stop.predicted_time}` : ""}
+                        </div>
+                    </div>
+
+                    <div class="stop-badges">
+                        ${stop.is_selected ? `<span class="selected-badge">기준 정류소</span>` : ""}
+
+                        ${isVirtual
+                    ? ``
+                    : `<span class="seat-badge">${stop.remaining_seat}석</span>`
+                }
+
+                        <span class="state-badge ${state.badgeClass}">
+                            ${state.text}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stop-bottom">
+                    ${isVirtual
+                    ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
+                    : `<span>예상 만차확률 ${(stop.full_prob * 100).toFixed(1)}%</span>`
+                }
+                </div>
+            </div>
+        `;
+
+            routeList.appendChild(li);
+        }
+
+        // 기준 정류소로 스크롤
+        const selectedCard = routeList.querySelector(".stop-card.selected");
+        if (selectedCard) {
+            selectedCard.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+    }
+</script>
 {% endblock %}
