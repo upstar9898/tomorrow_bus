@@ -271,7 +271,6 @@ def preprocess(df):
     df["full1"] = df["full1"].astype(str).str.strip()
     df["full_flag"] = df["full1"].isin(["1", "Y", "y", "True", "true"]).astype(int)
 
-    
     # -----------------------------
     # 기본 클리닝
     # -----------------------------
@@ -295,10 +294,10 @@ def preprocess(df):
 
     # 만차 플래그가 있으면 0석 처리
     df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
-    
+
     # remaining_seat가 0이면 무조건 만차 처리
     df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
-    
+
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
 
@@ -390,9 +389,10 @@ def preprocess(df):
     # 날씨 데이터 추가
     df = add_weather_features(df)
 
-    # trip_group을 기반으로 trip_id 생성
     df["trip_id"] = (
-        df["busRouteId"].astype(str)
+        df["mkTm"].dt.strftime("%y%m%d")
+        + "_"
+        + df["busRouteId"].astype(str)
         + "_"
         + df["vehId1"].astype(str)
         + "_"
@@ -422,8 +422,8 @@ def preprocess(df):
     )
 
     # 이름 변경
-    df = df.rename(columns={"stNm" : "station_name"})
-    
+    df = df.rename(columns={"stNm": "station_name"})
+
     # -----------------------------
     # 최종 정리
     # -----------------------------
@@ -450,7 +450,7 @@ def preprocess(df):
         # trip_id
         "trip_id",
         # 시간 파생
-        "date", 
+        "date",
         "year",
         "month",
         "day",
@@ -509,8 +509,12 @@ if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
     file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
     # file_list = ["bus_data_2026_03_12.csv"]
+    # 파일명에서 날짜 추출 (yymmdd)
+
 
     for filename in file_list:
+        file_date = filename.replace("bus_data_", "").replace(".csv", "")
+        file_date = file_date.replace("_", "")[2:]   # 20260312 → 260312
         input_path = os.path.join(BUS_API_DATA_DIR, filename)
         output_filename = filename.replace(
             ".csv", "_preprocessed_withweather_foranalysis.csv"
