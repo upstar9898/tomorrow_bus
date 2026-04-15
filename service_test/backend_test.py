@@ -2,9 +2,19 @@ import random
 
 from bus.models import Route_station
 
+
+
+def dummy_prob(remaining_seat):
+    if remaining_seat >= 10:
+        return round(random.uniform(0.01, 0.05), 4)
+    elif remaining_seat > 2:
+        return round(random.uniform(0.5, 0.8), 4)
+    else:
+        return round(random.uniform(0.95, 0.99), 4)
+
 def dummy_service1(routeId, stationId, date_time):
     remaining_seat = random.randint(0, 45)
-    full_prob = round(random.random(), 4)
+    full_prob = dummy_prob(remaining_seat)
     return {
         "routeId": routeId,
         "stationId": stationId,
@@ -38,7 +48,7 @@ def dummy_service2(route_id, station_id, date_time):
             predicted_time = ""
         else:
             remaining_seat = random.randint(0, 45)
-            full_prob = round(random.random(), 4)
+            full_prob = dummy_prob(remaining_seat)
             predicted_time = ""
 
         stops.append({
