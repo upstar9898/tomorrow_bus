@@ -43,7 +43,8 @@ def get_stations_by_route(request):
         )
 
     route_stations = (
-        Route_station.objects.filter(route_id=route_id)
+        Route_station.objects
+        .filter(route_id=route_id, station__isVirtual=0)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -232,9 +233,6 @@ def get_station_week_chart(request):
         + target_time_obj.second
     )
 
-    # ±30분
-    time_window_sec = 30 * 60
-
     # Python weekday: 월=0 ... 일=6
     is_weekend = target_date_obj.weekday() >= 5
 
@@ -277,25 +275,35 @@ def get_station_week_chart(request):
     for label, week_day_value in weekday_groups:
         day_rows = base_qs.filter(mkTm__week_day=week_day_value)
 
-        matched_rows = []
+        # (시간차이, row) 형태로 저장
+        diff_rows = []
 
         for row in day_rows:
-            row_seconds = row.mkTm.hour * 3600 + row.mkTm.minute * 60 + row.mkTm.second
+            row_seconds = (
+                row.mkTm.hour * 3600
+                + row.mkTm.minute * 60
+                + row.mkTm.second
+            )
             diff = abs(row_seconds - target_seconds)
+            diff_rows.append((diff, row))
 
-            if diff <= time_window_sec:
-                matched_rows.append(row)
+        # 요청 시간과 가까운 순 정렬
+        diff_rows.sort(key=lambda x: x[0])
 
-        if matched_rows:
+        # 가장 가까운 10개만 선택
+        nearest_rows = [row for diff, row in diff_rows[:10]]
+
+        if nearest_rows:
             avg_remaining_seat = round(
-                sum(row.remaining_seat for row in matched_rows) / len(matched_rows), 1
+                sum(row.remaining_seat for row in nearest_rows) / len(nearest_rows),
+                1
             )
 
             chart_data.append(
                 {
                     "dayLabel": label,
                     "remaining_seat": avg_remaining_seat,
-                    "sampleCount": len(matched_rows),
+                    "sampleCount": len(nearest_rows),
                 }
             )
         else:
@@ -317,7 +325,7 @@ def get_station_week_chart(request):
             "requestedDate": target_date,
             "requestedTime": target_time,
             "dayType": day_type,
-            "timeWindowMinutes": 30,
+            "sampleSizePerDay": 10,
             "bars": chart_data,
         }
     )
