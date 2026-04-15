@@ -43,7 +43,8 @@ def get_stations_by_route(request):
         )
 
     route_stations = (
-        Route_station.objects.filter(route_id=route_id)
+        Route_station.objects
+        .filter(route_id=route_id, station__isVirtual=0)
         .select_related("station")
         .order_by("staOrd")
     )
