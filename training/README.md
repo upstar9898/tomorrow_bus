@@ -1,89 +1,90 @@
-# 🚌 Bus Seat Prediction - Experiment Logging Guide
+# 📏 Experiment Logger 팀 규칙
 
-## 📌 개요
+## 1️⃣ 모든 실험은 반드시 저장
 
-본 프로젝트는 버스 잔여좌석 예측 및 혼잡도 분류 모델의 **재현성 확보 및 실험 비교**를 위해
-`experiment_logger.py` 기반의 실험 기록 시스템을 사용합니다.
-
----
-
-## 📂 폴더 구조
-
-```
-training/
- ┣ artifacts/
- ┃ ┣ logs/                 # 전체 실험 기록 (experiment_log.csv)
- ┃ ┣ summaries/            # best 결과 저장 (best_results.csv)
- ┃ ┣ reports/              # txt 리포트
- ┃ ┣ confusion_matrices/   # confusion matrix csv
- ┃ ┗ params/               # 모델 파라미터 json
- ┣ models/                 # 학습된 모델 저장
- ┣ utils/
- ┃ ┣ experiment_logger.py
- ┃ ┗ evaluation.py
- ┗ train_*.py              # 학습 코드
-```
+* 테스트라도 무조건 logger 사용
+* 결과 삭제 금지
 
 ---
 
-## 📊 실험 결과 저장 방식
+## 2️⃣ 메타 정보 필수 입력
 
-### 1. 모든 실행 기록
-
-* `logs/experiment_log.csv`
-* 모든 실험 결과 누적 저장
-
-### 2. 최고 성능 결과
-
-* `summaries/best_results.csv`
-* 동일 조건 내 best 성능만 유지
-
-### 3. 상세 결과
-
-* txt 리포트
-* confusion matrix csv
-* hyperparameter json
+* RUNNER 반드시 작성
+* MODEL_VERSION 반드시 작성
 
 ---
 
-## 🧪 실험 실행 방법
+## 3️⃣ 버전 관리 규칙
 
-### 1. 모델 학습 후 결과 저장
+### MODEL_VERSION
 
-```python
-logger.log_regression_result(...)
-logger.log_classification_result(...)
-```
+* 모델 구조/파라미터 변경 시 증가
 
----
+예:
 
-## 🏷️ 필수 메타 정보
-
-```python
-RUNNER = "이름"
-DATASET_NAME = "사용 데이터"
-DATA_VERSION = "데이터 버전"
-SPLIT_VERSION = "데이터 분할 방식"
-FEATURE_VERSION = "feature 버전"
-MODEL_NAME = "모델명"
-MODEL_VERSION = "모델 버전"
-```
+* v1: 기본 모델
+* v2: learning rate 변경
+* v3: feature 추가
 
 ---
 
-## 📌 저장 예시
+### DATA_VERSION
 
-```
-eunbyeol_lgbm_peak_cls_20260415_173012_classification_report.txt
-```
+* 데이터 변경 시 업데이트
+
+예:
+
+* 20260415
+* weather_added_v1
 
 ---
 
-## 🎯 목적
+### FEATURE_VERSION
 
-* 실험 재현성 확보
-* 모델 비교 분석
-* 팀원 간 협업 효율 향상
+* feature 변경 시 업데이트
+
+예:
+
+* basic_v1
+* pattern_v2
+* pattern_weather_v1
+
+---
+
+## 4️⃣ best 결과는 자동 관리
+
+* 직접 수정 금지
+* logger가 자동 갱신
+
+---
+
+## 5️⃣ 파일 삭제 금지
+
+* logs / reports / params
+* 실험 기록은 자산
+
+---
+
+## 6️⃣ 동일 조건 비교 기준
+
+다음이 같을 때만 성능 비교 가능:
+
+* dataset
+* data_version
+* split_version
+* feature_version
+* label_definition
+
+---
+
+## 7️⃣ 모델 이름 규칙
+
+* lgbm_reg
+* lgbm_peak_cls
+* xgb_reg
+* rf_cls
+
+통일해서 사용
 
 ```
 ```
