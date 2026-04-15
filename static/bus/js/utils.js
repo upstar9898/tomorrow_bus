@@ -36,3 +36,21 @@ export function formatDateTime(dateStr) {
 
     return `${yyyy}-${MM}-${dd} ${hh}:${mm}`;
 }
+
+export function showToast(message) {
+    let toast = document.getElementById("toast");
+
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast-ui";
+        document.body.appendChild(toast);
+    }
+
+    toast.innerText = message;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
