@@ -12,6 +12,7 @@ from .models import Bus_route, Route_station, Bus_arrival_info
 from datetime import datetime
 from django.db.models import F
 from django.db.models.functions import Abs
+from django.conf import settings
 
 
 def index(request):
@@ -25,7 +26,7 @@ def service1(request):
 
 def service2(request):
     routes = Bus_route.objects.all().order_by("routeName")
-    return render(request, "service2.html", {"routes": routes})
+    return render(request, "service2.html", {"routes": routes, "KAKAO_JS_KEY": settings.KAKAO_JS_KEY})
 
 
 def favorites(request):
@@ -362,3 +363,37 @@ def predict_service2(request):
             {"success": False, "error": str(e)},
             status=500,
         )
+    
+@require_GET
+def get_route_map_data(request):
+    route_id = request.GET.get("routeId")
+
+    if not route_id:
+        return JsonResponse({"success": False, "error": "routeId가 필요합니다."}, status=400)
+
+    route_stations = (
+        Route_station.objects
+        .filter(route_id=route_id)
+        .select_related("station")
+        .order_by("staOrd")
+    )
+
+    stations = []
+    for rs in route_stations:
+        st = rs.station
+        if st.locationY is None or st.locationX is None:
+            continue
+
+        stations.append({
+            "station_id": st.stationId,
+            "station_name": st.stationName,
+            "ars_id": st.arsId,
+            "latitude": st.locationY,
+            "longitude": st.locationX,
+            "is_virtual": st.isVirtual,
+        })
+
+    return JsonResponse({
+        "success": True,
+        "stations": stations,
+    })
