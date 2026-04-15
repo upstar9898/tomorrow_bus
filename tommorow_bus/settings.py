@@ -130,3 +130,4 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+KAKAO_JS_KEY = os.environ.get("KAKAO_JS_KEY")

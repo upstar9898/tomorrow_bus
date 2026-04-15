@@ -38,4 +38,5 @@ urlpatterns = [
     path(
         "ajax/predict/service2/", views.predict_service2, name="ajax_predict_service2"
     ),  # 예측2
+    path("ajax/route-map-data/", views.get_route_map_data, name="ajax_route_map_data"), # 비동기 지도 호출 
 ]
