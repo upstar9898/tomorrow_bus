@@ -51,9 +51,9 @@ def plot_staord_curve(df: pd.DataFrame):
         ax.fill_between(data["staOrd"], data["remaining_seat"], alpha=0.15, color="#2196F3")
 
         # 혼잡 기준선 (새 4단계 기준)
-        ax.axhline(y=30, color="#FF9800", linestyle="--", linewidth=1, alpha=0.8, label="혼잡 기준 (30석)")
-        ax.axhline(y=6,  color="#FF5722", linestyle="--", linewidth=1, alpha=0.8, label="매우혼잡 기준 (6석)")
-        ax.axhline(y=0,  color="#F44336", linestyle="--", linewidth=1, alpha=0.8, label="만차 기준 (0석)")
+        ax.axhline(y=30, color="#64B5F6", linestyle="--", linewidth=1, alpha=0.8, label="보통 기준 (30석)")
+        ax.axhline(y=20, color="#FF9800", linestyle="--", linewidth=1, alpha=0.8, label="혼잡 기준 (20석)")
+        ax.axhline(y=0,  color="#F44336", linestyle="--", linewidth=1, alpha=0.8, label="만석 기준 (0석)")
 
         ax.set_title(f"{route}번", fontsize=13)
         ax.set_xlabel("정류소 순번 (staOrd)")
@@ -132,7 +132,7 @@ def plot_first_congested_staord(df: pd.DataFrame):
 
     # trip 내에서 처음으로 혼잡(혼잡+만차) 상태가 되는 staOrd 추출
     # 잔여좌석=0 오류값은 utils.py load_data()에서 이미 제거됨
-    congested = df[df["congestion_level"].isin(["매우혼잡", "혼잡", "만차"])].copy()
+    congested = df[df["congestion_level"].isin(["혼잡", "만차"])].copy()
     first_cong = (
         congested.groupby(["route_name", "trip_id"])["staOrd"]
         .min()

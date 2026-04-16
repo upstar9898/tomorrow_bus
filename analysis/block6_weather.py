@@ -72,7 +72,7 @@ def plot_rain_congestion(df: pd.DataFrame):
 
     df = df.copy()
     df["is_rainy"] = (df["rainfall"] > 0).astype(int)
-    df["is_congested"] = df["congestion_level"].isin(["매우혼잡", "혼잡", "만차"]).astype(int)
+    df["is_congested"] = df["congestion_level"].isin(["혼잡", "만차"]).astype(int)
 
     # 노선별 강수/비강수 혼잡 비율 비교
     rain_cong = (
