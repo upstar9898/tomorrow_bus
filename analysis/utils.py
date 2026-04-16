@@ -30,12 +30,13 @@ OUTPUT_DIR   = BASE_DIR / "data" / "eda_output"
 # 혼잡 기준 (전처리 담당자와 합의된 기준)
 # ================================================================
 CONGESTION_COLORS = {
-    "여유": "#4CAF50",   # 초록
-    "혼잡": "#FF9800",   # 주황
-    "만차": "#F44336",   # 빨강
+    "여유":   "#4CAF50",   # 초록
+    "혼잡":   "#FF9800",   # 주황
+    "매우혼잡": "#FF5722", # 진한 주황
+    "만차":   "#F44336",   # 빨강
 }
 
-CONGESTION_ORDER = ["여유", "혼잡", "만차"]
+CONGESTION_ORDER = ["여유", "혼잡", "매우혼잡", "만차"]
 
 ROUTE_ORDER = ["9401", "9401-1", "9404", "9408", "9409", "9707", "9711"]
 
@@ -83,13 +84,37 @@ def load_data(version: str = "v1") -> pd.DataFrame:
 
     # staOrd 최솟값(첫 번째 정류소) 오류값 제거
     # API가 차량 출발 대기 중일 때 잔여좌석을 0으로 내려보내는 오류값
-    # → trip 내 staOrd 최솟값에서 remaining_seat=0인 행만 제거
+    # → trip 내 staOrd 최솟값에서 remaining_seat=0이면서
+    #   바로 다음 행에서 잔여좌석이 정상값(>0)으로 회복되는 경우만 제거
+    df = df.sort_values(["trip_id", "staOrd", "mkTm"]).reset_index(drop=True)
     min_staord = df.groupby("trip_id")["staOrd"].transform("min")
-    error_mask = (df["staOrd"] == min_staord) & (df["remaining_seat"] == 0)
+    next_seat = df.groupby("trip_id")["remaining_seat"].shift(-1)
+    error_mask = (
+        (df["staOrd"] == min_staord) &
+        (df["remaining_seat"] == 0) &
+        (next_seat > 0)
+    )
     removed = error_mask.sum()
     df = df[~error_mask].copy()
     if removed > 0:
-        print(f"  오류값 제거: {removed:,}건 (staOrd 최솟값 & 잔여좌석=0)")
+        print(f"  오류값 제거: {removed:,}건 (staOrd 최솟값 & 잔여좌석=0 & 다음행 정상)")
+
+    # 혼잡도 기준 재정의 (전처리 결과물의 기준을 덮어씀)
+    # 0: 만차      — 0석
+    # 1: 매우 혼잡 — 1~6석
+    # 2: 혼잡      — 7~30석
+    # 3: 여유      — 31석 이상
+    def assign_congestion(seat):
+        if seat == 0:
+            return "만차"
+        elif seat <= 6:
+            return "매우혼잡"
+        elif seat <= 30:
+            return "혼잡"
+        else:
+            return "여유"
+
+    df["congestion_level"] = df["remaining_seat"].apply(assign_congestion)
 
     print(f"[데이터 로드] 완료 — shape: {df.shape}")
     print(f"  기간: {df['mkTm'].min().date()} ~ {df['mkTm'].max().date()}")

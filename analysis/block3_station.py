@@ -156,7 +156,7 @@ def plot_congested_station(df: pd.DataFrame):
     print("\n[3-3] 노선별 혼잡 정류소 순위")
 
     df = df.copy()
-    df["is_congested"] = df["congestion_level"].isin(["혼잡", "만차"]).astype(int)
+    df["is_congested"] = df["congestion_level"].isin(["매우혼잡", "혼잡", "만차"]).astype(int)
 
     fig, axes = plt.subplots(2, 4, figsize=(24, 14))
     axes = axes.flatten()
@@ -189,6 +189,7 @@ def plot_congested_station(df: pd.DataFrame):
 
         colors = [
             CONGESTION_COLORS["만차"] if r >= 0.3
+            else CONGESTION_COLORS["매우혼잡"] if r >= 0.15
             else CONGESTION_COLORS["혼잡"] if r >= 0.1
             else CONGESTION_COLORS["여유"]
             for r in top20["congested_ratio"]

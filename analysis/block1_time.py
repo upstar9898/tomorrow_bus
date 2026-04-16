@@ -149,7 +149,7 @@ def plot_weekday_hour_heatmap(df: pd.DataFrame):
     df["weekday_kr"] = df["dayofweek"].map(WEEKDAY_MAP)
 
     # 혼잡+만차 비율
-    df["is_congested"] = (df["congestion_level"].isin(["혼잡", "만차"])).astype(int)
+    df["is_congested"] = (df["congestion_level"].isin(["매우혼잡", "혼잡", "만차"])).astype(int)
 
     fig, axes = plt.subplots(2, 4, figsize=(20, 10))
     axes = axes.flatten()

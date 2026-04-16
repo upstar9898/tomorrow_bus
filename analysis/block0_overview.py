@@ -86,7 +86,7 @@ def overview_congestion(df: pd.DataFrame):
 
     total = len(df)
     dist = df["congestion_level"].value_counts()
-    for level in ["여유", "혼잡", "만차"]:
+    for level in ["여유", "혼잡", "매우혼잡", "만차"]:
         cnt = dist.get(level, 0)
         print(f"  {level}: {cnt:,}건 ({cnt/total*100:.1f}%)")
 
@@ -103,7 +103,7 @@ def overview_congestion(df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(12, 5))
 
     bottom = {r: 0 for r in ROUTE_ORDER}
-    for level in ["여유", "혼잡", "만차"]:
+    for level in ["여유", "혼잡", "매우혼잡", "만차"]:
         vals = []
         for route in ROUTE_ORDER:
             row = route_cong[
