@@ -131,7 +131,7 @@ def plot_first_congested_staord(df: pd.DataFrame):
 
     # trip 내에서 처음으로 혼잡(혼잡+만차) 상태가 되는 staOrd 추출
     # 잔여좌석=0 오류값은 utils.py load_data()에서 이미 제거됨
-    congested = df[df["congestion_level"].isin(["혼잡", "만차"])].copy()
+    congested = df[df["congestion_level"].isin(["매우혼잡", "혼잡", "만차"])].copy()
     first_cong = (
         congested.groupby(["route_name", "trip_id"])["staOrd"]
         .min()
