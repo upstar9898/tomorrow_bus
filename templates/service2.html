@@ -441,5 +441,6 @@
 {% endblock %}
 
 {% block extra_script %}
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={{ KAKAO_JS_KEY }}&autoload=false"></script>
 <script type="module" src="{% static 'bus/js/service2.js' %}"></script>
 {% endblock %}
