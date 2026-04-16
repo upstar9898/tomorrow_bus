@@ -247,6 +247,7 @@ function renderRouteResult(routeName, stationName, data) {
         const isVirtual = stop.is_virtual === 1;
 
         const li = document.createElement("li");
+        console.log(stop)
         li.className = "stop-item";
 
         li.innerHTML = `
@@ -306,8 +307,8 @@ function renderRouteResult(routeName, stationName, data) {
 }
 
     let kakaoMap = null;
-let mapMarkers = [];
-let mapPolyline = null;
+    let mapMarkers = [];
+    let mapPolylines = [];
 
 function clearRouteMap() {
     for (const marker of mapMarkers) {
@@ -315,10 +316,10 @@ function clearRouteMap() {
     }
     mapMarkers = [];
 
-    if (mapPolyline) {
-        mapPolyline.setMap(null);
-        mapPolyline = null;
+    for (const polyline of mapPolylines) {
+        polyline.setMap(null);
     }
+    mapPolylines = [];
 }
 
 function makeMarkerImage(color = "#2563eb") {
@@ -351,11 +352,14 @@ function drawRouteMap(stations, selectedStationId) {
         return;
     }
 
-    const validStations = stations.filter(st =>
-        st.latitude != null &&
-        st.longitude != null &&
-        !Number.isNaN(Number(st.latitude)) &&
-        !Number.isNaN(Number(st.longitude))
+    const validStations = stations.filter(
+        (st) =>
+            st.latitude != null &&
+            st.longitude != null &&
+            !Number.isNaN(Number(st.latitude)) &&
+            !Number.isNaN(Number(st.longitude)) &&
+            Number(st.latitude) !== 0 &&
+            Number(st.longitude) !== 0,
     );
 
     if (validStations.length === 0) {
@@ -367,32 +371,36 @@ function drawRouteMap(stations, selectedStationId) {
     mapSummary.textContent = `정류소 ${validStations.length}개를 지도에 표시했습니다.`;
 
     const first = validStations[0];
-    const center = new kakao.maps.LatLng(Number(first.latitude), Number(first.longitude));
+    const center = new kakao.maps.LatLng(
+        Number(first.latitude),
+        Number(first.longitude),
+    );
 
     if (!kakaoMap) {
         kakaoMap = new kakao.maps.Map(mapContainer, {
             center: center,
-            level: 7
+            level: 7,
         });
-    } else {
-        kakaoMap.setCenter(center);
     }
 
     clearRouteMap();
 
     const bounds = new kakao.maps.LatLngBounds();
-    const linePath = [];
+
+    // 선을 여러 구간으로 나눠서 그리기
+    let currentPath = [];
+    let prevStaOrd = null;
 
     for (const st of validStations) {
         const latlng = new kakao.maps.LatLng(
             Number(st.latitude),
-            Number(st.longitude)
+            Number(st.longitude),
         );
 
-        linePath.push(latlng);
         bounds.extend(latlng);
 
-        const isSelected = String(st.station_id) === String(selectedStationId);
+        const isSelected =
+            String(st.station_id) === String(selectedStationId);
 
         const marker = new kakao.maps.Marker({
             map: kakaoMap,
@@ -400,13 +408,13 @@ function drawRouteMap(stations, selectedStationId) {
             title: st.station_name,
             image: isSelected
                 ? makeMarkerImage("#facc15")
-                : makeMarkerImage("#2563eb")
+                : makeMarkerImage("#2563eb"),
         });
 
         mapMarkers.push(marker);
 
         const infoWindow = new kakao.maps.InfoWindow({
-            removable: true, // 카카오 기본 닫기 버튼도 같이 표시됨
+            removable: true,
             content: `
                 <div style="
                     padding:10px 12px;
@@ -420,34 +428,61 @@ function drawRouteMap(stations, selectedStationId) {
                     <strong>${st.station_name}</strong><br>
                     ${st.ars_id ? `정류소 코드: ${st.ars_id}<br>` : ""}
                     ${st.is_virtual === 1 ? "가상 정류소" : "일반 정류소"}
-                    ${String(st.station_id) === String(selectedStationId)
-                        ? `<br><span style="color:#2563eb;font-weight:700;">기준 정류소</span>`
-                        : ""}
+                    ${
+                        isSelected
+                            ? `<br><span style="color:#ca8a04;font-weight:700;">기준 정류소</span>`
+                            : ""
+                    }
                 </div>
-            `
+            `,
         });
 
         kakao.maps.event.addListener(marker, "click", function () {
             infoWindow.open(kakaoMap, marker);
         });
+
+        // ===== 여기 핵심: staOrd가 끊기면 선도 끊기 =====
+        const currentStaOrd = Number(st.staOrd);
+
+        if (
+            prevStaOrd !== null &&
+            !Number.isNaN(currentStaOrd) &&
+            !Number.isNaN(prevStaOrd) &&
+            currentStaOrd - prevStaOrd > 1
+        ) {
+            if (currentPath.length >= 2) {
+                const polyline = new kakao.maps.Polyline({
+                    map: kakaoMap,
+                    path: currentPath,
+                    strokeWeight: 5,
+                    strokeColor: "#2563eb",
+                    strokeOpacity: 0.85,
+                    strokeStyle: "solid",
+                });
+                mapPolylines.push(polyline);
+            }
+
+            currentPath = [];
+        }
+
+        currentPath.push(latlng);
+        prevStaOrd = currentStaOrd;
     }
 
-    mapPolyline = new kakao.maps.Polyline({
-        map: kakaoMap,
-        path: linePath,
-        strokeWeight: 5,
-        strokeColor: "#2563eb",
-        strokeOpacity: 0.85,
-        strokeStyle: "solid"
-    });
+    // 마지막 구간 polyline 추가
+    if (currentPath.length >= 2) {
+        const polyline = new kakao.maps.Polyline({
+            map: kakaoMap,
+            path: currentPath,
+            strokeWeight: 5,
+            strokeColor: "#2563eb",
+            strokeOpacity: 0.85,
+            strokeStyle: "solid",
+        });
+        mapPolylines.push(polyline);
+    }
 
     kakaoMap.setBounds(bounds, 80, 80, 80, 80);
-
-    setTimeout(() => {
-        if (kakaoMap.getLevel() < 8) {
-            kakaoMap.setLevel(8);
-        }
-    }, 100);
 }
 
 kakao.maps.load(function () {
