@@ -62,8 +62,8 @@ def plot_fullness_rate(df: pd.DataFrame):
     ax = axes[0]
     colors = [
         CONGESTION_COLORS["만차"] if r >= 0.05
-        else CONGESTION_COLORS["매우혼잡"] if r >= 0.03
         else CONGESTION_COLORS["혼잡"] if r >= 0.01
+        else CONGESTION_COLORS["보통"] if r >= 0.005
         else CONGESTION_COLORS["여유"]
         for r in route_full["full_ratio"]
     ]
