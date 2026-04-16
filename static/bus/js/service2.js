@@ -321,6 +321,28 @@ function clearRouteMap() {
     }
 }
 
+function makeMarkerImage(color = "#2563eb") {
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
+            <path d="M18 2C10.268 2 4 8.268 4 16c0 10.2 14 28 14 28s14-17.8 14-28C32 8.268 25.732 2 18 2z"
+                fill="${color}" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="18" cy="16" r="5" fill="#ffffff"/>
+        </svg>
+    `;
+
+    const encoded = encodeURIComponent(svg)
+        .replace(/'/g, "%27")
+        .replace(/"/g, "%22");
+
+    return new kakao.maps.MarkerImage(
+        `data:image/svg+xml;charset=UTF-8,${encoded}`,
+        new kakao.maps.Size(36, 48),
+        {
+            offset: new kakao.maps.Point(18, 48),
+        }
+    );
+}
+
 function drawRouteMap(stations, selectedStationId) {
     const mapContainer = document.getElementById("routeMap");
     const mapSummary = document.getElementById("mapSummary");
@@ -370,10 +392,15 @@ function drawRouteMap(stations, selectedStationId) {
         linePath.push(latlng);
         bounds.extend(latlng);
 
+        const isSelected = String(st.station_id) === String(selectedStationId);
+
         const marker = new kakao.maps.Marker({
             map: kakaoMap,
             position: latlng,
-            title: st.station_name
+            title: st.station_name,
+            image: isSelected
+                ? makeMarkerImage("#facc15")
+                : makeMarkerImage("#2563eb")
         });
 
         mapMarkers.push(marker);
