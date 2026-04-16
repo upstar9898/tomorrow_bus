@@ -379,6 +379,7 @@ function drawRouteMap(stations, selectedStationId) {
         mapMarkers.push(marker);
 
         const infoWindow = new kakao.maps.InfoWindow({
+            removable: true, // 카카오 기본 닫기 버튼도 같이 표시됨
             content: `
                 <div style="
                     padding:10px 12px;
