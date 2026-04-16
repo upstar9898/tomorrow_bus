@@ -84,32 +84,47 @@ predictForm.addEventListener("submit", async function (e) {
             <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
         `;
 
-    try {
-        const response = await fetch("/ajax/predict/service2/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
-            },
-            body: JSON.stringify({
-                routeId: routeId,
-                stationId: stationId,
-                date_time: dateTime,
-            }),
-        });
+        try {
+    const predictFetch = fetch("/ajax/predict/service2/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+            routeId: routeId,
+            stationId: stationId,
+            date_time: dateTime
+        })
+    });
 
-        const result = await response.json();
+    const mapFetch = fetch(
+        `/ajax/route-map-data/?routeId=${encodeURIComponent(routeId)}`
+    );
 
-        if (!response.ok || !result.success) {
-            alert(result.error || "예측 요청에 실패했습니다.");
-            return;
-        }
+    const [predictResponse, mapResponse] = await Promise.all([predictFetch, mapFetch]);
 
-        renderRouteResult(routeName, stationName, result.data);
-    } catch (error) {
-        alert("서버 요청 중 오류가 발생했습니다.");
+    const predictResult = await predictResponse.json();
+    const mapResult = await mapResponse.json();
+
+    if (!predictResponse.ok || !predictResult.success) {
+        alert(predictResult.error || "예측 요청에 실패했습니다.");
+        return;
     }
-});
+
+    renderRouteResult(routeName, stationName, predictResult.data);
+
+    if (!mapResponse.ok || !mapResult.success) {
+        document.getElementById("mapSummary").textContent = "지도 데이터를 불러오지 못했습니다.";
+        return;
+    }
+
+    drawRouteMap(mapResult.stations, stationId);
+
+} catch (error) {
+    console.error(error);
+    alert("서버 요청 중 오류가 발생했습니다.");
+}});
 
 function getSeatState(stop) {
     if (stop.is_virtual === 1) {
@@ -289,3 +304,130 @@ function renderRouteResult(routeName, stationName, data) {
         });
     }
 }
+
+    let kakaoMap = null;
+let mapMarkers = [];
+let mapPolyline = null;
+
+function clearRouteMap() {
+    for (const marker of mapMarkers) {
+        marker.setMap(null);
+    }
+    mapMarkers = [];
+
+    if (mapPolyline) {
+        mapPolyline.setMap(null);
+        mapPolyline = null;
+    }
+}
+
+function drawRouteMap(stations, selectedStationId) {
+    const mapContainer = document.getElementById("routeMap");
+    const mapSummary = document.getElementById("mapSummary");
+
+    if (!mapContainer || !window.kakao || !window.kakao.maps) {
+        return;
+    }
+
+    const validStations = stations.filter(st =>
+        st.latitude != null &&
+        st.longitude != null &&
+        !Number.isNaN(Number(st.latitude)) &&
+        !Number.isNaN(Number(st.longitude))
+    );
+
+    if (validStations.length === 0) {
+        mapSummary.textContent = "표시할 정류소 좌표가 없습니다.";
+        clearRouteMap();
+        return;
+    }
+
+    mapSummary.textContent = `정류소 ${validStations.length}개를 지도에 표시했습니다.`;
+
+    const first = validStations[0];
+    const center = new kakao.maps.LatLng(Number(first.latitude), Number(first.longitude));
+
+    if (!kakaoMap) {
+        kakaoMap = new kakao.maps.Map(mapContainer, {
+            center: center,
+            level: 7
+        });
+    } else {
+        kakaoMap.setCenter(center);
+    }
+
+    clearRouteMap();
+
+    const bounds = new kakao.maps.LatLngBounds();
+    const linePath = [];
+
+    for (const st of validStations) {
+        const latlng = new kakao.maps.LatLng(
+            Number(st.latitude),
+            Number(st.longitude)
+        );
+
+        linePath.push(latlng);
+        bounds.extend(latlng);
+
+        const marker = new kakao.maps.Marker({
+            map: kakaoMap,
+            position: latlng,
+            title: st.station_name
+        });
+
+        mapMarkers.push(marker);
+
+        const infoWindow = new kakao.maps.InfoWindow({
+            content: `
+                <div style="
+                    padding:10px 12px;
+                    font-size:13px;
+                    line-height:1.5;
+                    border-radius:12px;
+                    background:#fff;
+                    border:1px solid #dbe4f0;
+                    min-width:170px;
+                ">
+                    <strong>${st.station_name}</strong><br>
+                    ${st.ars_id ? `정류소 코드: ${st.ars_id}<br>` : ""}
+                    ${st.is_virtual === 1 ? "가상 정류소" : "일반 정류소"}
+                    ${String(st.station_id) === String(selectedStationId)
+                        ? `<br><span style="color:#2563eb;font-weight:700;">기준 정류소</span>`
+                        : ""}
+                </div>
+            `
+        });
+
+        kakao.maps.event.addListener(marker, "click", function () {
+            infoWindow.open(kakaoMap, marker);
+        });
+    }
+
+    mapPolyline = new kakao.maps.Polyline({
+        map: kakaoMap,
+        path: linePath,
+        strokeWeight: 5,
+        strokeColor: "#2563eb",
+        strokeOpacity: 0.85,
+        strokeStyle: "solid"
+    });
+
+    kakaoMap.setBounds(bounds, 80, 80, 80, 80);
+
+    setTimeout(() => {
+        if (kakaoMap.getLevel() < 8) {
+            kakaoMap.setLevel(8);
+        }
+    }, 100);
+}
+
+kakao.maps.load(function () {
+    const mapContainer = document.getElementById("routeMap");
+    if (!mapContainer) return;
+
+    kakaoMap = new kakao.maps.Map(mapContainer, {
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 8
+    });
+});
