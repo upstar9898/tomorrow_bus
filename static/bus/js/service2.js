@@ -247,6 +247,7 @@ function renderRouteResult(routeName, stationName, data) {
         const isVirtual = stop.is_virtual === 1;
 
         const li = document.createElement("li");
+        console.log(stop)
         li.className = "stop-item";
 
         li.innerHTML = `
@@ -306,8 +307,8 @@ function renderRouteResult(routeName, stationName, data) {
 }
 
     let kakaoMap = null;
-let mapMarkers = [];
-let mapPolyline = null;
+    let mapMarkers = [];
+    let mapPolylines = [];
 
 function clearRouteMap() {
     for (const marker of mapMarkers) {
@@ -315,10 +316,32 @@ function clearRouteMap() {
     }
     mapMarkers = [];
 
-    if (mapPolyline) {
-        mapPolyline.setMap(null);
-        mapPolyline = null;
+    for (const polyline of mapPolylines) {
+        polyline.setMap(null);
     }
+    mapPolylines = [];
+}
+
+function makeMarkerImage(color = "#2563eb") {
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
+            <path d="M18 2C10.268 2 4 8.268 4 16c0 10.2 14 28 14 28s14-17.8 14-28C32 8.268 25.732 2 18 2z"
+                fill="${color}" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="18" cy="16" r="5" fill="#ffffff"/>
+        </svg>
+    `;
+
+    const encoded = encodeURIComponent(svg)
+        .replace(/'/g, "%27")
+        .replace(/"/g, "%22");
+
+    return new kakao.maps.MarkerImage(
+        `data:image/svg+xml;charset=UTF-8,${encoded}`,
+        new kakao.maps.Size(36, 48),
+        {
+            offset: new kakao.maps.Point(18, 48),
+        }
+    );
 }
 
 function drawRouteMap(stations, selectedStationId) {
@@ -329,11 +352,14 @@ function drawRouteMap(stations, selectedStationId) {
         return;
     }
 
-    const validStations = stations.filter(st =>
-        st.latitude != null &&
-        st.longitude != null &&
-        !Number.isNaN(Number(st.latitude)) &&
-        !Number.isNaN(Number(st.longitude))
+    const validStations = stations.filter(
+        (st) =>
+            st.latitude != null &&
+            st.longitude != null &&
+            !Number.isNaN(Number(st.latitude)) &&
+            !Number.isNaN(Number(st.longitude)) &&
+            Number(st.latitude) !== 0 &&
+            Number(st.longitude) !== 0,
     );
 
     if (validStations.length === 0) {
@@ -345,40 +371,50 @@ function drawRouteMap(stations, selectedStationId) {
     mapSummary.textContent = `정류소 ${validStations.length}개를 지도에 표시했습니다.`;
 
     const first = validStations[0];
-    const center = new kakao.maps.LatLng(Number(first.latitude), Number(first.longitude));
+    const center = new kakao.maps.LatLng(
+        Number(first.latitude),
+        Number(first.longitude),
+    );
 
     if (!kakaoMap) {
         kakaoMap = new kakao.maps.Map(mapContainer, {
             center: center,
-            level: 7
+            level: 7,
         });
-    } else {
-        kakaoMap.setCenter(center);
     }
 
     clearRouteMap();
 
     const bounds = new kakao.maps.LatLngBounds();
-    const linePath = [];
+
+    // 선을 여러 구간으로 나눠서 그리기
+    let currentPath = [];
+    let prevStaOrd = null;
 
     for (const st of validStations) {
         const latlng = new kakao.maps.LatLng(
             Number(st.latitude),
-            Number(st.longitude)
+            Number(st.longitude),
         );
 
-        linePath.push(latlng);
         bounds.extend(latlng);
+
+        const isSelected =
+            String(st.station_id) === String(selectedStationId);
 
         const marker = new kakao.maps.Marker({
             map: kakaoMap,
             position: latlng,
-            title: st.station_name
+            title: st.station_name,
+            image: isSelected
+                ? makeMarkerImage("#facc15")
+                : makeMarkerImage("#2563eb"),
         });
 
         mapMarkers.push(marker);
 
         const infoWindow = new kakao.maps.InfoWindow({
+            removable: true,
             content: `
                 <div style="
                     padding:10px 12px;
@@ -392,34 +428,61 @@ function drawRouteMap(stations, selectedStationId) {
                     <strong>${st.station_name}</strong><br>
                     ${st.ars_id ? `정류소 코드: ${st.ars_id}<br>` : ""}
                     ${st.is_virtual === 1 ? "가상 정류소" : "일반 정류소"}
-                    ${String(st.station_id) === String(selectedStationId)
-                        ? `<br><span style="color:#2563eb;font-weight:700;">기준 정류소</span>`
-                        : ""}
+                    ${
+                        isSelected
+                            ? `<br><span style="color:#ca8a04;font-weight:700;">기준 정류소</span>`
+                            : ""
+                    }
                 </div>
-            `
+            `,
         });
 
         kakao.maps.event.addListener(marker, "click", function () {
             infoWindow.open(kakaoMap, marker);
         });
+
+        // ===== 여기 핵심: staOrd가 끊기면 선도 끊기 =====
+        const currentStaOrd = Number(st.staOrd);
+
+        if (
+            prevStaOrd !== null &&
+            !Number.isNaN(currentStaOrd) &&
+            !Number.isNaN(prevStaOrd) &&
+            currentStaOrd - prevStaOrd > 1
+        ) {
+            if (currentPath.length >= 2) {
+                const polyline = new kakao.maps.Polyline({
+                    map: kakaoMap,
+                    path: currentPath,
+                    strokeWeight: 5,
+                    strokeColor: "#2563eb",
+                    strokeOpacity: 0.85,
+                    strokeStyle: "solid",
+                });
+                mapPolylines.push(polyline);
+            }
+
+            currentPath = [];
+        }
+
+        currentPath.push(latlng);
+        prevStaOrd = currentStaOrd;
     }
 
-    mapPolyline = new kakao.maps.Polyline({
-        map: kakaoMap,
-        path: linePath,
-        strokeWeight: 5,
-        strokeColor: "#2563eb",
-        strokeOpacity: 0.85,
-        strokeStyle: "solid"
-    });
+    // 마지막 구간 polyline 추가
+    if (currentPath.length >= 2) {
+        const polyline = new kakao.maps.Polyline({
+            map: kakaoMap,
+            path: currentPath,
+            strokeWeight: 5,
+            strokeColor: "#2563eb",
+            strokeOpacity: 0.85,
+            strokeStyle: "solid",
+        });
+        mapPolylines.push(polyline);
+    }
 
     kakaoMap.setBounds(bounds, 80, 80, 80, 80);
-
-    setTimeout(() => {
-        if (kakaoMap.getLevel() < 8) {
-            kakaoMap.setLevel(8);
-        }
-    }, 100);
 }
 
 kakao.maps.load(function () {

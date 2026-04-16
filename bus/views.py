@@ -391,6 +391,7 @@ def get_route_map_data(request):
             "latitude": st.locationY,
             "longitude": st.locationX,
             "is_virtual": st.isVirtual,
+            "staOrd": rs.staOrd
         })
 
     return JsonResponse({
