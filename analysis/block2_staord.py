@@ -50,9 +50,10 @@ def plot_staord_curve(df: pd.DataFrame):
                 linewidth=2, color="#2196F3")
         ax.fill_between(data["staOrd"], data["remaining_seat"], alpha=0.15, color="#2196F3")
 
-        # 혼잡 기준선 (12석, 2석)
-        ax.axhline(y=12, color="#FF9800", linestyle="--", linewidth=1, alpha=0.8, label="혼잡 기준 (12석)")
-        ax.axhline(y=2,  color="#F44336", linestyle="--", linewidth=1, alpha=0.8, label="만차 기준 (2석)")
+        # 혼잡 기준선 (새 4단계 기준)
+        ax.axhline(y=30, color="#FF9800", linestyle="--", linewidth=1, alpha=0.8, label="혼잡 기준 (30석)")
+        ax.axhline(y=6,  color="#FF5722", linestyle="--", linewidth=1, alpha=0.8, label="매우혼잡 기준 (6석)")
+        ax.axhline(y=0,  color="#F44336", linestyle="--", linewidth=1, alpha=0.8, label="만차 기준 (0석)")
 
         ax.set_title(f"{route}번", fontsize=13)
         ax.set_xlabel("정류소 순번 (staOrd)")
