@@ -5,7 +5,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 import json
 
-from service_test.backend_test import dummy_service1, dummy_service2  # 실제 서비스로 변경 필요
+from service_test.backend_test import (
+    dummy_service1,
+    dummy_service2,
+)  # 실제 서비스로 변경 필요
 
 from .models import Bus_route, Route_station, Bus_arrival_info
 
@@ -26,7 +29,11 @@ def service1(request):
 
 def service2(request):
     routes = Bus_route.objects.all().order_by("routeName")
-    return render(request, "service2.html", {"routes": routes, "KAKAO_JS_KEY": settings.KAKAO_JS_KEY})
+    return render(
+        request,
+        "service2.html",
+        {"routes": routes, "KAKAO_JS_KEY": settings.KAKAO_JS_KEY},
+    )
 
 
 def favorites(request):
@@ -44,8 +51,7 @@ def get_stations_by_route(request):
         )
 
     route_stations = (
-        Route_station.objects
-        .filter(route_id=route_id, station__isVirtual=0)
+        Route_station.objects.filter(route_id=route_id, station__isVirtual=0)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -63,7 +69,9 @@ def get_stations_by_route(request):
     return JsonResponse(
         {
             "success": True,
-            "stations": stations,
+            "data": {
+                "stations": stations,
+            },
         }
     )
 
@@ -275,7 +283,7 @@ def get_station_week_chart(request):
     chart_data = []
 
     SAMPLE_SIZE_PER_DAY = 10
-    
+
     for label, week_day_value in weekday_groups:
         day_rows = base_qs.filter(mkTm__week_day=week_day_value)
 
@@ -283,11 +291,7 @@ def get_station_week_chart(request):
         diff_rows = []
 
         for row in day_rows:
-            row_seconds = (
-                row.mkTm.hour * 3600
-                + row.mkTm.minute * 60
-                + row.mkTm.second
-            )
+            row_seconds = row.mkTm.hour * 3600 + row.mkTm.minute * 60 + row.mkTm.second
             diff = abs(row_seconds - target_seconds)
             diff_rows.append((diff, row))
 
@@ -299,8 +303,7 @@ def get_station_week_chart(request):
 
         if nearest_rows:
             avg_remaining_seat = round(
-                sum(row.remaining_seat for row in nearest_rows) / len(nearest_rows),
-                1
+                sum(row.remaining_seat for row in nearest_rows) / len(nearest_rows), 1
             )
 
             chart_data.append(
@@ -322,41 +325,49 @@ def get_station_week_chart(request):
     return JsonResponse(
         {
             "success": True,
-            "data" : {
-            "route_id": route_id,
-            "route_name": route_name,
-            "station_id": station_id,
-            "station_name": station_name,
-            "requested_date": target_date,
-            "requested_time": target_time,
-            "day_type": day_type,
-            "sample_size_per_day": SAMPLE_SIZE_PER_DAY,
-            "bars": chart_data,
-            }
+            "data": {
+                "route_id": route_id,
+                "route_name": route_name,
+                "station_id": station_id,
+                "station_name": station_name,
+                "requested_date": target_date,
+                "requested_time": target_time,
+                "day_type": day_type,
+                "sample_size_per_day": SAMPLE_SIZE_PER_DAY,
+                "bars": chart_data,
+            },
         }
     )
-        
+
+
 @require_POST
 def predict_service2(request):
     try:
         data = json.loads(request.body)
 
-        route_id = data.get("routeId")
-        station_id = data.get("stationId")
+        route_id = data.get("route_id")
+        station_id = data.get("station_id")
         date_time = data.get("date_time")
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
-                {"success": False, "error": "routeId, stationId, date_time은 필수입니다."},
+                {
+                    "success": False,
+                    "error": "route_id, station_id, date_time은 필수입니다.",
+                },
                 status=400,
             )
 
-        result = dummy_service2(route_id, station_id, date_time)  # 실제 서비스로 변경 필요
+        result = dummy_service2(
+            route_id, station_id, date_time
+        )  # 실제 서비스로 변경 필요
 
-        return JsonResponse({
-            "success": True,
-            "data": result,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "data": result,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse(
@@ -368,17 +379,19 @@ def predict_service2(request):
             {"success": False, "error": str(e)},
             status=500,
         )
-    
+
+
 @require_GET
 def get_route_map_data(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
 
     if not route_id:
-        return JsonResponse({"success": False, "error": "routeId가 필요합니다."}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "route_id가 필요합니다."}, status=400
+        )
 
     route_stations = (
-        Route_station.objects
-        .filter(route_id=route_id)
+        Route_station.objects.filter(route_id=route_id)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -389,17 +402,23 @@ def get_route_map_data(request):
         if st.locationY is None or st.locationX is None:
             continue
 
-        stations.append({
-            "station_id": st.stationId,
-            "station_name": st.stationName,
-            "ars_id": st.arsId,
-            "latitude": st.locationY,
-            "longitude": st.locationX,
-            "is_virtual": st.isVirtual,
-            "staOrd": rs.staOrd
-        })
+        stations.append(
+            {
+                "station_id": st.stationId,
+                "station_name": st.stationName,
+                "ars_id": st.arsId,
+                "latitude": st.locationY,
+                "longitude": st.locationX,
+                "is_virtual": st.isVirtual,
+                "staOrd": rs.staOrd,
+            }
+        )
 
-    return JsonResponse({
-        "success": True,
-        "stations": stations,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "data": {
+                "stations": stations,
+            },
+        }
+    )
