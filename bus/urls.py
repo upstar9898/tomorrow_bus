@@ -40,9 +40,5 @@ urlpatterns = [
     ),  # 예측2
     path("ajax/route-map-data/", views.get_route_map_data, name="ajax_route_map_data"), # 비동기 지도 호출 
     path("favorite/route-name/", views.get_route_name, name="get_route_name"), # 노선 아이디로 노션명 가져오기
-        path(
-        "favorite/station-info/",
-        views.get_station_favorite_info,
-        name="get_station_favorite_info",
-    ),  # 정류소 pk를 이용해 노선명을 join해서 가져오기
+
 ]
