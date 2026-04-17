@@ -35,11 +35,11 @@ def favorites(request):
 
 @require_GET
 def get_stations_by_route(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
 
     if not route_id:
         return JsonResponse(
-            {"success": False, "error": "routeId가 필요합니다."},
+            {"success": False, "error": "route_id가 필요합니다."},
             status=400,
         )
 
@@ -52,10 +52,10 @@ def get_stations_by_route(request):
 
     stations = [
         {
-            "stationId": rs.station.stationId,
-            "stationName": rs.station.stationName,
-            "arsId": rs.station.arsId,
-            "staOrd": rs.staOrd,
+            "station_id": rs.station.stationId,
+            "station_name": rs.station.stationName,
+            "ars_id": rs.station.arsId,
+            "sta_ord": rs.staOrd,
         }
         for rs in route_stations
     ]
@@ -109,15 +109,16 @@ def predict_service1(request):
         )
 
 
+# 미사용 함수, 추후 서비스2에 사용 가능성 있음
 @require_GET
 def get_route_seat_chart(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
     target_date = request.GET.get("date")  # 예: 2026-04-01
     target_time = request.GET.get("time")  # 예: 06:33
 
     if not route_id or not target_date or not target_time:
         return JsonResponse(
-            {"success": False, "error": "routeId, date, time은 필수입니다."},
+            {"success": False, "error": "route_id, date, time은 필수입니다."},
             status=400,
         )
 
@@ -175,9 +176,9 @@ def get_route_seat_chart(request):
 
     chart_data = [
         {
-            "staOrd": row.staOrd,
-            "stationId": row.station.stationId,
-            "stationName": row.station.stationName,
+            "sta_ord": row.staOrd,
+            "station_id": row.station.stationId,
+            "station_name": row.station.stationName,
             "remaining_seat": row.remaining_seat,
             "full_flag": row.full_flag,
         }
@@ -187,14 +188,14 @@ def get_route_seat_chart(request):
     return JsonResponse(
         {
             "success": True,
-            "routeId": route_id,
-            "routeName": snapshot_qs.first().route.routeName
+            "route_id": route_id,
+            "route_name": snapshot_qs.first().route.routeName
             if snapshot_qs.exists()
             else "",
-            "requestedDate": target_date,
-            "requestedTime": target_time,
-            "dayType": "weekend" if is_weekend else "weekday",
-            "nearestMkTm": nearest_mkTm.strftime("%Y-%m-%d %H:%M:%S"),
+            "requested_date": target_date,
+            "requested_time": target_time,
+            "day_type": "weekend" if is_weekend else "weekday",
+            "nearest_mkTm": nearest_mkTm.strftime("%Y-%m-%d %H:%M:%S"),
             "stations": chart_data,
         }
     )
@@ -202,8 +203,8 @@ def get_route_seat_chart(request):
 
 @require_GET
 def get_station_week_chart(request):
-    route_id = request.GET.get("routeId")
-    station_id = request.GET.get("stationId")
+    route_id = request.GET.get("route_id")
+    station_id = request.GET.get("station_id")
     target_date = request.GET.get("date")  # 예: 2026-04-15
     target_time = request.GET.get("time")  # 예: 07:30
 
@@ -211,7 +212,7 @@ def get_station_week_chart(request):
         return JsonResponse(
             {
                 "success": False,
-                "error": "routeId, stationId, date, time은 모두 필요합니다.",
+                "error": "route_id, station_id, date, time은 모두 필요합니다.",
             },
             status=400,
         )
@@ -302,7 +303,7 @@ def get_station_week_chart(request):
 
             chart_data.append(
                 {
-                    "dayLabel": label,
+                    "day_label": label,
                     "remaining_seat": avg_remaining_seat,
                     "sampleCount": len(nearest_rows),
                 }

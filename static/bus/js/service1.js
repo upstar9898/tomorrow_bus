@@ -48,7 +48,7 @@ routeSelect.addEventListener("change", async function () {
 
     try {
         const response = await fetch(
-            `/ajax/stations/?routeId=${encodeURIComponent(routeId)}`,
+            `/ajax/stations/?route_id=${encodeURIComponent(routeId)}`,
         );
         const result = await response.json();
 
@@ -66,11 +66,11 @@ routeSelect.addEventListener("change", async function () {
 
         let options = `<option value="">정류장을 선택하세요</option>`;
         for (const station of stations) {
-            const label = station.arsId
-                ? `${station.stationName} (${station.arsId})`
-                : station.stationName;
+            const label = station.ars_id
+                ? `${station.station_name} (${station.ars_id})`
+                : station.station_name;
 
-            options += `<option value="${station.stationId}">${label}</option>`;
+            options += `<option value="${station.station_id}">${label}</option>`;
         }
 
         stationSelect.innerHTML = options;
@@ -131,7 +131,7 @@ predictForm.addEventListener("submit", async function (e) {
         });
 
         const chartPromise = fetch(
-            `/ajax/station-week-chart/?routeId=${encodeURIComponent(routeId)}&stationId=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
+            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
         );
 
         const [predictResponse, chartResponse] = await Promise.all([
@@ -245,7 +245,7 @@ function drawWeekChart(bars, dayType = "") {
     data.addColumn("number", "잔여좌석");
 
     bars.forEach((item) => {
-        data.addRow([item.dayLabel, item.remaining_seat]);
+        data.addRow([item.day_label, item.remaining_seat]);
     });
 
     const isMobile = window.innerWidth <= 768;
