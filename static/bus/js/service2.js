@@ -1,4 +1,5 @@
 import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
+import {routeSelectChangeEvent} from "./routeSelect.js"
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
@@ -19,50 +20,10 @@ const summaryBusyStops = document.getElementById("summaryBusyStops");
 rideDateTime.min = getNowForDateTimeLocal();
 rideDateTime.value = getNowForDateTimeLocal();
 
-routeSelect.addEventListener("change", async function () {
-    const routeId = this.value;
+// 노선을 선택하면 정류장 목록을 불러오는 이벤트
+routeSelectChangeEvent(routeSelect, stationSelect);
 
-    stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
-    stationSelect.disabled = true;
-
-    if (!routeId) {
-        stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `/ajax/stations/?routeId=${encodeURIComponent(routeId)}`,
-        );
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-            return;
-        }
-
-        const stations = result.stations;
-
-        if (stations.length === 0) {
-            stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
-            return;
-        }
-
-        let options = `<option value="">정류장을 선택하세요</option>`;
-        for (const station of stations) {
-            const label = station.arsId
-                ? `${station.stationName} (${station.arsId})`
-                : station.stationName;
-
-            options += `<option value="${station.stationId}">${label}</option>`;
-        }
-
-        stationSelect.innerHTML = options;
-        stationSelect.disabled = false;
-    } catch (error) {
-        stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-    }
-});
+// 예측 버튼을 눌렀을 때, 예측 결과와 지도를 표시하는 이벤트
 
 predictForm.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -92,20 +53,22 @@ predictForm.addEventListener("submit", async function (e) {
             "X-CSRFToken": getCookie("csrftoken"),
         },
         body: JSON.stringify({
-            routeId: routeId,
-            stationId: stationId,
+            route_id: routeId,
+            station_id: stationId,
             date_time: dateTime
         })
     });
 
     const mapFetch = fetch(
-        `/ajax/route-map-data/?routeId=${encodeURIComponent(routeId)}`
+        `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
     );
 
     const [predictResponse, mapResponse] = await Promise.all([predictFetch, mapFetch]);
 
     const predictResult = await predictResponse.json();
     const mapResult = await mapResponse.json();
+    
+
 
     if (!predictResponse.ok || !predictResult.success) {
         alert(predictResult.error || "예측 요청에 실패했습니다.");
@@ -118,8 +81,8 @@ predictForm.addEventListener("submit", async function (e) {
         document.getElementById("mapSummary").textContent = "지도 데이터를 불러오지 못했습니다.";
         return;
     }
-
-    drawRouteMap(mapResult.stations, stationId);
+    const mapResultData = mapResult.data;
+    drawRouteMap(mapResultData.stations, stationId);
 
 } catch (error) {
     console.error(error);
@@ -159,6 +122,7 @@ function getSeatState(stop) {
     };
 }
 
+// result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
     // 상단 요약
     const formattedDate = formatDateTime(data.date_time);
@@ -313,7 +277,7 @@ function renderRouteResult(routeName, stationName, data) {
 
 function isVirtualStop(stop) {
     const name = stop.station_name || "";
-    console.log("정류소명:", name);
+    // console.log("정류소명:", name);
     return name.includes("가상") || name.includes("미정차");
 }
 
