@@ -103,5 +103,8 @@ data/
 /*.txt
 *.pkl
 
-# training 산출물
-training/artifacts
+# 모델 결과 / 로그
+outputs_peak_v2/
+*.csv
+*.log
+*.pkl
