@@ -398,3 +398,30 @@ def get_route_map_data(request):
         "success": True,
         "stations": stations,
     })
+
+@require_GET
+def get_route_name(request):
+    route_id = request.GET.get("routeId")
+
+    if not route_id:
+        return JsonResponse(
+            {"success": False, "error": "routeId가 필요합니다."},
+            status=400,
+        )
+
+    try:
+        route = Bus_route.objects.get(routeId=route_id)
+    except Bus_route.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "해당 노선을 찾을 수 없습니다."},
+            status=404,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "routeId": route.routeId,
+            "routeName": route.routeName,
+        }
+    )
+
