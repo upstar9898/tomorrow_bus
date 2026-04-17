@@ -124,15 +124,6 @@ async function renderFavorites() {
 
             itemWrap.appendChild(nameSpan);
 
-            const badgeWrap = document.createElement("div");
-            badgeWrap.style.display = "flex";
-            badgeWrap.style.flexWrap = "wrap";
-            badgeWrap.style.gap = "8px";
-            badgeWrap.style.marginTop = "6px";
-
-            badgeWrap.appendChild(createRouteBadge(routeName));
-            itemWrap.appendChild(badgeWrap);
-
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "btn btn-delete";
             deleteBtn.textContent = "삭제";
