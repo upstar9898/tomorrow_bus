@@ -39,7 +39,7 @@ async function fetchRouteName(routeId) {
             return routeId;
         }
 
-        return data.routeName || routeId;
+        return data.data.route_name || routeId;
     } catch (error) {
         console.error("노선명 조회 실패:", error);
         return routeId;
