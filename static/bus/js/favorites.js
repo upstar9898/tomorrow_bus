@@ -46,6 +46,38 @@ async function fetchRouteName(routeId) {
     }
 }
 
+function setFavoriteDataset(element, { type, routeId = "", stationId = "", arsId = "" }) {
+    element.dataset.type = type;
+
+    if (routeId) {
+        element.dataset.routeId = String(routeId);
+    }
+
+    if (stationId) {
+        element.dataset.stationId = String(stationId);
+    }
+
+    if (arsId) {
+        element.dataset.arsId = String(arsId);
+    }
+}
+
+function moveToPredictPageByBus(routeId) {
+    const url = new URL("/service1/", window.location.origin);
+    url.searchParams.set("route_id", routeId);
+    window.location.href = url.toString();
+}
+
+function moveToPredictPageByStation({ stationId, routeId, arsId }) {
+    const url = new URL("/service1/", window.location.origin);
+
+    if (routeId) url.searchParams.set("route_id", routeId);
+    if (stationId) url.searchParams.set("station_id", stationId);
+    if (arsId) url.searchParams.set("ars_id", arsId);
+
+    window.location.href = url.toString();
+}
+
 function createRouteBadge(routeName) {
     const badge = document.createElement("span");
     badge.className = "favorite-badge";
@@ -75,6 +107,16 @@ async function renderFavorites() {
             const li = document.createElement("li");
             const itemWrap = document.createElement("div");
             itemWrap.className = "favorite-item-wrap";
+            itemWrap.style.cursor = "pointer";
+
+            setFavoriteDataset(itemWrap, {
+                type: "bus",
+                routeId: bus,
+            });
+
+            itemWrap.addEventListener("click", () => {
+                moveToPredictPageByBus(itemWrap.dataset.routeId);
+            });
 
             const nameSpan = document.createElement("span");
             nameSpan.className = "favorite-item-name";
@@ -82,10 +124,20 @@ async function renderFavorites() {
 
             itemWrap.appendChild(nameSpan);
 
+            const badgeWrap = document.createElement("div");
+            badgeWrap.style.display = "flex";
+            badgeWrap.style.flexWrap = "wrap";
+            badgeWrap.style.gap = "8px";
+            badgeWrap.style.marginTop = "6px";
+
+            badgeWrap.appendChild(createRouteBadge(routeName));
+            itemWrap.appendChild(badgeWrap);
+
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "btn btn-delete";
             deleteBtn.textContent = "삭제";
-            deleteBtn.addEventListener("click", () => {
+            deleteBtn.addEventListener("click", (event) => {
+                event.stopPropagation();
                 removeFavorite("bus", bus);
             });
 
@@ -104,6 +156,22 @@ async function renderFavorites() {
             const li = document.createElement("li");
             const itemWrap = document.createElement("div");
             itemWrap.className = "favorite-item-wrap";
+            itemWrap.style.cursor = "pointer";
+
+            setFavoriteDataset(itemWrap, {
+                type: "station",
+                routeId: station.routeId,
+                stationId: station.stationId,
+                arsId: station.arsId,
+            });
+
+            itemWrap.addEventListener("click", () => {
+                moveToPredictPageByStation({
+                    routeId: itemWrap.dataset.routeId,
+                    stationId: itemWrap.dataset.stationId,
+                    arsId: itemWrap.dataset.arsId,
+                });
+            });
 
             const nameSpan = document.createElement("span");
             nameSpan.className = "favorite-item-name";
@@ -129,7 +197,8 @@ async function renderFavorites() {
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "btn btn-delete";
             deleteBtn.textContent = "삭제";
-            deleteBtn.addEventListener("click", () => {
+            deleteBtn.addEventListener("click", (event) => {
+                event.stopPropagation();
                 removeFavorite("station", {
                     arsId: station.arsId,
                     routeId: station.routeId,
