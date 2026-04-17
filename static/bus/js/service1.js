@@ -28,6 +28,7 @@ let currentPrediction = {
     routeName: "",
     stationId: "",
     stationName: "",
+    arsId: "",
 };
 
 // 차트 출력을 위해 필요한 변수
@@ -101,7 +102,12 @@ predictForm.addEventListener("submit", async function (e) {
     }
 
     const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-    const stationName = stationSelect.options[stationSelect.selectedIndex].text;
+    const stationLabel = stationSelect.options[stationSelect.selectedIndex].text;
+
+    // "정든마을.우성아파트 (47043)" -> stationName, arsId 분리
+    const stationMatch = stationLabel.match(/^(.*?)(?:\s*\(([^)]+)\))?$/);
+    const stationName = stationMatch ? stationMatch[1].trim() : stationLabel;
+    const arsId = stationMatch && stationMatch[2] ? stationMatch[2].trim() : "";
 
     const [date, timeRaw] = dateTime.split("T");
     const time = timeRaw ? timeRaw.slice(0, 5) : "";
@@ -147,7 +153,7 @@ predictForm.addEventListener("submit", async function (e) {
             return;
         }
 
-        renderResult(routeName, stationName, predictResult);
+        renderResult(routeName, stationName, arsId, predictResult);
 
         if (!chartResponse.ok || !chartResult.success) {
             document.getElementById("chartInfo").innerHTML =
@@ -190,15 +196,26 @@ favoriteRouteBtn.addEventListener("click", function () {
 
 // 즐겨찾기 정류장 추가 이벤트
 favoriteStationBtn.addEventListener("click", function () {
-    if (!currentPrediction.stationName) {
+    if (
+        !currentPrediction.stationName ||
+        !currentPrediction.arsId ||
+        !currentPrediction.routeId ||
+        !currentPrediction.routeName
+    ) {
         showToast("먼저 예측을 실행하세요.");
         return;
     }
-    addFavorite("station", currentPrediction.stationName);
+
+    addFavorite("station", {
+        stationName: currentPrediction.stationName,
+        arsId: currentPrediction.arsId,
+        routeId: currentPrediction.routeId,
+        routeName: currentPrediction.routeName,
+    });
 });
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
-function renderResult(routeName, stationName, result) {
+function renderResult(routeName, stationName, arsId, result) {
     const data = result.data;
 
     const formattedDate = formatDateTime(data.date_time);
@@ -215,6 +232,7 @@ function renderResult(routeName, stationName, result) {
     currentPrediction.routeName = routeName;
     currentPrediction.stationId = stationSelect.value;
     currentPrediction.stationName = stationName;
+    currentPrediction.arsId = arsId;
 
     favoriteRouteBtn.disabled = false;
     favoriteStationBtn.disabled = false;
