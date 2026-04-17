@@ -274,6 +274,8 @@ def get_station_week_chart(request):
 
     chart_data = []
 
+    SAMPLE_SIZE_PER_DAY = 10
+    
     for label, week_day_value in weekday_groups:
         day_rows = base_qs.filter(mkTm__week_day=week_day_value)
 
@@ -292,8 +294,8 @@ def get_station_week_chart(request):
         # 요청 시간과 가까운 순 정렬
         diff_rows.sort(key=lambda x: x[0])
 
-        # 가장 가까운 10개만 선택
-        nearest_rows = [row for diff, row in diff_rows[:10]]
+        # 가장 가까운 10개 (SAMPLE_SIZE_PER_DAY)만 선택
+        nearest_rows = [row for diff, row in diff_rows[:SAMPLE_SIZE_PER_DAY]]
 
         if nearest_rows:
             avg_remaining_seat = round(
@@ -305,15 +307,15 @@ def get_station_week_chart(request):
                 {
                     "day_label": label,
                     "remaining_seat": avg_remaining_seat,
-                    "sampleCount": len(nearest_rows),
+                    "sample_count": len(nearest_rows),
                 }
             )
         else:
             chart_data.append(
                 {
-                    "dayLabel": label,
+                    "day_label": label,
                     "remaining_seat": 0,
-                    "sampleCount": 0,
+                    "sample_count": 0,
                 }
             )
 
@@ -321,14 +323,14 @@ def get_station_week_chart(request):
         {
             "success": True,
             "data" : {
-            "routeId": route_id,
-            "routeName": route_name,
-            "stationId": station_id,
-            "stationName": station_name,
-            "requestedDate": target_date,
-            "requestedTime": target_time,
-            "dayType": day_type,
-            "sampleSizePerDay": 10,
+            "route_id": route_id,
+            "route_name": route_name,
+            "station_id": station_id,
+            "station_name": station_name,
+            "requested_date": target_date,
+            "requested_time": target_time,
+            "day_type": day_type,
+            "sample_size_per_day": SAMPLE_SIZE_PER_DAY,
             "bars": chart_data,
             }
         }
