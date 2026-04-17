@@ -5,6 +5,8 @@ import {
     showToast,
 } from "./utils.js";
 import { addFavorite } from "./favorite.js";
+import {routeSelectChangeEvent} from "./routeSelect.js"
+
 
 // 구글 차트 라이브러리 로드
 google.charts.load("current", { packages: ["corechart"] });
@@ -35,50 +37,7 @@ let latestDayType = "";
 let latestWeekBars = [];
 
 // 노선을 선택하면 정류장 목록을 불러오는 이벤트
-routeSelect.addEventListener("change", async function () {
-    const routeId = this.value;
-
-    stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
-    stationSelect.disabled = true;
-
-    if (!routeId) {
-        stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `/ajax/stations/?route_id=${encodeURIComponent(routeId)}`,
-        );
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-            return;
-        }
-
-        const stations = result.stations;
-
-        if (stations.length === 0) {
-            stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
-            return;
-        }
-
-        let options = `<option value="">정류장을 선택하세요</option>`;
-        for (const station of stations) {
-            const label = station.ars_id
-                ? `${station.station_name} (${station.ars_id})`
-                : station.station_name;
-
-            options += `<option value="${station.station_id}">${label}</option>`;
-        }
-
-        stationSelect.innerHTML = options;
-        stationSelect.disabled = false;
-    } catch (error) {
-        stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-    }
-});
+routeSelectChangeEvent(routeSelect, stationSelect);
 
 // 예측 버튼을 눌렀을 때, 예외처리를 포함하여 차트 및 예측 결과를 표시하는 이벤트
 predictForm.addEventListener("submit", async function (e) {
