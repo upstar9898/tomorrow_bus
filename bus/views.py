@@ -320,6 +320,7 @@ def get_station_week_chart(request):
     return JsonResponse(
         {
             "success": True,
+            "data" : {
             "routeId": route_id,
             "routeName": route_name,
             "stationId": station_id,
@@ -329,6 +330,7 @@ def get_station_week_chart(request):
             "dayType": day_type,
             "sampleSizePerDay": 10,
             "bars": chart_data,
+            }
         }
     )
         

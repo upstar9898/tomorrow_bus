@@ -141,6 +141,7 @@ predictForm.addEventListener("submit", async function (e) {
 
         const predictResult = await predictResponse.json();
         const chartResult = await chartResponse.json();
+        
 
         if (!predictResponse.ok || !predictResult.success) {
             alert(predictResult.error || "예측 요청에 실패했습니다.");
@@ -155,14 +156,15 @@ predictForm.addEventListener("submit", async function (e) {
             return;
         }
 
-        latestWeekBars = chartResult.bars;
-        latestDayType = chartResult.dayType;
+        const chartResultData = chartResult.data
+        latestWeekBars = chartResultData.bars;
+        latestDayType = chartResultData.dayType;
 
         document.getElementById("chartInfo").innerHTML = `
-                <strong>${chartResult.routeName}</strong><br>
-                정류소: ${chartResult.stationName}<br>
-                기준 시간: ${chartResult.requestedTime}<br>
-                구분: ${chartResult.dayType === "weekday" ? "평일(월~금)" : "주말(토~일)"}
+                <strong>${chartResultData.routeName}</strong><br>
+                정류소: ${chartResultData.stationName}<br>
+                기준 시간: ${chartResultData.requestedTime}<br>
+                구분: ${chartResultData.dayType === "weekday" ? "평일(월~금)" : "주말(토~일)"}
             `;
 
         drawWeekChart(latestWeekBars, latestDayType);
