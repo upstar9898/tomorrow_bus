@@ -158,13 +158,13 @@ predictForm.addEventListener("submit", async function (e) {
 
         const chartResultData = chartResult.data
         latestWeekBars = chartResultData.bars;
-        latestDayType = chartResultData.dayType;
+        latestDayType = chartResultData.day_type;
 
         document.getElementById("chartInfo").innerHTML = `
-                <strong>${chartResultData.routeName}</strong><br>
-                정류소: ${chartResultData.stationName}<br>
-                기준 시간: ${chartResultData.requestedTime}<br>
-                구분: ${chartResultData.dayType === "weekday" ? "평일(월~금)" : "주말(토~일)"}
+                <strong>${chartResultData.route_name}</strong><br>
+                정류소: ${chartResultData.station_name}<br>
+                기준 시간: ${chartResultData.requested_time}<br>
+                구분: ${chartResultData.day_type === "weekday" ? "평일(월~금)" : "주말(토~일)"}
             `;
 
         drawWeekChart(latestWeekBars, latestDayType);
