@@ -32,16 +32,18 @@ routeSelect.addEventListener("change", async function () {
 
     try {
         const response = await fetch(
-            `/ajax/stations/?routeId=${encodeURIComponent(routeId)}`,
+            `/ajax/stations/?route_id=${encodeURIComponent(routeId)}`,
         );
         const result = await response.json();
+        
 
         if (!response.ok || !result.success) {
             stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
             return;
         }
+        const resultData = result.data;
 
-        const stations = result.stations;
+        const stations = resultData.stations;
 
         if (stations.length === 0) {
             stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
@@ -50,11 +52,11 @@ routeSelect.addEventListener("change", async function () {
 
         let options = `<option value="">정류장을 선택하세요</option>`;
         for (const station of stations) {
-            const label = station.arsId
-                ? `${station.stationName} (${station.arsId})`
-                : station.stationName;
+            const label = station.ars_id
+                ? `${station.station_name} (${station.ars_id})`
+                : station.station_name;
 
-            options += `<option value="${station.stationId}">${label}</option>`;
+            options += `<option value="${station.station_id}">${label}</option>`;
         }
 
         stationSelect.innerHTML = options;
@@ -92,20 +94,22 @@ predictForm.addEventListener("submit", async function (e) {
             "X-CSRFToken": getCookie("csrftoken"),
         },
         body: JSON.stringify({
-            routeId: routeId,
-            stationId: stationId,
+            route_id: routeId,
+            station_id: stationId,
             date_time: dateTime
         })
     });
 
     const mapFetch = fetch(
-        `/ajax/route-map-data/?routeId=${encodeURIComponent(routeId)}`
+        `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
     );
 
     const [predictResponse, mapResponse] = await Promise.all([predictFetch, mapFetch]);
 
     const predictResult = await predictResponse.json();
     const mapResult = await mapResponse.json();
+    
+
 
     if (!predictResponse.ok || !predictResult.success) {
         alert(predictResult.error || "예측 요청에 실패했습니다.");
@@ -118,8 +122,8 @@ predictForm.addEventListener("submit", async function (e) {
         document.getElementById("mapSummary").textContent = "지도 데이터를 불러오지 못했습니다.";
         return;
     }
-
-    drawRouteMap(mapResult.stations, stationId);
+    const mapResultData = mapResult.data;
+    drawRouteMap(mapResultData.stations, stationId);
 
 } catch (error) {
     console.error(error);
