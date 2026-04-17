@@ -5,7 +5,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 import json
 
-from service_test.backend_test import dummy_service1, dummy_service2  # 실제 서비스로 변경 필요
+from service_test.backend_test import (
+    dummy_service1,
+    dummy_service2,
+)  # 실제 서비스로 변경 필요
 
 from .models import Bus_route, Route_station, Bus_arrival_info, Bus_station
 
@@ -27,7 +30,11 @@ def service1(request):
 
 def service2(request):
     routes = Bus_route.objects.all().order_by("routeName")
-    return render(request, "service2.html", {"routes": routes, "KAKAO_JS_KEY": settings.KAKAO_JS_KEY})
+    return render(
+        request,
+        "service2.html",
+        {"routes": routes, "KAKAO_JS_KEY": settings.KAKAO_JS_KEY},
+    )
 
 
 def favorites(request):
@@ -36,27 +43,26 @@ def favorites(request):
 
 @require_GET
 def get_stations_by_route(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
 
     if not route_id:
         return JsonResponse(
-            {"success": False, "error": "routeId가 필요합니다."},
+            {"success": False, "error": "route_id가 필요합니다."},
             status=400,
         )
 
     route_stations = (
-        Route_station.objects
-        .filter(route_id=route_id, station__isVirtual=0)
+        Route_station.objects.filter(route_id=route_id, station__isVirtual=0)
         .select_related("station")
         .order_by("staOrd")
     )
 
     stations = [
         {
-            "stationId": rs.station.stationId,
-            "stationName": rs.station.stationName,
-            "arsId": rs.station.arsId,
-            "staOrd": rs.staOrd,
+            "station_id": rs.station.stationId,
+            "station_name": rs.station.stationName,
+            "ars_id": rs.station.arsId,
+            "sta_ord": rs.staOrd,
         }
         for rs in route_stations
     ]
@@ -64,7 +70,9 @@ def get_stations_by_route(request):
     return JsonResponse(
         {
             "success": True,
-            "stations": stations,
+            "data": {
+                "stations": stations,
+            },
         }
     )
 
@@ -110,15 +118,16 @@ def predict_service1(request):
         )
 
 
+# 미사용 함수, 추후 서비스2에 사용 가능성 있음
 @require_GET
 def get_route_seat_chart(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
     target_date = request.GET.get("date")  # 예: 2026-04-01
     target_time = request.GET.get("time")  # 예: 06:33
 
     if not route_id or not target_date or not target_time:
         return JsonResponse(
-            {"success": False, "error": "routeId, date, time은 필수입니다."},
+            {"success": False, "error": "route_id, date, time은 필수입니다."},
             status=400,
         )
 
@@ -176,9 +185,9 @@ def get_route_seat_chart(request):
 
     chart_data = [
         {
-            "staOrd": row.staOrd,
-            "stationId": row.station.stationId,
-            "stationName": row.station.stationName,
+            "sta_ord": row.staOrd,
+            "station_id": row.station.stationId,
+            "station_name": row.station.stationName,
             "remaining_seat": row.remaining_seat,
             "full_flag": row.full_flag,
         }
@@ -188,23 +197,25 @@ def get_route_seat_chart(request):
     return JsonResponse(
         {
             "success": True,
-            "routeId": route_id,
-            "routeName": snapshot_qs.first().route.routeName
+            "data" : {
+            "route_id": route_id,
+            "route_name": snapshot_qs.first().route.routeName
             if snapshot_qs.exists()
             else "",
-            "requestedDate": target_date,
-            "requestedTime": target_time,
-            "dayType": "weekend" if is_weekend else "weekday",
-            "nearestMkTm": nearest_mkTm.strftime("%Y-%m-%d %H:%M:%S"),
+            "requested_date": target_date,
+            "requested_time": target_time,
+            "day_type": "weekend" if is_weekend else "weekday",
+            "nearest_mkTm": nearest_mkTm.strftime("%Y-%m-%d %H:%M:%S"),
             "stations": chart_data,
+            }
         }
     )
 
 
 @require_GET
 def get_station_week_chart(request):
-    route_id = request.GET.get("routeId")
-    station_id = request.GET.get("stationId")
+    route_id = request.GET.get("route_id")
+    station_id = request.GET.get("station_id")
     target_date = request.GET.get("date")  # 예: 2026-04-15
     target_time = request.GET.get("time")  # 예: 07:30
 
@@ -212,7 +223,7 @@ def get_station_week_chart(request):
         return JsonResponse(
             {
                 "success": False,
-                "error": "routeId, stationId, date, time은 모두 필요합니다.",
+                "error": "route_id, station_id, date, time은 모두 필요합니다.",
             },
             status=400,
         )
@@ -274,6 +285,8 @@ def get_station_week_chart(request):
 
     chart_data = []
 
+    SAMPLE_SIZE_PER_DAY = 10
+
     for label, week_day_value in weekday_groups:
         day_rows = base_qs.filter(mkTm__week_day=week_day_value)
 
@@ -281,78 +294,83 @@ def get_station_week_chart(request):
         diff_rows = []
 
         for row in day_rows:
-            row_seconds = (
-                row.mkTm.hour * 3600
-                + row.mkTm.minute * 60
-                + row.mkTm.second
-            )
+            row_seconds = row.mkTm.hour * 3600 + row.mkTm.minute * 60 + row.mkTm.second
             diff = abs(row_seconds - target_seconds)
             diff_rows.append((diff, row))
 
         # 요청 시간과 가까운 순 정렬
         diff_rows.sort(key=lambda x: x[0])
 
-        # 가장 가까운 10개만 선택
-        nearest_rows = [row for diff, row in diff_rows[:10]]
+        # 가장 가까운 10개 (SAMPLE_SIZE_PER_DAY)만 선택
+        nearest_rows = [row for diff, row in diff_rows[:SAMPLE_SIZE_PER_DAY]]
 
         if nearest_rows:
             avg_remaining_seat = round(
-                sum(row.remaining_seat for row in nearest_rows) / len(nearest_rows),
-                1
+                sum(row.remaining_seat for row in nearest_rows) / len(nearest_rows), 1
             )
 
             chart_data.append(
                 {
-                    "dayLabel": label,
+                    "day_label": label,
                     "remaining_seat": avg_remaining_seat,
-                    "sampleCount": len(nearest_rows),
+                    "sample_count": len(nearest_rows),
                 }
             )
         else:
             chart_data.append(
                 {
-                    "dayLabel": label,
+                    "day_label": label,
                     "remaining_seat": 0,
-                    "sampleCount": 0,
+                    "sample_count": 0,
                 }
             )
 
     return JsonResponse(
         {
             "success": True,
-            "routeId": route_id,
-            "routeName": route_name,
-            "stationId": station_id,
-            "stationName": station_name,
-            "requestedDate": target_date,
-            "requestedTime": target_time,
-            "dayType": day_type,
-            "sampleSizePerDay": 10,
-            "bars": chart_data,
+            "data": {
+                "route_id": route_id,
+                "route_name": route_name,
+                "station_id": station_id,
+                "station_name": station_name,
+                "requested_date": target_date,
+                "requested_time": target_time,
+                "day_type": day_type,
+                "sample_size_per_day": SAMPLE_SIZE_PER_DAY,
+                "bars": chart_data,
+            },
         }
     )
-        
+
+
 @require_POST
 def predict_service2(request):
     try:
         data = json.loads(request.body)
 
-        route_id = data.get("routeId")
-        station_id = data.get("stationId")
+        route_id = data.get("route_id")
+        station_id = data.get("station_id")
         date_time = data.get("date_time")
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
-                {"success": False, "error": "routeId, stationId, date_time은 필수입니다."},
+                {
+                    "success": False,
+                    "error": "route_id, station_id, date_time은 필수입니다.",
+                },
                 status=400,
             )
 
-        result = dummy_service2(route_id, station_id, date_time)  # 실제 서비스로 변경 필요
+        result = dummy_service2(
+            route_id, station_id, date_time
+        )  # 실제 서비스로 변경 필요
 
-        return JsonResponse({
-            "success": True,
-            "data": result,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "data": result,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse(
@@ -364,17 +382,19 @@ def predict_service2(request):
             {"success": False, "error": str(e)},
             status=500,
         )
-    
+
+
 @require_GET
 def get_route_map_data(request):
-    route_id = request.GET.get("routeId")
+    route_id = request.GET.get("route_id")
 
     if not route_id:
-        return JsonResponse({"success": False, "error": "routeId가 필요합니다."}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "route_id가 필요합니다."}, status=400
+        )
 
     route_stations = (
-        Route_station.objects
-        .filter(route_id=route_id)
+        Route_station.objects.filter(route_id=route_id)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -385,19 +405,23 @@ def get_route_map_data(request):
         if st.locationY is None or st.locationX is None:
             continue
 
-        stations.append({
-            "station_id": st.stationId,
-            "station_name": st.stationName,
-            "ars_id": st.arsId,
-            "latitude": st.locationY,
-            "longitude": st.locationX,
-            "is_virtual": st.isVirtual,
-            "staOrd": rs.staOrd
-        })
+        stations.append(
+            {
+                "station_id": st.stationId,
+                "station_name": st.stationName,
+                "ars_id": st.arsId,
+                "latitude": st.locationY,
+                "longitude": st.locationX,
+                "is_virtual": st.isVirtual,
+                "staOrd": rs.staOrd,
+            }
+        )
 
     return JsonResponse({
         "success": True,
-        "stations": stations,
+        "data" : {
+            "stations": stations,
+        }   
     })
 
 @require_GET
@@ -421,11 +445,12 @@ def get_route_name(request):
     return JsonResponse(
         {
             "success": True,
-            "routeId": route.routeId,
-            "routeName": route.routeName,
+            "data": {
+                "route_id": route.routeId,
+                "route_name": route.routeName,
+            },
         }
     )
-
 @require_GET
 def get_station_favorite_info(request):
     raw_station = request.GET.get("station")
@@ -484,11 +509,15 @@ def get_station_favorite_info(request):
             "staOrd": rs.staOrd,
         })
 
-    return JsonResponse({
-        "success": True,
-        "raw": raw_station,
-        "stationId": station.stationId,
-        "stationName": station.stationName,
-        "arsId": station.arsId,
-        "routes": route_items,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "data": {
+                "raw": raw_station,
+                "station_id": station.stationId,
+                "station_name": station.stationName,
+                "ars_id": station.arsId,
+                "routes": route_items,
+            },
+        }
+    )
