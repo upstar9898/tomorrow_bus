@@ -7,12 +7,13 @@ import json
 
 from service_test.backend_test import dummy_service1, dummy_service2  # 실제 서비스로 변경 필요
 
-from .models import Bus_route, Route_station, Bus_arrival_info
+from .models import Bus_route, Route_station, Bus_arrival_info, Bus_station
 
 from datetime import datetime
 from django.db.models import F
 from django.db.models.functions import Abs
 from django.conf import settings
+import re
 
 
 def index(request):
@@ -425,3 +426,69 @@ def get_route_name(request):
         }
     )
 
+@require_GET
+def get_station_favorite_info(request):
+    raw_station = request.GET.get("station")
+
+    if not raw_station:
+        return JsonResponse(
+            {"success": False, "error": "station 값이 필요합니다."},
+            status=400,
+        )
+
+    # "정든마을.우성아파트 (47043)" → 47043 추출
+    match = re.search(r"\(([^)]+)\)\s*$", raw_station)
+    if not match:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "정류소 문자열에서 ID를 추출할 수 없습니다.",
+            },
+            status=400,
+        )
+
+    extracted_id = match.group(1).strip()
+
+    # 🔥 핵심: arsId 기준으로 먼저 찾기
+    try:
+        station = Bus_station.objects.get(arsId=extracted_id)
+    except Bus_station.DoesNotExist:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "해당 정류소를 찾을 수 없습니다.",
+            },
+            status=404,
+        )
+
+    # 🔥 실제 FK는 stationId로 조회해야 함
+    route_stations = (
+        Route_station.objects
+        .filter(station_id=station.stationId)
+        .select_related("route", "station")
+        .order_by("route__routeName", "staOrd")
+    )
+
+    route_items = []
+    used_route_ids = set()
+
+    for rs in route_stations:
+        if rs.route_id in used_route_ids:
+            continue
+
+        used_route_ids.add(rs.route_id)
+
+        route_items.append({
+            "routeId": rs.route.routeId,
+            "routeName": rs.route.routeName,
+            "staOrd": rs.staOrd,
+        })
+
+    return JsonResponse({
+        "success": True,
+        "raw": raw_station,
+        "stationId": station.stationId,
+        "stationName": station.stationName,
+        "arsId": station.arsId,
+        "routes": route_items,
+    })

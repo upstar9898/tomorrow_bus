@@ -1,21 +1,22 @@
-function getFavorites() {
-    const data = localStorage.getItem("favorites");
-    return data ? JSON.parse(data) : { buses: [], stations: [] };
-}
+import { getFavorites, saveFavorites } from "./favorite.js";
 
-function saveFavorites(favorites) {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-}
-
-function removeFavorite(type, name) {
+function removeFavorite(type, value) {
     const favorites = getFavorites();
 
     if (type === "bus") {
-        favorites.buses = favorites.buses.filter(item => item !== name);
+        favorites.buses = favorites.buses.filter(
+            (item) => String(item) !== String(value)
+        );
     }
 
     if (type === "station") {
-        favorites.stations = favorites.stations.filter(item => item !== name);
+        favorites.stations = favorites.stations.filter(
+            (item) =>
+                !(
+                    String(item.arsId) === String(value.arsId) &&
+                    String(item.routeId) === String(value.routeId)
+                )
+        );
     }
 
     saveFavorites(favorites);
@@ -45,6 +46,13 @@ async function fetchRouteName(routeId) {
     }
 }
 
+function createRouteBadge(routeName) {
+    const badge = document.createElement("span");
+    badge.className = "favorite-badge";
+    badge.textContent = routeName;
+    return badge;
+}
+
 async function renderFavorites() {
     const favorites = getFavorites();
 
@@ -65,10 +73,14 @@ async function renderFavorites() {
             const routeName = await fetchRouteName(bus);
 
             const li = document.createElement("li");
+            const itemWrap = document.createElement("div");
+            itemWrap.className = "favorite-item-wrap";
 
             const nameSpan = document.createElement("span");
             nameSpan.className = "favorite-item-name";
             nameSpan.textContent = routeName;
+
+            itemWrap.appendChild(nameSpan);
 
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "btn btn-delete";
@@ -77,7 +89,7 @@ async function renderFavorites() {
                 removeFavorite("bus", bus);
             });
 
-            li.appendChild(nameSpan);
+            li.appendChild(itemWrap);
             li.appendChild(deleteBtn);
             busList.appendChild(li);
         }
@@ -88,22 +100,48 @@ async function renderFavorites() {
     } else {
         stationEmpty.style.display = "none";
 
-        favorites.stations.forEach(station => {
+        for (const station of favorites.stations) {
             const li = document.createElement("li");
-            li.innerHTML = `
-                <span class="favorite-item-name">${station}</span>
-                <button class="btn btn-delete">삭제</button>
-            `;
+            const itemWrap = document.createElement("div");
+            itemWrap.className = "favorite-item-wrap";
 
-            li.querySelector("button").addEventListener("click", () => {
-                removeFavorite("station", station);
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "favorite-item-name";
+            nameSpan.textContent = station.stationName || "정류소명 없음";
+            itemWrap.appendChild(nameSpan);
+
+            if (station.routeName) {
+                const badgeWrap = document.createElement("div");
+                badgeWrap.style.display = "flex";
+                badgeWrap.style.flexWrap = "wrap";
+                badgeWrap.style.gap = "8px";
+                badgeWrap.style.marginTop = "6px";
+
+                badgeWrap.appendChild(createRouteBadge(station.routeName));
+                itemWrap.appendChild(badgeWrap);
+            } else {
+                const subText = document.createElement("span");
+                subText.className = "favorite-sub-text";
+                subText.textContent = "노선 정보가 없습니다.";
+                itemWrap.appendChild(subText);
+            }
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "btn btn-delete";
+            deleteBtn.textContent = "삭제";
+            deleteBtn.addEventListener("click", () => {
+                removeFavorite("station", {
+                    arsId: station.arsId,
+                    routeId: station.routeId,
+                });
             });
 
+            li.appendChild(itemWrap);
+            li.appendChild(deleteBtn);
             stationList.appendChild(li);
-        });
+        }
     }
 }
 
 document.addEventListener("DOMContentLoaded", renderFavorites);
-
 window.clearAllFavorites = clearAllFavorites;
