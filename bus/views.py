@@ -73,15 +73,15 @@ def predict_service1(request):
     try:
         data = json.loads(request.body)
 
-        route_id = data.get("routeId")
-        station_id = data.get("stationId")
+        route_id = data.get("route_id")
+        station_id = data.get("station_id")
         date_time = data.get("date_time")
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
                 {
                     "success": False,
-                    "error": "routeId, stationId, date_time은 필수입니다.",
+                    "error": "route_id, station_id, date_time은 필수입니다.",
                 },
                 status=400,
             )
