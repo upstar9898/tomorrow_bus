@@ -12,12 +12,12 @@ def dummy_prob(remaining_seat):
         return round(random.uniform(0.95, 0.99), 4)
 
 
-def dummy_service1(routeId, stationId, date_time):
+def dummy_service1(route_id, station_id, date_time):
     remaining_seat = random.randint(0, 45)
     full_prob = dummy_prob(remaining_seat)
     return {
-        "routeId": routeId,
-        "stationId": stationId,
+        "route_id": route_id,
+        "station_id": station_id,
         "date_time": date_time,
         "remaining_seat": remaining_seat,
         "full_prob": full_prob,

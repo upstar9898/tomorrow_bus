@@ -124,8 +124,8 @@ predictForm.addEventListener("submit", async function (e) {
                 "X-CSRFToken": getCookie("csrftoken"),
             },
             body: JSON.stringify({
-                routeId: routeId,
-                stationId: stationId,
+                route_id: routeId,
+                station_id: stationId,
                 date_time: dateTime,
             }),
         });
