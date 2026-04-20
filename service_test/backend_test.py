@@ -61,6 +61,7 @@ def dummy_service2(route_id, station_id, date_time):
                 "full_prob": full_prob,
                 "is_selected": is_selected,
                 "is_virtual": is_virtual,
+                "staOrd" : rs.staOrd,
             }
         )
 

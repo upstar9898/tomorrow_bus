@@ -28,9 +28,26 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
             return;
         }
 
+        const staOrdList = stations
+            .map((station) => Number(station.staOrd))
+            .filter((staOrd) => !Number.isNaN(staOrd));
+
+        const minStaOrd = staOrdList.length ? Math.min(...staOrdList) : null;
+        const maxStaOrd = staOrdList.length ? Math.max(...staOrdList) : null;
+
         let options = `<option value="">정류장을 선택하세요</option>`;
 
         for (const station of stations) {
+            const staOrd = Number(station.staOrd);
+
+            // 첫 정류소, 마지막 정류소는 select option 에서 제외
+            if (
+                !Number.isNaN(staOrd) &&
+                (staOrd === minStaOrd || staOrd === maxStaOrd)
+            ) {
+                continue;
+            }
+
             const label = station.ars_id
                 ? `${station.station_name} (${station.ars_id})`
                 : station.station_name;

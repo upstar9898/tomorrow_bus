@@ -1,5 +1,5 @@
 import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
-import {routeSelectChangeEvent} from "./routeSelect.js"
+import { routeSelectChangeEvent } from "./routeSelect.js";
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
@@ -11,9 +11,7 @@ const routeList = document.getElementById("routeList");
 
 const selectedStopName = document.getElementById("selectedStopName");
 const selectedDateTime = document.getElementById("selectedDateTime");
-const selectedSeatPrediction = document.getElementById(
-    "selectedSeatPrediction",
-);
+const selectedSeatPrediction = document.getElementById("selectedSeatPrediction");
 const summaryTotalStops = document.getElementById("summaryTotalStops");
 const summaryBusyStops = document.getElementById("summaryBusyStops");
 
@@ -22,8 +20,6 @@ rideDateTime.value = getNowForDateTimeLocal();
 
 // 노선을 선택하면 정류장 목록을 불러오는 이벤트
 routeSelectChangeEvent(routeSelect, stationSelect);
-
-// 예측 버튼을 눌렀을 때, 예측 결과와 지도를 표시하는 이벤트
 
 predictForm.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -42,57 +38,93 @@ predictForm.addEventListener("submit", async function (e) {
 
     resultSummary.textContent = "예측 중...";
     routeList.innerHTML = `
-            <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
-        `;
+        <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
+    `;
 
-        try {
-    const predictFetch = fetch("/ajax/predict/service2/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-        },
-        body: JSON.stringify({
-            route_id: routeId,
-            station_id: stationId,
-            date_time: dateTime
-        })
-    });
+    try {
+        const predictFetch = fetch("/ajax/predict/service2/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+                route_id: routeId,
+                station_id: stationId,
+                date_time: dateTime,
+            }),
+        });
 
-    const mapFetch = fetch(
-        `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
-    );
+        const mapFetch = fetch(
+            `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
+        );
 
-    const [predictResponse, mapResponse] = await Promise.all([predictFetch, mapFetch]);
+        const [predictResponse, mapResponse] = await Promise.all([
+            predictFetch,
+            mapFetch,
+        ]);
 
-    const predictResult = await predictResponse.json();
-    const mapResult = await mapResponse.json();
-    
+        const predictResult = await predictResponse.json();
+        const mapResult = await mapResponse.json();
 
+        if (!predictResponse.ok || !predictResult.success) {
+            alert(predictResult.error || "예측 요청에 실패했습니다.");
+            return;
+        }
 
-    if (!predictResponse.ok || !predictResult.success) {
-        alert(predictResult.error || "예측 요청에 실패했습니다.");
-        return;
+        renderRouteResult(routeName, stationName, predictResult.data);
+
+        if (!mapResponse.ok || !mapResult.success) {
+            document.getElementById("mapSummary").textContent =
+                "지도 데이터를 불러오지 못했습니다.";
+            return;
+        }
+
+        const mapResultData = mapResult.data;
+        const predictedStops = predictResult.data.stops || [];
+
+        drawRouteMap(mapResultData.stations, stationId, predictedStops);
+    } catch (error) {
+        console.error(error);
+        alert("서버 요청 중 오류가 발생했습니다.");
+    }
+});
+
+function getBoundaryStaOrd(stops = []) {
+    const staOrdList = stops
+        .map((stop) => Number(stop.staOrd))
+        .filter((v) => !Number.isNaN(v));
+
+    if (staOrdList.length === 0) {
+        return { minStaOrd: null, maxStaOrd: null };
     }
 
-    renderRouteResult(routeName, stationName, predictResult.data);
+    return {
+        minStaOrd: Math.min(...staOrdList),
+        maxStaOrd: Math.max(...staOrdList),
+    };
+}
 
-    if (!mapResponse.ok || !mapResult.success) {
-        document.getElementById("mapSummary").textContent = "지도 데이터를 불러오지 못했습니다.";
-        return;
+function isBoundaryStop(stop, minStaOrd, maxStaOrd) {
+    const staOrd = Number(stop.staOrd);
+    if (Number.isNaN(staOrd)) return false;
+    return staOrd === minStaOrd || staOrd === maxStaOrd;
+}
+
+function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
+    const isBoundary = isBoundaryStop(stop, minStaOrd, maxStaOrd);
+
+    if (isBoundary) {
+        return {
+            text:
+                Number(stop.staOrd) === Number(minStaOrd)
+                    ? "첫 정류장"
+                    : "마지막 정류장",
+            dotClass: "status-gray",
+            badgeClass: "state-gray",
+        };
     }
-    const mapResultData = mapResult.data;
-    const predictedStops = predictResult.data.stops || [];
 
-    drawRouteMap(mapResultData.stations, stationId, predictedStops);
-
-} catch (error) {
-    console.error(error);
-    alert("서버 요청 중 오류가 발생했습니다.");
-}});
-
-
-function getSeatState(stop) {
     if (stop.is_virtual === 1) {
         return {
             text: "가상 정류소",
@@ -126,7 +158,6 @@ function getSeatState(stop) {
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
-    // 상단 요약
     const formattedDate = formatDateTime(data.date_time);
     resultSummary.textContent = `${routeName} · ${stationName} · ${formattedDate}`;
 
@@ -139,82 +170,54 @@ function renderRouteResult(routeName, stationName, data) {
         selectedDateTime.textContent = formattedDate;
     }
 
+    const { minStaOrd, maxStaOrd } = getBoundaryStaOrd(data.stops);
+
     if (summaryTotalStops) {
         summaryTotalStops.textContent = data.stops.length;
     }
 
-    // 기준 정류소 찾기
     const selectedStop = data.stops.find((stop) => stop.is_selected);
+    const selectedIsBoundary =
+        selectedStop && isBoundaryStop(selectedStop, minStaOrd, maxStaOrd);
 
     if (selectedSeatPrediction) {
-        if (!selectedStop || selectedStop.is_virtual === 1) {
+        if (
+            !selectedStop ||
+            selectedStop.is_virtual === 1 ||
+            selectedIsBoundary
+        ) {
             selectedSeatPrediction.textContent = "-";
         } else {
             selectedSeatPrediction.textContent = `${selectedStop.remaining_seat}석`;
         }
     }
 
-    // 혼잡 정류소 수
     if (summaryBusyStops) {
-        const busyCount = data.stops.filter(
-            (stop) => stop.is_virtual !== 1 && stop.remaining_seat <= 12,
-        ).length;
+        const busyCount = data.stops.filter((stop) => {
+            const boundary = isBoundaryStop(stop, minStaOrd, maxStaOrd);
+            return !boundary && stop.is_virtual !== 1 && stop.remaining_seat <= 12;
+        }).length;
+
         summaryBusyStops.textContent = busyCount;
     }
 
-    // 가상 정류소 수
     const summaryVirtualStops = document.getElementById("summaryVirtualStops");
     if (summaryVirtualStops) {
         const virtualCount = data.stops.filter(
-            (stop) => stop.is_virtual === 1,
+            (stop) => stop.is_virtual === 1
         ).length;
         summaryVirtualStops.textContent = virtualCount;
     }
 
-    // 리스트 초기화
     routeList.classList.remove("route-list-empty");
     routeList.innerHTML = "";
 
-    // 상태 판단 함수
-    function getSeatState(stop) {
-        if (stop.is_virtual === 1) {
-            return {
-                text: "가상 정류소",
-                dotClass: "status-gray",
-                badgeClass: "state-gray",
-            };
-        }
-
-        const seat = stop.remaining_seat;
-
-        if (seat <= 2) {
-            return {
-                text: "만차임박",
-                dotClass: "status-red",
-                badgeClass: "state-red",
-            };
-        }
-        if (seat <= 12) {
-            return {
-                text: "혼잡",
-                dotClass: "status-yellow",
-                badgeClass: "state-yellow",
-            };
-        }
-        return {
-            text: "여유",
-            dotClass: "status-green",
-            badgeClass: "state-green",
-        };
-    }
-
-    // 리스트 렌더링
     for (const stop of data.stops) {
-        const state = getSeatState(stop);
+        const boundary = isBoundaryStop(stop, minStaOrd, maxStaOrd);
+        const state = getSeatState(stop, minStaOrd, maxStaOrd);
         const isVirtual = stop.is_virtual === 1;
 
         const li = document.createElement("li");
-        console.log(stop)
         li.className = "stop-item";
 
         li.innerHTML = `
@@ -239,9 +242,9 @@ function renderRouteResult(routeName, stationName, data) {
                         ${stop.is_selected ? `<span class="selected-badge">기준 정류소</span>` : ""}
 
                         ${
-                            isVirtual
-                                ? ``
-                                : `<span class="seat-badge">${stop.remaining_seat}석</span>`
+                            !isVirtual && !boundary
+                                ? `<span class="seat-badge">${stop.remaining_seat}석</span>`
+                                : ``
                         }
 
                         <span class="state-badge ${state.badgeClass}">
@@ -252,9 +255,11 @@ function renderRouteResult(routeName, stationName, data) {
 
                 <div class="stop-bottom">
                     ${
-                        isVirtual
-                            ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
-                            : `<span>예상 만차확률 ${(stop.full_prob * 100).toFixed(1)}%</span>`
+                        boundary
+                            ? `<span>기점/종점 정류장은 예측값을 표시하지 않습니다.</span>`
+                            : isVirtual
+                                ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
+                                : `<span>예상 만차확률 ${(stop.full_prob * 100).toFixed(1)}%</span>`
                     }
                 </div>
             </div>
@@ -263,7 +268,6 @@ function renderRouteResult(routeName, stationName, data) {
         routeList.appendChild(li);
     }
 
-    // 기준 정류소로 스크롤
     const selectedCard = routeList.querySelector(".stop-card.selected");
     if (selectedCard) {
         selectedCard.scrollIntoView({
@@ -302,7 +306,6 @@ function clearRouteMap() {
     for (const infoWindow of mapInfoWindows) {
         infoWindow.close();
     }
-
     mapInfoWindows = [];
 
     for (const overlay of mapSeatOverlays) {
@@ -350,12 +353,15 @@ function updateMarkerVisibilityByLevel() {
 
 function drawRouteMap(stations, selectedStationId, predictedStops = []) {
     const predictedStopMap = new Map(
-    predictedStops.map((stop) => [String(stop.station_id), stop])
-);
+        predictedStops.map((stop) => [String(stop.station_id), stop])
+    );
+
+    const { minStaOrd, maxStaOrd } = getBoundaryStaOrd(
+        predictedStops.length > 0 ? predictedStops : stations
+    );
+
     const mapContainer = document.getElementById("routeMap");
     const mapSummary = document.getElementById("mapSummary");
-    
-
 
     if (!mapContainer || !window.kakao || !window.kakao.maps) {
         return;
@@ -410,7 +416,6 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
             Number(st.longitude)
         );
 
-        // polyline
         const currentStaOrd = Number(st.staOrd);
 
         if (
@@ -437,11 +442,11 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
         currentPath.push(latlng);
         prevStaOrd = currentStaOrd;
 
-        // 가상/미정차는 마커 제외
         if (isVirtualStop(st)) {
             continue;
         }
 
+        const boundary = isBoundaryStop(st, minStaOrd, maxStaOrd);
         const isSelected =
             String(st.station_id) === String(selectedStationId);
 
@@ -458,11 +463,10 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
 
         const predicted = predictedStopMap.get(String(st.station_id));
         const remainingSeat = predicted ? predicted.remaining_seat : null;
-        const fullProb = predicted ? predicted.full_prob : null;
         const isVirtual = predicted ? predicted.is_virtual === 1 : false;
 
-            // 좌석 수 오버레이 추가
-        if (!isVirtual && remainingSeat != null) {
+        // 첫/마지막 정류장 및 가상 정류장은 숫자 오버레이 표시 안 함
+        if (!boundary && !isVirtual && remainingSeat != null) {
             const seatOverlay = createSeatOverlay(
                 latlng,
                 `${remainingSeat}석`,
@@ -472,6 +476,12 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
             mapSeatOverlays.push(seatOverlay);
         }
 
+        const boundaryText =
+            Number(st.staOrd) === Number(minStaOrd)
+                ? "첫 정류장"
+                : Number(st.staOrd) === Number(maxStaOrd)
+                    ? "마지막 정류장"
+                    : "";
 
         const infoWindow = new kakao.maps.InfoWindow({
             removable: true,
@@ -487,7 +497,13 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
                 ">
                     <strong>${st.station_name}</strong><br>
                     ${st.ars_id ? `정류소 코드: ${st.ars_id}<br>` : ""}
-                    ${st.is_virtual === 1 ? "가상 정류소" : "일반 정류소"}
+                    ${
+                        boundary
+                            ? `<span style="color:#475569;font-weight:700;">${boundaryText}</span>`
+                            : st.is_virtual === 1
+                                ? "가상 정류소"
+                                : "일반 정류소"
+                    }
                     ${
                         isSelected
                             ? `<br><span style="color:#ca8a04;font-weight:700;">기준 정류소</span>`
@@ -516,7 +532,6 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
         mapPolylines.push(polyline);
     }
 
-    // 기준 정류소 중심으로 이동 + 확대
     kakaoMap.setCenter(focusLatLng);
     kakaoMap.setLevel(DEFAULT_FOCUS_LEVEL);
 

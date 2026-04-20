@@ -51,7 +51,8 @@ def get_stations_by_route(request):
         )
 
     route_stations = (
-        Route_station.objects.filter(route_id=route_id, station__isVirtual=0)
+        Route_station.objects
+        .filter(route_id=route_id)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -61,7 +62,7 @@ def get_stations_by_route(request):
             "station_id": rs.station.stationId,
             "station_name": rs.station.stationName,
             "ars_id": rs.station.arsId,
-            "sta_ord": rs.staOrd,
+            "staOrd": rs.staOrd,   # 여기 중요
         }
         for rs in route_stations
     ]
@@ -449,3 +450,4 @@ def get_route_name(request):
             },
         }
     )
+
