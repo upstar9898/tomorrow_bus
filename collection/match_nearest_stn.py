@@ -1,199 +1,197 @@
 import os
 import glob
 import math
-import pandas as pd
-from django.core.management.base import BaseCommand
 from datetime import datetime
 
+import pandas as pd
 
-class Command(BaseCommand):
-    help = "bus_station_with_regid 최신 파일과 weather_regioncode.csv를 매칭해 regId/FCT_ID 범위 내에서 가장 가까운 STN을 stn 컬럼에 저장한다."
 
-    def handle(self, *args, **kwargs):
-        # 프로젝트 루트
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0
+
+    lat1_rad = math.radians(lat1)
+    lon1_rad = math.radians(lon1)
+    lat2_rad = math.radians(lat2)
+    lon2_rad = math.radians(lon2)
+
+    dlat = lat2_rad - lat1_rad
+    dlon = lon2_rad - lon1_rad
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
+
+
+def int_str_or_blank(v):
+    if pd.isna(v):
+        return ""
+    return str(int(v))
+
+
+def main():
+    # 현재 파일 위치: 프로젝트루트/collection/파일명.py
+    current_file = os.path.abspath(__file__)
+    collection_dir = os.path.dirname(current_file)
+    base_dir = os.path.dirname(collection_dir)   # 프로젝트 루트
+    data_dir = os.path.join(base_dir, "data")
+
+    os.makedirs(data_dir, exist_ok=True)
+
+    print("현재 파일 위치:", current_file)
+    print("collection 폴더:", collection_dir)
+    print("프로젝트 루트:", base_dir)
+    print("data 폴더:", data_dir)
+
+    # 1) 최신 정류소 파일 찾기
+    station_pattern = os.path.join(data_dir, "bus_station_with_regid_*.csv")
+    station_files = glob.glob(station_pattern)
+
+    if not station_files:
+        raise FileNotFoundError(
+            f"bus_station_with_regid_*.csv 파일이 없습니다: {station_pattern}"
         )
-        data_dir = os.path.join(base_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
 
-        # 1) 최신 정류소 파일 찾기
-        station_pattern = os.path.join(data_dir, "bus_station_with_regid_*.csv")
-        station_files = glob.glob(station_pattern)
+    station_path = max(station_files, key=os.path.getmtime)
 
-        if not station_files:
-            self.stdout.write(
-                self.style.ERROR(
-                    "bus_station_with_regid_*.csv 파일이 프로젝트 루트에 없습니다."
-                )
-            )
-            return
+    # 2) weather csv 파일
+    # 네 기존 코드는 base_dir에서 찾고 있었는데,
+    # 지금 다른 파일들처럼 data 폴더에 두는 게 더 일관적이다.
+    weather_path = os.path.join(data_dir, "weather_regioncode.csv")
+    if not os.path.exists(weather_path):
+        raise FileNotFoundError(f"weather_regioncode.csv 파일이 없습니다: {weather_path}")
 
-        station_path = max(station_files, key=os.path.getmtime)
+    today_str = datetime.now().strftime("%y%m%d")
 
-        # 2) weather csv 파일
-        weather_path = os.path.join(base_dir, "weather_regioncode.csv")
-        if not os.path.exists(weather_path):
-            self.stdout.write(
-                self.style.ERROR(
-                    f"weather_regioncode.csv 파일이 없습니다: {weather_path}"
-                )
-            )
-            return
+    output_path = os.path.join(data_dir, f"bus_station_with_stn_{today_str}.csv")
+    unmatched_path = os.path.join(data_dir, f"bus_station_stn_unmatched_{today_str}.csv")
 
-        today_str = datetime.now().strftime("%y%m%d")
+    print("사용할 정류소 파일:", station_path)
+    print("사용할 weather 파일:", weather_path)
+    print("결과 파일 경로:", output_path)
+    print("미매칭 파일 경로:", unmatched_path)
 
-        output_path = os.path.join(data_dir, f"bus_station_with_stn_{today_str}.csv")
-        unmatched_path = os.path.join(
-            data_dir, f"bus_station_stn_unmatched_{today_str}.csv"
-        )
+    # 3) 버스 정류소 읽기
+    station_df = pd.read_csv(station_path, encoding="utf-8-sig")
 
-        self.stdout.write(f"사용할 정류소 파일: {station_path}")
-        self.stdout.write(f"사용할 weather 파일: {weather_path}")
+    station_df["위도"] = pd.to_numeric(station_df["위도"], errors="coerce")
+    station_df["경도"] = pd.to_numeric(station_df["경도"], errors="coerce")
 
-        # 3) 버스 정류소 읽기
-        station_df = pd.read_csv(station_path, encoding="utf-8-sig")
+    if "regId" in station_df.columns:
+        station_df["regId"] = station_df["regId"].astype(str).str.strip()
+    else:
+        station_df["regId"] = None
 
-        station_df["위도"] = pd.to_numeric(station_df["위도"], errors="coerce")
-        station_df["경도"] = pd.to_numeric(station_df["경도"], errors="coerce")
+    # 4) weather csv 읽기
+    weather_df = pd.read_csv(weather_path, encoding="utf-8-sig")
 
-        if "regId" in station_df.columns:
-            station_df["regId"] = station_df["regId"].astype(str).str.strip()
-        else:
-            station_df["regId"] = None
+    required_cols = ["STN", "LON", "LAT", "FCT_ID"]
+    for col in required_cols:
+        if col not in weather_df.columns:
+            raise ValueError(f"weather_regioncode.csv에 {col} 컬럼이 없습니다.")
 
-        # 4) weather csv 읽기
-        weather_df = pd.read_csv(weather_path, encoding="utf-8-sig")
+    weather_df["STN"] = pd.to_numeric(weather_df["STN"], errors="coerce")
+    weather_df["LON"] = pd.to_numeric(weather_df["LON"], errors="coerce")
+    weather_df["LAT"] = pd.to_numeric(weather_df["LAT"], errors="coerce")
+    weather_df["FCT_ID"] = weather_df["FCT_ID"].astype(str).str.strip()
 
-        required_cols = ["STN", "LON", "LAT", "FCT_ID"]
-        for col in required_cols:
-            if col not in weather_df.columns:
-                self.stdout.write(
-                    self.style.ERROR(f"weather_regioncode.csv에 {col} 컬럼이 없습니다.")
-                )
-                return
+    weather_df = weather_df.dropna(subset=["STN", "LON", "LAT"]).copy()
 
-        weather_df["STN"] = pd.to_numeric(weather_df["STN"], errors="coerce")
-        weather_df["LON"] = pd.to_numeric(weather_df["LON"], errors="coerce")
-        weather_df["LAT"] = pd.to_numeric(weather_df["LAT"], errors="coerce")
-        weather_df["FCT_ID"] = weather_df["FCT_ID"].astype(str).str.strip()
+    if weather_df.empty:
+        raise ValueError("weather_regioncode.csv에서 사용할 좌표 데이터가 없습니다.")
 
-        weather_df = weather_df.dropna(subset=["STN", "LON", "LAT"]).copy()
+    weather_df["STN"] = weather_df["STN"].astype(int)
 
-        if weather_df.empty:
-            self.stdout.write(
-                self.style.ERROR(
-                    "weather_regioncode.csv에서 사용할 좌표 데이터가 없습니다."
-                )
-            )
-            return
+    print("\n[로드 완료]")
+    print("station_df:", station_df.shape)
+    print("weather_df:", weather_df.shape)
 
-        weather_df["STN"] = weather_df["STN"].astype(int)
+    # 5) FCT_ID별 후보 묶기
+    weather_by_fct = {
+        fct_id: g[["STN", "LON", "LAT"]].to_dict("records")
+        for fct_id, g in weather_df.groupby("FCT_ID")
+    }
 
-        # 5) 거리 계산 함수
-        def haversine(lat1, lon1, lat2, lon2):
-            R = 6371.0
+    all_weather_records = weather_df[["STN", "LON", "LAT"]].to_dict("records")
 
-            lat1_rad = math.radians(lat1)
-            lon1_rad = math.radians(lon1)
-            lat2_rad = math.radians(lat2)
-            lon2_rad = math.radians(lon2)
+    # 6) 가장 가까운 STN 찾기
+    stn_list = []
+    distance_km_list = []
 
-            dlat = lat2_rad - lat1_rad
-            dlon = lon2_rad - lon1_rad
+    for _, row in station_df.iterrows():
+        bus_lat = row["위도"]
+        bus_lon = row["경도"]
+        reg_id = str(row["regId"]).strip() if pd.notna(row["regId"]) else ""
 
-            a = (
-                math.sin(dlat / 2) ** 2
-                + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2) ** 2
-            )
-            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        if pd.isna(bus_lat) or pd.isna(bus_lon) or (bus_lat == 0 and bus_lon == 0):
+            stn_list.append(None)
+            distance_km_list.append(None)
+            continue
 
-            return R * c
+        # 1차: regId와 같은 FCT_ID만 후보
+        candidate_records = weather_by_fct.get(reg_id, [])
 
-        # 6) FCT_ID별 후보 묶기
-        weather_by_fct = {
-            fct_id: g[["STN", "LON", "LAT"]].to_dict("records")
-            for fct_id, g in weather_df.groupby("FCT_ID")
-        }
+        # 2차 fallback: 같은 regId 후보가 없으면 전국 전체
+        if not candidate_records:
+            candidate_records = all_weather_records
 
-        all_weather_records = weather_df[["STN", "LON", "LAT"]].to_dict("records")
+        best_stn = None
+        best_dist = None
 
-        # 7) 가장 가까운 STN 찾기
-        stn_list = []
-        distance_km_list = []
+        for w in candidate_records:
+            dist = haversine(bus_lat, bus_lon, w["LAT"], w["LON"])
+            if best_dist is None or dist < best_dist:
+                best_dist = dist
+                best_stn = w["STN"]
 
-        for _, row in station_df.iterrows():
-            bus_lat = row["위도"]
-            bus_lon = row["경도"]
-            reg_id = str(row["regId"]).strip() if pd.notna(row["regId"]) else ""
+        stn_list.append(best_stn)
+        distance_km_list.append(round(best_dist, 4) if best_dist is not None else None)
 
-            if pd.isna(bus_lat) or pd.isna(bus_lon) or (bus_lat == 0 and bus_lon == 0):
-                stn_list.append(None)
-                distance_km_list.append(None)
-                continue
+    # 7) 컬럼 추가
+    station_df["stn"] = stn_list
+    station_df["distance_km"] = distance_km_list
 
-            # 1차: regId와 같은 FCT_ID만 후보
-            candidate_records = weather_by_fct.get(reg_id, [])
+    # stationId, stn 앞으로
+    front_cols = []
+    if "stationId" in station_df.columns:
+        front_cols.append("stationId")
+    if "stn" in station_df.columns:
+        front_cols.append("stn")
 
-            # 2차 fallback: 같은 regId 후보가 없으면 전국 전체
-            if not candidate_records:
-                candidate_records = all_weather_records
+    remain_cols = [c for c in station_df.columns if c not in front_cols]
+    station_df = station_df[front_cols + remain_cols]
 
-            best_stn = None
-            best_dist = None
+    # 8) 저장용 DataFrame 생성 (.0 방지)
+    save_df = station_df.copy()
 
-            for w in candidate_records:
-                dist = haversine(bus_lat, bus_lon, w["LAT"], w["LON"])
-                if best_dist is None or dist < best_dist:
-                    best_dist = dist
-                    best_stn = w["STN"]
+    for col in ["stationId", "stn", "arsId"]:
+        if col in save_df.columns:
+            save_df[col] = pd.to_numeric(save_df[col], errors="coerce")
+            save_df[col] = save_df[col].apply(int_str_or_blank)
 
-            stn_list.append(best_stn)
-            distance_km_list.append(
-                round(best_dist, 4) if best_dist is not None else None
-            )
+    # 9) 저장
+    save_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-        # 8) 컬럼 추가
-        station_df["stn"] = stn_list
-        station_df["distance_km"] = distance_km_list
+    unmatched_df = save_df[save_df["stn"] == ""].copy()
+    unmatched_df.to_csv(unmatched_path, index=False, encoding="utf-8-sig")
 
-        # stationId, stn 앞으로
-        front_cols = []
-        if "stationId" in station_df.columns:
-            front_cols.append("stationId")
-        if "stn" in station_df.columns:
-            front_cols.append("stn")
+    matched_count = (save_df["stn"] != "").sum()
+    total_count = len(save_df)
 
-        remain_cols = [c for c in station_df.columns if c not in front_cols]
-        station_df = station_df[front_cols + remain_cols]
+    print("\n[완료]")
+    print(f"전체 행 수: {total_count}")
+    print(f"stn 매칭: {matched_count}/{total_count}")
+    print(f"결과 파일: {output_path}")
+    print(f"미매칭 파일: {unmatched_path}")
 
-        # 9) 저장용 DataFrame 생성 (.0 방지)
-        save_df = station_df.copy()
 
-        def int_str_or_blank(v):
-            if pd.isna(v):
-                return ""
-            return str(int(v))
-
-        for col in ["stationId", "stn", "arsId"]:
-            if col in save_df.columns:
-                save_df[col] = pd.to_numeric(save_df[col], errors="coerce")
-                save_df[col] = save_df[col].apply(int_str_or_blank)
-
-        # 10) 저장
-        save_df.to_csv(output_path, index=False, encoding="utf-8-sig")
-
-        unmatched_df = save_df[save_df["stn"] == ""].copy()
-        unmatched_df.to_csv(unmatched_path, index=False, encoding="utf-8-sig")
-
-        matched_count = (save_df["stn"] != "").sum()
-        total_count = len(save_df)
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"전체 행 수: {total_count}\n"
-                f"stn 매칭: {matched_count}/{total_count}\n"
-                f"결과 파일: {output_path}\n"
-                f"미매칭 파일: {unmatched_path}"
-            )
-        )
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("\n[ERROR]")
+        print(type(e).__name__, ":", e)
+        raise

@@ -1,5 +1,5 @@
 import pandas as pd
-from .test_ml_model_load import ml_model_1, ml_model_2, ml_model_3
+from .test_ml_model_load import ml_model_1, ml_model_2
 
 FEATURE_COLS = [
     # 인코딩

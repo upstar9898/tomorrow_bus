@@ -5,6 +5,8 @@ import {
     showToast,
 } from "./utils.js";
 import { addFavorite } from "./favorite.js";
+import {routeSelectChangeEvent} from "./routeSelect.js"
+
 
 // 구글 차트 라이브러리 로드
 google.charts.load("current", { packages: ["corechart"] });
@@ -28,6 +30,7 @@ let currentPrediction = {
     routeName: "",
     stationId: "",
     stationName: "",
+    arsId: "",
 };
 
 // 차트 출력을 위해 필요한 변수
@@ -35,50 +38,7 @@ let latestDayType = "";
 let latestWeekBars = [];
 
 // 노선을 선택하면 정류장 목록을 불러오는 이벤트
-routeSelect.addEventListener("change", async function () {
-    const routeId = this.value;
-
-    stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
-    stationSelect.disabled = true;
-
-    if (!routeId) {
-        stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `/ajax/stations/?routeId=${encodeURIComponent(routeId)}`,
-        );
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-            return;
-        }
-
-        const stations = result.stations;
-
-        if (stations.length === 0) {
-            stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
-            return;
-        }
-
-        let options = `<option value="">정류장을 선택하세요</option>`;
-        for (const station of stations) {
-            const label = station.arsId
-                ? `${station.stationName} (${station.arsId})`
-                : station.stationName;
-
-            options += `<option value="${station.stationId}">${label}</option>`;
-        }
-
-        stationSelect.innerHTML = options;
-        stationSelect.disabled = false;
-    } catch (error) {
-        stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-    }
-});
+routeSelectChangeEvent(routeSelect, stationSelect);
 
 // 예측 버튼을 눌렀을 때, 예외처리를 포함하여 차트 및 예측 결과를 표시하는 이벤트
 predictForm.addEventListener("submit", async function (e) {
@@ -101,7 +61,12 @@ predictForm.addEventListener("submit", async function (e) {
     }
 
     const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-    const stationName = stationSelect.options[stationSelect.selectedIndex].text;
+    const stationLabel = stationSelect.options[stationSelect.selectedIndex].text;
+
+    // "정든마을.우성아파트 (47043)" -> stationName, arsId 분리
+    const stationMatch = stationLabel.match(/^(.*?)(?:\s*\(([^)]+)\))?$/);
+    const stationName = stationMatch ? stationMatch[1].trim() : stationLabel;
+    const arsId = stationMatch && stationMatch[2] ? stationMatch[2].trim() : "";
 
     const [date, timeRaw] = dateTime.split("T");
     const time = timeRaw ? timeRaw.slice(0, 5) : "";
@@ -131,7 +96,7 @@ predictForm.addEventListener("submit", async function (e) {
         });
 
         const chartPromise = fetch(
-            `/ajax/station-week-chart/?routeId=${encodeURIComponent(routeId)}&stationId=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
+            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
         );
 
         const [predictResponse, chartResponse] = await Promise.all([
@@ -141,13 +106,14 @@ predictForm.addEventListener("submit", async function (e) {
 
         const predictResult = await predictResponse.json();
         const chartResult = await chartResponse.json();
+        
 
         if (!predictResponse.ok || !predictResult.success) {
             alert(predictResult.error || "예측 요청에 실패했습니다.");
             return;
         }
 
-        renderResult(routeName, stationName, predictResult);
+        renderResult(routeName, stationName, arsId, predictResult);
 
         if (!chartResponse.ok || !chartResult.success) {
             document.getElementById("chartInfo").innerHTML =
@@ -155,14 +121,15 @@ predictForm.addEventListener("submit", async function (e) {
             return;
         }
 
-        latestWeekBars = chartResult.bars;
-        latestDayType = chartResult.dayType;
+        const chartResultData = chartResult.data
+        latestWeekBars = chartResultData.bars;
+        latestDayType = chartResultData.day_type;
 
         document.getElementById("chartInfo").innerHTML = `
-                <strong>${chartResult.routeName}</strong><br>
-                정류소: ${chartResult.stationName}<br>
-                기준 시간: ${chartResult.requestedTime}<br>
-                구분: ${chartResult.dayType === "weekday" ? "평일(월~금)" : "주말(토~일)"}
+                <strong>${chartResultData.route_name}</strong><br>
+                정류소: ${chartResultData.station_name}<br>
+                기준 시간: ${chartResultData.requested_time}<br>
+                구분: ${chartResultData.day_type === "weekday" ? "평일(월~금)" : "주말(토~일)"}
             `;
 
         drawWeekChart(latestWeekBars, latestDayType);
@@ -190,15 +157,26 @@ favoriteRouteBtn.addEventListener("click", function () {
 
 // 즐겨찾기 정류장 추가 이벤트
 favoriteStationBtn.addEventListener("click", function () {
-    if (!currentPrediction.stationName) {
+    if (
+        !currentPrediction.stationName ||
+        !currentPrediction.arsId ||
+        !currentPrediction.routeId ||
+        !currentPrediction.routeName
+    ) {
         showToast("먼저 예측을 실행하세요.");
         return;
     }
-    addFavorite("station", currentPrediction.stationName);
+
+    addFavorite("station", {
+        stationName: currentPrediction.stationName,
+        arsId: currentPrediction.arsId,
+        routeId: currentPrediction.routeId,
+        routeName: currentPrediction.routeName,
+    });
 });
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
-function renderResult(routeName, stationName, result) {
+function renderResult(routeName, stationName, arsId, result) {
     const data = result.data;
 
     const formattedDate = formatDateTime(data.date_time);
@@ -215,6 +193,7 @@ function renderResult(routeName, stationName, result) {
     currentPrediction.routeName = routeName;
     currentPrediction.stationId = stationSelect.value;
     currentPrediction.stationName = stationName;
+    currentPrediction.arsId = arsId;
 
     favoriteRouteBtn.disabled = false;
     favoriteStationBtn.disabled = false;
@@ -245,7 +224,7 @@ function drawWeekChart(bars, dayType = "") {
     data.addColumn("number", "잔여좌석");
 
     bars.forEach((item) => {
-        data.addRow([item.dayLabel, item.remaining_seat]);
+        data.addRow([item.day_label, item.remaining_seat]);
     });
 
     const isMobile = window.innerWidth <= 768;

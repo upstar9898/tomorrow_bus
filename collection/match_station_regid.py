@@ -1,8 +1,8 @@
 import os
-import pandas as pd
-from django.core.management.base import BaseCommand
-from datetime import datetime
 import glob
+from datetime import datetime
+
+import pandas as pd
 
 
 def get_latest_file(data_dir, prefix):
