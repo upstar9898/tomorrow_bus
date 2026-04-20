@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}즐겨찾기 | Tomorrow Bus{% endblock %}
 
@@ -179,6 +180,42 @@
             width: 100%;
         }
     }
+
+    .favorite-item-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .favorite-sub-text {
+        display: inline-block;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .favorite-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        font-size: 0.82rem;
+        font-weight: 700;
+        width: fit-content;
+        margin-top: 6px;
+        cursor: pointer;
+    }
+
+    .favorite-badge:hover {
+        background: #dbeafe;
+    }
+
+    .favorite-badge:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
 </style>
 {% endblock %}
 
@@ -235,76 +272,5 @@
 {% endblock %}
 
 {% block extra_script %}
-<script>
-    function getFavorites() {
-        const data = localStorage.getItem('favorites');
-        return data ? JSON.parse(data) : { buses: [], stations: [] };
-    }
-
-    function saveFavorites(favorites) {
-        localStorage.setItem('favorites', JSON.stringify(favorites));
-    }
-
-    function removeFavorite(type, name) {
-        const favorites = getFavorites();
-
-        if (type === 'bus') {
-            favorites.buses = favorites.buses.filter(item => item !== name);
-        }
-
-        if (type === 'station') {
-            favorites.stations = favorites.stations.filter(item => item !== name);
-        }
-
-        saveFavorites(favorites);
-        renderFavorites();
-    }
-
-    function clearAllFavorites() {
-        localStorage.removeItem('favorites');
-        renderFavorites();
-    }
-
-    function renderFavorites() {
-        const favorites = getFavorites();
-
-        const busList = document.getElementById('busList');
-        const stationList = document.getElementById('stationList');
-        const busEmpty = document.getElementById('busEmpty');
-        const stationEmpty = document.getElementById('stationEmpty');
-
-        busList.innerHTML = '';
-        stationList.innerHTML = '';
-
-        if (favorites.buses.length === 0) {
-            busEmpty.style.display = 'block';
-        } else {
-            busEmpty.style.display = 'none';
-            favorites.buses.forEach(bus => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="favorite-item-name">${bus}</span>
-                    <button class="btn btn-delete" onclick="removeFavorite('bus', '${bus}')">삭제</button>
-                `;
-                busList.appendChild(li);
-            });
-        }
-
-        if (favorites.stations.length === 0) {
-            stationEmpty.style.display = 'block';
-        } else {
-            stationEmpty.style.display = 'none';
-            favorites.stations.forEach(station => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="favorite-item-name">${station}</span>
-                    <button class="btn btn-delete" onclick="removeFavorite('station', '${station}')">삭제</button>
-                `;
-                stationList.appendChild(li);
-            });
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', renderFavorites);
-</script>
+<script type="module" src="{% static 'bus/js/favorites.js' %}"></script>
 {% endblock %}
