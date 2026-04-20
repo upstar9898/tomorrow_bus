@@ -3,76 +3,93 @@ import time
 import pandas as pd
 import requests
 
-from django.core.management.base import BaseCommand
 
+def main():
+    # 현재 파일 위치: 프로젝트루트/collection/파일명.py
+    current_file = os.path.abspath(__file__)
+    collection_dir = os.path.dirname(current_file)
+    base_dir = os.path.dirname(collection_dir)   # 프로젝트 루트
+    data_dir = os.path.join(base_dir, "data")
 
-class Command(BaseCommand):
-    help = "위도/경도로 도시명 + 전체 주소 추가 후 CSV 저장"
+    os.makedirs(data_dir, exist_ok=True)
 
-    def handle(self, *args, **kwargs):
-        # 프로젝트 루트
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        )
+    input_path = os.path.join(data_dir, "bus_station_coordinate.csv")
+    output_path = os.path.join(data_dir, "bus_station_with_city.csv")
 
-        # ✅ data 폴더
-        data_dir = os.path.join(base_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
+    print("현재 파일 위치:", current_file)
+    print("프로젝트 루트:", base_dir)
+    print("data 폴더:", data_dir)
+    print("입력 파일:", input_path)
+    print("출력 파일:", output_path)
 
-        # ✅ 경로 변경
-        input_path = os.path.join(data_dir, "bus_station_coordinate.csv")
-        output_path = os.path.join(data_dir, "bus_station_with_city.csv")
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"입력 파일이 없습니다: {input_path}")
 
-        # API 키
-        KAKAO_API_KEY = os.environ.get("KAKAO_ADMIN_KEY")
+    # API 키
+    kakao_api_key = os.environ.get("KAKAO_ADMIN_KEY")
+    if not kakao_api_key:
+        raise EnvironmentError("환경변수 KAKAO_ADMIN_KEY가 설정되지 않았습니다.")
 
-        headers = {"Authorization": f"KakaoAK {KAKAO_API_KEY}"}
+    headers = {"Authorization": f"KakaoAK {kakao_api_key}"}
 
-        df = pd.read_csv(input_path)
+    df = pd.read_csv(input_path, encoding="utf-8-sig")
 
-        city_list = []
-        address_list = []
+    if "위도" not in df.columns or "경도" not in df.columns:
+        raise ValueError("입력 CSV에 '위도', '경도' 컬럼이 필요합니다.")
 
-        for idx, row in df.iterrows():
-            lat = row["위도"]
-            lon = row["경도"]
+    city_list = []
+    address_list = []
 
-            url = "https://dapi.kakao.com/v2/local/geo/coord2address.json"
+    url = "https://dapi.kakao.com/v2/local/geo/coord2address.json"
 
+    for idx, row in df.iterrows():
+        lat = row["위도"]
+        lon = row["경도"]
+
+        try:
             params = {"x": lon, "y": lat}
+            res = requests.get(url, headers=headers, params=params, timeout=10)
+            res.raise_for_status()
+            data = res.json()
 
-            try:
-                res = requests.get(url, headers=headers, params=params, timeout=10)
-                data = res.json()
+            if data.get("documents"):
+                addr = data["documents"][0]["address"]
 
-                if data["documents"]:
-                    addr = data["documents"][0]["address"]
+                city = addr.get("region_1depth_name", "")
+                district = addr.get("region_2depth_name", "")
+                city_name = f"{city} {district}".strip()
+                address_name = addr.get("address_name", "UNKNOWN")
+            else:
+                city_name = "UNKNOWN"
+                address_name = "UNKNOWN"
 
-                    city = addr["region_1depth_name"]
-                    district = addr["region_2depth_name"]
+        except Exception as e:
+            city_name = "ERROR"
+            address_name = "ERROR"
+            print(f"[에러] idx={idx}, lat={lat}, lon={lon}, error={e}")
 
-                    city_name = f"{city} {district}"
-                    address_name = addr["address_name"]
-                else:
-                    city_name = "UNKNOWN"
-                    address_name = "UNKNOWN"
+        city_list.append(city_name)
+        address_list.append(address_name)
 
-            except Exception as e:
-                city_name = "ERROR"
-                address_name = "ERROR"
-                print(f"에러: {e}")
+        time.sleep(0.1)
 
-            city_list.append(city_name)
-            address_list.append(address_name)
+        if idx % 50 == 0:
+            print(f"{idx} 처리중...")
 
-            time.sleep(0.1)
+    df["city"] = city_list
+    df["address"] = address_list
 
-            if idx % 50 == 0:
-                print(f"{idx} 처리중...")
+    df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-        df["city"] = city_list
-        df["address"] = address_list
+    print("\n[완료]")
+    print(f"저장 위치: {output_path}")
+    print(f"총 처리 건수: {len(df)}")
 
-        df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
-        self.stdout.write(self.style.SUCCESS(f"완료! 저장 위치: {output_path}"))
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("\n[ERROR]")
+        print(type(e).__name__, ":", e)
+        raise
