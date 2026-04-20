@@ -271,13 +271,17 @@ function renderRouteResult(routeName, stationName, data) {
     }
 }
 
-    let kakaoMap = null;
-    let mapMarkers = [];
-    let mapPolylines = [];
+let kakaoMap = null;
+let mapMarkers = [];
+let mapPolylines = [];
+let mapInfoWindows = [];
+
+const MARKER_VISIBLE_MAX_LEVEL = 5;
+const DEFAULT_FOCUS_LEVEL = 4;
+const DEFAULT_MAP_LEVEL = 7;
 
 function isVirtualStop(stop) {
     const name = stop.station_name || "";
-    // console.log("정류소명:", name);
     return name.includes("가상") || name.includes("미정차");
 }
 
@@ -291,14 +295,19 @@ function clearRouteMap() {
         polyline.setMap(null);
     }
     mapPolylines = [];
+
+    for (const infoWindow of mapInfoWindows) {
+        infoWindow.close();
+    }
+    mapInfoWindows = [];
 }
 
 function makeMarkerImage(color = "#2563eb") {
     const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
-            <path d="M18 2C10.268 2 4 8.268 4 16c0 10.2 14 28 14 28s14-17.8 14-28C32 8.268 25.732 2 18 2z"
-                fill="${color}" stroke="#ffffff" stroke-width="2"/>
-            <circle cx="18" cy="16" r="5" fill="#ffffff"/>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28">
+            <path d="M10 1C5.582 1 2 4.582 2 9c0 5.9 8 17 8 17s8-11.1 8-17c0-4.418-3.582-8-8-8z"
+                fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+            <circle cx="10" cy="9" r="2.8" fill="#ffffff"/>
         </svg>
     `;
 
@@ -308,11 +317,22 @@ function makeMarkerImage(color = "#2563eb") {
 
     return new kakao.maps.MarkerImage(
         `data:image/svg+xml;charset=UTF-8,${encoded}`,
-        new kakao.maps.Size(36, 48),
+        new kakao.maps.Size(20, 28),
         {
-            offset: new kakao.maps.Point(18, 48),
+            offset: new kakao.maps.Point(10, 28),
         }
     );
+}
+
+function updateMarkerVisibilityByLevel() {
+    if (!kakaoMap) return;
+
+    const currentLevel = kakaoMap.getLevel();
+    const shouldShowMarkers = currentLevel <= MARKER_VISIBLE_MAX_LEVEL;
+
+    for (const marker of mapMarkers) {
+        marker.setMap(shouldShowMarkers ? kakaoMap : null);
+    }
 }
 
 function drawRouteMap(stations, selectedStationId) {
@@ -330,7 +350,7 @@ function drawRouteMap(stations, selectedStationId) {
             !Number.isNaN(Number(st.latitude)) &&
             !Number.isNaN(Number(st.longitude)) &&
             Number(st.latitude) !== 0 &&
-            Number(st.longitude) !== 0,
+            Number(st.longitude) !== 0
     );
 
     if (validStations.length === 0) {
@@ -339,24 +359,29 @@ function drawRouteMap(stations, selectedStationId) {
         return;
     }
 
-    mapSummary.textContent = `정류소 ${validStations.length}개를 지도에 표시했습니다.`;
+    const selectedStation = validStations.find(
+        (st) => String(st.station_id) === String(selectedStationId)
+    );
 
-    const first = validStations[0];
-    const center = new kakao.maps.LatLng(
-        Number(first.latitude),
-        Number(first.longitude),
+    const focusStation = selectedStation || validStations[0];
+
+    const focusLatLng = new kakao.maps.LatLng(
+        Number(focusStation.latitude),
+        Number(focusStation.longitude)
     );
 
     if (!kakaoMap) {
         kakaoMap = new kakao.maps.Map(mapContainer, {
-            center: center,
-            level: 7,
+            center: focusLatLng,
+            level: DEFAULT_MAP_LEVEL,
+        });
+
+        kakao.maps.event.addListener(kakaoMap, "zoom_changed", function () {
+            updateMarkerVisibilityByLevel();
         });
     }
 
     clearRouteMap();
-
-    const bounds = new kakao.maps.LatLngBounds();
 
     let currentPath = [];
     let prevStaOrd = null;
@@ -364,12 +389,10 @@ function drawRouteMap(stations, selectedStationId) {
     for (const st of validStations) {
         const latlng = new kakao.maps.LatLng(
             Number(st.latitude),
-            Number(st.longitude),
+            Number(st.longitude)
         );
 
-        bounds.extend(latlng);
-
-        // ===== polyline은 전체 validStations 기준으로 처리 =====
+        // polyline
         const currentStaOrd = Number(st.staOrd);
 
         if (
@@ -382,7 +405,7 @@ function drawRouteMap(stations, selectedStationId) {
                 const polyline = new kakao.maps.Polyline({
                     map: kakaoMap,
                     path: currentPath,
-                    strokeWeight: 5,
+                    strokeWeight: 4,
                     strokeColor: "#2563eb",
                     strokeOpacity: 0.85,
                     strokeStyle: "solid",
@@ -396,7 +419,7 @@ function drawRouteMap(stations, selectedStationId) {
         currentPath.push(latlng);
         prevStaOrd = currentStaOrd;
 
-        // ===== 마커는 가상/미정차 제외 =====
+        // 가상/미정차는 마커 제외
         if (isVirtualStop(st)) {
             continue;
         }
@@ -439,6 +462,8 @@ function drawRouteMap(stations, selectedStationId) {
             `,
         });
 
+        mapInfoWindows.push(infoWindow);
+
         kakao.maps.event.addListener(marker, "click", function () {
             infoWindow.open(kakaoMap, marker);
         });
@@ -448,7 +473,7 @@ function drawRouteMap(stations, selectedStationId) {
         const polyline = new kakao.maps.Polyline({
             map: kakaoMap,
             path: currentPath,
-            strokeWeight: 5,
+            strokeWeight: 4,
             strokeColor: "#2563eb",
             strokeOpacity: 0.85,
             strokeStyle: "solid",
@@ -456,7 +481,15 @@ function drawRouteMap(stations, selectedStationId) {
         mapPolylines.push(polyline);
     }
 
-    kakaoMap.setBounds(bounds, 80, 80, 80, 80);
+    // 기준 정류소 중심으로 이동 + 확대
+    kakaoMap.setCenter(focusLatLng);
+    kakaoMap.setLevel(DEFAULT_FOCUS_LEVEL);
+
+    mapSummary.textContent = selectedStation
+        ? `기준 정류소 중심으로 지도를 표시했습니다.`
+        : `선택한 정류소를 찾지 못해 노선 시작 지점을 기준으로 표시했습니다.`;
+
+    updateMarkerVisibilityByLevel();
 }
 
 kakao.maps.load(function () {
@@ -465,6 +498,10 @@ kakao.maps.load(function () {
 
     kakaoMap = new kakao.maps.Map(mapContainer, {
         center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 8
+        level: DEFAULT_MAP_LEVEL,
+    });
+
+    kakao.maps.event.addListener(kakaoMap, "zoom_changed", function () {
+        updateMarkerVisibilityByLevel();
     });
 });
