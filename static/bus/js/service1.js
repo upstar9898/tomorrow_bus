@@ -5,8 +5,7 @@ import {
     showToast,
 } from "./utils.js";
 import { addFavorite } from "./favorite.js";
-import {routeSelectChangeEvent} from "./routeSelect.js"
-
+import { routeSelectChangeEvent, loadStationsByRoute } from "./routeSelect.js";
 
 // 구글 차트 라이브러리 로드
 google.charts.load("current", { packages: ["corechart"] });
@@ -16,6 +15,7 @@ const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
 const predictForm = document.getElementById("predictForm");
 const rideDateTime = document.getElementById("rideDateTime");
+
 // 즐겨찾기 관련 element 가져오기
 const favoriteRouteBtn = document.getElementById("favoriteRouteBtn");
 const favoriteStationBtn = document.getElementById("favoriteStationBtn");
@@ -39,6 +39,32 @@ let latestWeekBars = [];
 
 // 노선을 선택하면 정류장 목록을 불러오는 이벤트
 routeSelectChangeEvent(routeSelect, stationSelect);
+
+// 쿼리스트링 기반 초기값 세팅
+async function applyQueryStringToForm() {
+    const params = new URLSearchParams(window.location.search);
+
+    const routeId = params.get("route_id");
+    const stationId = params.get("station_id");
+    const arsId = params.get("ars_id");
+    const dateTime = params.get("date_time");
+
+    if (!routeId) {
+        return;
+    }
+
+    routeSelect.value = String(routeId);
+
+    await loadStationsByRoute(routeSelect, stationSelect, stationId, arsId);
+
+    if (dateTime) {
+        rideDateTime.value = dateTime;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+    await applyQueryStringToForm();
+});
 
 // 예측 버튼을 눌렀을 때, 예외처리를 포함하여 차트 및 예측 결과를 표시하는 이벤트
 predictForm.addEventListener("submit", async function (e) {
@@ -96,7 +122,7 @@ predictForm.addEventListener("submit", async function (e) {
         });
 
         const chartPromise = fetch(
-            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
+            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`
         );
 
         const [predictResponse, chartResponse] = await Promise.all([
@@ -106,7 +132,6 @@ predictForm.addEventListener("submit", async function (e) {
 
         const predictResult = await predictResponse.json();
         const chartResult = await chartResponse.json();
-        
 
         if (!predictResponse.ok || !predictResult.success) {
             alert(predictResult.error || "예측 요청에 실패했습니다.");
@@ -121,16 +146,16 @@ predictForm.addEventListener("submit", async function (e) {
             return;
         }
 
-        const chartResultData = chartResult.data
+        const chartResultData = chartResult.data;
         latestWeekBars = chartResultData.bars;
         latestDayType = chartResultData.day_type;
 
         document.getElementById("chartInfo").innerHTML = `
-                <strong>${chartResultData.route_name}</strong><br>
-                정류소: ${chartResultData.station_name}<br>
-                기준 시간: ${chartResultData.requested_time}<br>
-                구분: ${chartResultData.day_type === "weekday" ? "평일(월~금)" : "주말(토~일)"}
-            `;
+            <strong>${chartResultData.route_name}</strong><br>
+            정류소: ${chartResultData.station_name}<br>
+            기준 시간: ${chartResultData.requested_time}<br>
+            구분: ${chartResultData.day_type === "weekday" ? "평일(월~금)" : "주말(토~일)"}
+        `;
 
         drawWeekChart(latestWeekBars, latestDayType);
     } catch (error) {
@@ -172,6 +197,7 @@ favoriteStationBtn.addEventListener("click", function () {
         arsId: currentPrediction.arsId,
         routeId: currentPrediction.routeId,
         routeName: currentPrediction.routeName,
+        stationId: currentPrediction.stationId,
     });
 });
 
@@ -201,12 +227,12 @@ function renderResult(routeName, stationName, arsId, result) {
     const historyTable = document.getElementById("historyTable");
     const row = document.createElement("tr");
     row.innerHTML = `
-    <td>${routeName}</td>
-    <td>${stationName}</td>
-    <td>${formattedDate}</td>
-    <td>${data.remaining_seat}석</td>
-    <td>${(data.full_prob * 100).toFixed(1)}%</td>
-`;
+        <td>${routeName}</td>
+        <td>${stationName}</td>
+        <td>${formattedDate}</td>
+        <td>${data.remaining_seat}석</td>
+        <td>${(data.full_prob * 100).toFixed(1)}%</td>
+    `;
     historyTable.prepend(row);
 
     while (historyTable.children.length > 6) {
@@ -258,4 +284,3 @@ function drawWeekChart(bars, dayType = "") {
     const chart = new google.visualization.ColumnChart(chartEl);
     chart.draw(data, options);
 }
-
