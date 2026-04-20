@@ -18,7 +18,8 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed")
+BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_foranalysis")
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
@@ -210,6 +211,24 @@ def preprocess(df):
         ascending=[True, True, True, True, True],
     ).copy()
 
+        # -----------------------------
+    # 이전 정류장 좌석(prev_seat), 차이(diff) 추가
+    # -----------------------------
+    prev_df = df[
+        ["busRouteId", "vehId1", "trip_group", "staOrd", "remaining_seat"]
+    ].copy()
+
+    prev_df = prev_df.rename(columns={"remaining_seat": "prev_seat"})
+    prev_df["staOrd"] = prev_df["staOrd"] + 1
+
+    df = df.merge(
+        prev_df,
+        on=["busRouteId", "vehId1", "trip_group", "staOrd"],
+        how="left",
+    )
+    df["diff"] = df["remaining_seat"] - df["prev_seat"]
+    
+    
     # -----------------------------
     # 최종 정리
     # -----------------------------
@@ -226,6 +245,9 @@ def preprocess(df):
         "arrmsg1",
         "remaining_seat",
         "full_flag",
+        # 이전 좌석수 정보
+        "prev_seat",
+        "diff",
         # 시간 파생
         "year",
         "month",
@@ -275,6 +297,9 @@ def preprocess(df):
         "minute_cos",
         "dow_sin",
         "dow_cos",
+        # 이전 좌석수 정보
+        "prev_seat",
+        "diff",
     ]
 
     for c in numeric_cols:
@@ -290,12 +315,12 @@ def preprocess(df):
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
-    file_list = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
+    file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
     # file_list = ["bus_data_2026_03_10.csv"]
 
     for filename in file_list:
-        input_path = os.path.join(DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed.csv")
+        input_path = os.path.join(BUS_API_DATA_DIR, filename)
+        output_filename = filename.replace(".csv", "_preprocessed_foranalysis.csv")
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
         if os.path.exists(output_path):
