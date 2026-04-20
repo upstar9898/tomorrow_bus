@@ -108,3 +108,7 @@ outputs_peak_v2/
 *.csv
 *.log
 *.pkl
+
+# tensorflow 사용을 위한 3.12 버전 venv ignore
+# 실제 서비스에 적용할 때는 삭제 요망
+venv_312/
