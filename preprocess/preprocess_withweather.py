@@ -18,7 +18,12 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_foranalysis")
+BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
+WEATHER_DATA_DIR = os.path.join(DATA_DIR, "data_for_weather_process")
+STATION_PATH = os.path.join(WEATHER_DATA_DIR, "bus_station_for_admin_260409.csv")
+WEATHER_PATH = os.path.join(WEATHER_DATA_DIR, "weather_260413_first_processed.csv")
+
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
 TOTAL_SEATS = 45
@@ -84,6 +89,155 @@ def normalize_arrmsg(text):
     return str(text).strip()
 
 
+# 날씨 데이터 추가 함수
+def add_weather_features(df):
+    station_df = pd.read_csv(STATION_PATH, dtype={"stationId": str, "stn": str})
+
+    weather_df = pd.read_csv(WEATHER_PATH, dtype={"STN": str})
+
+    # -----------------------------
+    # 1) 정류장별 기상관측소 번호(stn) 붙이기
+    # -----------------------------
+    df["stId"] = df["stId"].astype(str)
+
+    station_map = (
+        station_df[["stationId", "stn"]]
+        .dropna(subset=["stationId", "stn"])
+        .drop_duplicates(subset=["stationId"])
+        .rename(columns={"stationId": "stId"})
+    )
+
+    df = df.merge(station_map, on="stId", how="left")
+
+    # -----------------------------
+    # 2) mkTm을 가장 가까운 정시로 반올림
+    # -----------------------------
+    df["weather_time"] = df["mkTm"].dt.round("h")
+
+    df["weather_year"] = df["weather_time"].dt.year
+    df["weather_month"] = df["weather_time"].dt.month
+    df["weather_day"] = df["weather_time"].dt.day
+    df["weather_hour"] = df["weather_time"].dt.hour
+
+    # -----------------------------
+    # 3) weather 파일과 merge
+    # -----------------------------
+    weather_df = weather_df.rename(columns={"STN": "stn"})
+    weather_df["stn"] = weather_df["stn"].astype(str)
+
+    weather_use = weather_df[
+        [
+            "year",
+            "month",
+            "day",
+            "hour",
+            "stn",
+            "precipitation",
+            "TA",
+            "RN",
+        ]
+    ].copy()
+
+    df["stn"] = df["stn"].astype(str)
+
+    weather_use = weather_df.rename(
+        columns={
+            "year": "w_year",
+            "month": "w_month",
+            "day": "w_day",
+            "hour": "w_hour",
+            "STN": "stn",
+            "TA": "temperature",
+            "RN": "rainfall",
+        }
+    )
+
+    df = df.merge(
+        weather_use,
+        left_on=["weather_year", "weather_month", "weather_day", "weather_hour", "stn"],
+        right_on=["w_year", "w_month", "w_day", "w_hour", "stn"],
+        how="left",
+    )
+
+    # merge 후 보조 컬럼 정리
+    df = df.drop(
+        columns=[
+            "weather_time",
+            "weather_year",
+            "weather_month",
+            "weather_day",
+            "weather_hour",
+        ],
+        errors="ignore",
+    )
+
+    # 결측치가 있을 경우 그 시간대 평균/최빈값으로 처리
+
+    # 강수 여부는 최빈값 처리
+    df["precipitation"] = df["precipitation"].fillna(
+        df.groupby(["year", "month", "day", "hour"])["precipitation"].transform(
+            lambda x: x.mode().iloc[0] if not x.mode().empty else 0
+        )
+    )
+    df["precipitation"] = df["precipitation"].fillna(0)
+
+    # 안개 여부도 최빈값 처리
+    df["fog"] = df["fog"].fillna(
+        df.groupby(["year", "month", "day", "hour"])["precipitation"].transform(
+            lambda x: x.mode().iloc[0] if not x.mode().empty else 0
+        )
+    )
+    df["fog"] = df["fog"].fillna(0)
+
+    # precipitation == 0 이면 rainfall은 무조건 0
+    df.loc[df["precipitation"] == 0, "rainfall"] = 0
+
+    # precipitation == 1 이고 rainfall이 결측인 경우만 처리
+    mask = (df["precipitation"] == 1) & (df["rainfall"].isna())
+
+    # 1차: 그 날짜의 그 시간 평균
+    rain_date_hour_mean = (
+        df.loc[df["precipitation"] == 1]
+        .groupby(["year", "month", "day", "hour"])["rainfall"]
+        .mean()
+    )
+
+    df.loc[mask, "rainfall"] = (
+        df.loc[mask, ["year", "month", "day", "hour"]]
+        .apply(tuple, axis=1)
+        .map(rain_date_hour_mean)
+    )
+
+    # 2차: 그래도 못 채운 경우 같은 날짜 평균
+    mask = (df["precipitation"] == 1) & (df["rainfall"].isna())
+
+    rain_date_mean = (
+        df.loc[df["precipitation"] == 1]
+        .groupby(["year", "month", "day"])["rainfall"]
+        .mean()
+    )
+
+    df.loc[mask, "rainfall"] = (
+        df.loc[mask, ["year", "month", "day"]].apply(tuple, axis=1).map(rain_date_mean)
+    )
+
+    # 마지막 안전장치
+    df["rainfall"] = df["rainfall"].fillna(0)
+
+    # 기온 평균값 대체
+    df["temperature"] = df["temperature"].fillna(
+        df.groupby(["year", "month", "day", "hour"])["temperature"].transform("mean")
+    )
+
+    df["temperature"] = df["temperature"].fillna(
+        df.groupby(["year", "month", "day"])["temperature"].transform("mean")
+    )
+
+    df["temperature"] = df["temperature"].fillna(df["temperature"].mean())
+
+    return df
+
+
 # =========================================================
 # 3. 로드
 # =========================================================
@@ -108,7 +262,7 @@ def preprocess(df):
     df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
     df["arrmsg1"] = df["arrmsg1"].apply(normalize_arrmsg)
     mask1 = df["arrmsg1"].str.contains("곧", na=False)
-    mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
+    mask2 = df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False)
 
     df = df[mask1 | mask2].copy()
 
@@ -138,6 +292,9 @@ def preprocess(df):
 
     # 만차 플래그가 있으면 0석 처리
     df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
+
+    # remaining_seat가 0이면 무조건 만차 처리
+    df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
 
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
@@ -177,16 +334,22 @@ def preprocess(df):
     # ETA가 더 작고 좌석정보가 있는 쪽을 우선
     # 그 후 같은 운행 안에서 우선순위를 정해서 하나의 행만 남김
 
-    TIME_GAP_MINUTES = 20
-
+    TIME_GAP_MINUTES = 40
+    STAORD_BACKWARD_THRESHOLD = 5
+    
     df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
 
     df["time_diff"] = (
         df.groupby(["busRouteId", "vehId1"])["mkTm"].diff().dt.total_seconds().div(60)
     )
+    
+    # 같은 노선-차량 내 정류장 순번 차이
+    df["staOrd_diff"] = df.groupby(["busRouteId", "vehId1"])["staOrd"].diff()
 
     df["new_trip_flag"] = (
-        df["time_diff"].isna() | (df["time_diff"] > TIME_GAP_MINUTES)
+        df["time_diff"].isna()
+        | (df["time_diff"] > TIME_GAP_MINUTES)
+        | (df["staOrd_diff"] <= -STAORD_BACKWARD_THRESHOLD)
     ).astype(int)
 
     df["trip_group"] = df.groupby(["busRouteId", "vehId1"])["new_trip_flag"].cumsum()
@@ -204,30 +367,15 @@ def preprocess(df):
     df = df.drop_duplicates(
         subset=["busRouteId", "stId", "vehId1", "trip_group"], keep="first"
     ).copy()
-    
+
     df = df.sort_values(
         ["busRouteId", "vehId1", "trip_group", "staOrd", "mkTm"],
         ascending=[True, True, True, True, True],
     ).copy()
 
-        # -----------------------------
-    # 이전 정류장 좌석(prev_seat), 차이(diff) 추가
-    # -----------------------------
-    prev_df = df[
-        ["busRouteId", "vehId1", "trip_group", "staOrd", "remaining_seat"]
-    ].copy()
+    # 날씨 데이터 추가
+    df = add_weather_features(df)
 
-    prev_df = prev_df.rename(columns={"remaining_seat": "prev_seat"})
-    prev_df["staOrd"] = prev_df["staOrd"] + 1
-
-    df = df.merge(
-        prev_df,
-        on=["busRouteId", "vehId1", "trip_group", "staOrd"],
-        how="left",
-    )
-    df["diff"] = df["remaining_seat"] - df["prev_seat"]
-    
-    
     # -----------------------------
     # 최종 정리
     # -----------------------------
@@ -244,9 +392,6 @@ def preprocess(df):
         "arrmsg1",
         "remaining_seat",
         "full_flag",
-        # 이전 좌석수 정보
-        "prev_seat",
-        "diff",
         # 시간 파생
         "year",
         "month",
@@ -267,6 +412,11 @@ def preprocess(df):
         "minute_cos",
         "dow_sin",
         "dow_cos",
+        # 날씨 데이터
+        "precipitation",
+        "fog",
+        "temperature",
+        "rainfall",
     ]
 
     df = df[final_cols].copy()
@@ -296,9 +446,11 @@ def preprocess(df):
         "minute_cos",
         "dow_sin",
         "dow_cos",
-        # 이전 좌석수 정보
-        "prev_seat",
-        "diff",
+        # 날씨 데이터
+        "precipitation",
+        "fog",
+        "temperature",
+        "rainfall",
     ]
 
     for c in numeric_cols:
@@ -314,12 +466,12 @@ def preprocess(df):
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
-    file_list = [f for f in os.listdir(DATA_DIR) if f.endswith(".csv")]
-    # file_list = ["bus_data_2026_03_10.csv"]
+    file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
+    # file_list = ["bus_data_2026_03_12.csv"]
 
     for filename in file_list:
-        input_path = os.path.join(DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed_foranalysis.csv")
+        input_path = os.path.join(BUS_API_DATA_DIR, filename)
+        output_filename = filename.replace(".csv", "_preprocessed_withweather.csv")
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
         if os.path.exists(output_path):

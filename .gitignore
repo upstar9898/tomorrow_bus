@@ -102,3 +102,10 @@ data/
 
 /*.csv
 /*.txt
+*.pkl
+
+# 모델 결과 / 로그
+outputs_peak_v2/
+*.csv
+*.log
+*.pkl
