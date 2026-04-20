@@ -3,6 +3,8 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
+from service_test.backend_test import dummy_service2
+
 import json
 from datetime import datetime
 
