@@ -4,16 +4,13 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
 import json
+from datetime import datetime
 
-from service_test.backend_test import (
-    dummy_service1,
-    dummy_service2,
-)  # 실제 서비스로 변경 필요
-
-from .models import Bus_route, Route_station, Bus_arrival_info, Bus_station
+from .models import Bus_route, Route_station, Bus_arrival_info
+from .services.ml_predictor import predict_service1_result
 
 from datetime import datetime
-from django.db.models import F
+from django.db.models import Max
 from django.db.models.functions import Abs
 from django.conf import settings
 import re
@@ -85,6 +82,7 @@ def predict_service1(request):
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         date_time = data.get("date_time")
+        precipitation = data.get("precipitation", 0)
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
@@ -95,16 +93,14 @@ def predict_service1(request):
                 status=400,
             )
 
-        result = dummy_service1(
-            route_id, station_id, date_time
-        )  # 실제 서비스로 변경 필요
-
-        return JsonResponse(
-            {
-                "success": True,
-                "data": result,
-            }
+        result = predict_service1_result(
+            route_id=route_id,
+            station_id=station_id,
+            date_time=date_time,
+            precipitation=precipitation,
         )
+
+        return JsonResponse({"success": True, "data": result})
 
     except json.JSONDecodeError:
         return JsonResponse(
@@ -116,7 +112,7 @@ def predict_service1(request):
             {"success": False, "error": str(e)},
             status=500,
         )
-
+    
 
 # 미사용 함수, 추후 서비스2에 사용 가능성 있음
 @require_GET
