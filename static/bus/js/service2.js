@@ -82,7 +82,9 @@ predictForm.addEventListener("submit", async function (e) {
         return;
     }
     const mapResultData = mapResult.data;
-    drawRouteMap(mapResultData.stations, stationId);
+    const predictedStops = predictResult.data.stops || [];
+
+    drawRouteMap(mapResultData.stations, stationId, predictedStops);
 
 } catch (error) {
     console.error(error);
@@ -275,6 +277,7 @@ let kakaoMap = null;
 let mapMarkers = [];
 let mapPolylines = [];
 let mapInfoWindows = [];
+let mapSeatOverlays = [];
 
 const MARKER_VISIBLE_MAX_LEVEL = 5;
 const DEFAULT_FOCUS_LEVEL = 4;
@@ -299,7 +302,13 @@ function clearRouteMap() {
     for (const infoWindow of mapInfoWindows) {
         infoWindow.close();
     }
+
     mapInfoWindows = [];
+
+    for (const overlay of mapSeatOverlays) {
+        overlay.setMap(null);
+    }
+    mapSeatOverlays = [];
 }
 
 function makeMarkerImage(color = "#2563eb") {
@@ -333,11 +342,20 @@ function updateMarkerVisibilityByLevel() {
     for (const marker of mapMarkers) {
         marker.setMap(shouldShowMarkers ? kakaoMap : null);
     }
+
+    for (const overlay of mapSeatOverlays) {
+        overlay.setMap(shouldShowMarkers ? kakaoMap : null);
+    }
 }
 
-function drawRouteMap(stations, selectedStationId) {
+function drawRouteMap(stations, selectedStationId, predictedStops = []) {
+    const predictedStopMap = new Map(
+    predictedStops.map((stop) => [String(stop.station_id), stop])
+);
     const mapContainer = document.getElementById("routeMap");
     const mapSummary = document.getElementById("mapSummary");
+    
+
 
     if (!mapContainer || !window.kakao || !window.kakao.maps) {
         return;
@@ -438,6 +456,23 @@ function drawRouteMap(stations, selectedStationId) {
 
         mapMarkers.push(marker);
 
+        const predicted = predictedStopMap.get(String(st.station_id));
+        const remainingSeat = predicted ? predicted.remaining_seat : null;
+        const fullProb = predicted ? predicted.full_prob : null;
+        const isVirtual = predicted ? predicted.is_virtual === 1 : false;
+
+            // 좌석 수 오버레이 추가
+        if (!isVirtual && remainingSeat != null) {
+            const seatOverlay = createSeatOverlay(
+                latlng,
+                `${remainingSeat}석`,
+                isSelected
+            );
+            seatOverlay.setMap(kakaoMap);
+            mapSeatOverlays.push(seatOverlay);
+        }
+
+
         const infoWindow = new kakao.maps.InfoWindow({
             removable: true,
             content: `
@@ -505,3 +540,29 @@ kakao.maps.load(function () {
         updateMarkerVisibilityByLevel();
     });
 });
+
+function createSeatOverlay(latlng, seatText, isSelected = false) {
+    const content = document.createElement("div");
+    content.style.position = "relative";
+    content.style.transform = "translateY(-38px)";
+    content.style.padding = "2px 6px";
+    content.style.borderRadius = "999px";
+    content.style.background = isSelected ? "#facc15" : "#ffffff";
+    content.style.color = isSelected ? "#1f2937" : "#111827";
+    content.style.border = isSelected
+        ? "1px solid #eab308"
+        : "1px solid #cbd5e1";
+    content.style.fontSize = "11px";
+    content.style.fontWeight = "700";
+    content.style.lineHeight = "1.2";
+    content.style.boxShadow = "0 1px 4px rgba(0,0,0,0.15)";
+    content.style.whiteSpace = "nowrap";
+    content.textContent = seatText;
+
+    return new kakao.maps.CustomOverlay({
+        position: latlng,
+        content: content,
+        yAnchor: 1,
+        zIndex: isSelected ? 4 : 3,
+    });
+}
