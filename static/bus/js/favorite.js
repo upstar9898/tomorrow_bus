@@ -81,6 +81,7 @@ export function addFavorite(type, payload) {
         }
 
         favorites.stations.push({
+            stationId: stationItem.stationId,
             stationName: stationItem.stationName,
             arsId,
             routeId,
