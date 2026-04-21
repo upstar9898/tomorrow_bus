@@ -1,21 +1,24 @@
 import pandas as pd
-from pathlib import Path
+import os
 import numpy as np
+import glob
 
 # =========================================================
 # 1. 설정
 # =========================================================
-DATA_DIR = Path(r"C:\Users\Administrator\Desktop\test")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+WITHWEATHER_DATA_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
 
 SEAT_COL = "remaining_seat"
 TIME_COL = "mkTm"
 
-OUTPUT_FILE = DATA_DIR / "bus_all_raw_weather.csv"
+OUTPUT_FILE = os.path.join(WITHWEATHER_DATA_DIR, "bus_all_raw_weather.csv")
 
 # =========================================================
 # 2. 파일 탐색 (날씨 포함 파일)
 # =========================================================
-file_list = sorted(DATA_DIR.glob("*_withweather.csv"))
+file_list = sorted(glob.glob(os.path.join(WITHWEATHER_DATA_DIR, "*_withweather.csv")))
 
 if not file_list:
     raise FileNotFoundError("withweather CSV 파일이 없습니다.")
@@ -25,7 +28,10 @@ print(f"[총 파일 개수] {len(file_list)}")
 dfs = []
 
 for file_path in file_list:
-    print(f"[불러오는 중] {file_path.name}")
+    
+    file_name = os.path.basename(file_path)
+    
+    print(f"[불러오는 중] {file_name}")
 
     try:
         df = pd.read_csv(file_path, encoding="utf-8-sig", low_memory=False)
@@ -35,10 +41,10 @@ for file_path in file_list:
     # 파일별 이상 컬럼 체크
     tab_cols = [c for c in df.columns if "\t" in str(c)]
     if tab_cols:
-        print(f"[주의] 탭이 포함된 이상 컬럼 발견: {file_path.name}")
+        print(f"[주의] 탭이 포함된 이상 컬럼 발견: {file_name}")
         print(tab_cols)
 
-    df["source_file"] = file_path.name
+    df["source_file"] = file_name
     dfs.append(df)
 
 # =========================================================
