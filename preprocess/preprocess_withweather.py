@@ -38,7 +38,7 @@ from config.columns import USE_COLS, FINAL_COLS, NUMERIC_COLS
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather_re")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
 OUTPUT_SUFFIX = "_preprocessed_withweather.csv"
 
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
