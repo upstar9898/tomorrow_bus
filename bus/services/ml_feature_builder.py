@@ -19,7 +19,14 @@ from .ml_config import (
 from .ml_utils import safe_label_encode, make_peak_level
 
 
-def build_feature_row(route_id, station_id, date_time, precipitation=0):
+def build_feature_row(
+    route_id,
+    station_id,
+    date_time,
+    precipitation=0,
+    sta_ord=None,
+    ars_id=None,
+):
     route_id = str(route_id).strip()
     station_id = str(station_id).strip()
     dt = pd.to_datetime(date_time, errors="coerce")
@@ -32,19 +39,27 @@ def build_feature_row(route_id, station_id, date_time, precipitation=0):
     except Exception:
         precipitation = 0.0
 
-    route_station = (
-        Route_station.objects
-        .filter(route_id=route_id, station_id=station_id)
-        .select_related("station")
-        .first()
-    )
+    # sta_ord, ars_id가 없을 때만 DB 조회
+    if sta_ord is None or ars_id is None:
+        route_station = (
+            Route_station.objects
+            .filter(route_id=route_id, station_id=station_id)
+            .select_related("station")
+            .first()
+        )
 
-    if not route_station:
-        raise ValueError(f"route_id={route_id}, station_id={station_id} 조합을 찾을 수 없습니다.")
+        if not route_station:
+            raise ValueError(
+                f"route_id={route_id}, station_id={station_id} 조합을 찾을 수 없습니다."
+            )
 
-    sta_ord = float(route_station.staOrd)
-    ars_id = str(route_station.station.arsId).strip()
+        sta_ord = float(route_station.staOrd)
+        ars_id = str(route_station.station.arsId).strip()
+    else:
+        sta_ord = float(sta_ord)
+        ars_id = str(ars_id).strip()
 
+    # 아래부터는 route_station 쓰지 말고 sta_ord, ars_id만 사용
     route_max_sta = (
         Route_station.objects
         .filter(route_id=route_id)
