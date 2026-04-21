@@ -6,7 +6,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 WEATHER_DATA_DIR = os.path.join(DATA_DIR, "data_for_weather_process")
 STATION_PATH = os.path.join(WEATHER_DATA_DIR, "bus_station_for_admin_260409.csv")
-WEATHER_PATH = os.path.join(WEATHER_DATA_DIR, "weather_260413_first_processed.csv")
+WEATHER_PATH = os.path.join(WEATHER_DATA_DIR, "weather_260421_first_processed.csv")
 
 
 # 날씨 데이터 추가 함수
