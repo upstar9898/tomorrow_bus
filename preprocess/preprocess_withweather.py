@@ -190,8 +190,8 @@ def preprocess(df):
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
-    # file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
-    file_list = ["bus_data_2026_03_12.csv"]
+    file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
+    # file_list = ["bus_data_2026_03_12.csv"]
 
     use_cols = USE_COLS[MODE]
 
