@@ -10,6 +10,7 @@ from datetime import datetime
 
 from .models import Bus_route, Route_station, Bus_arrival_info
 from .services.ml_predictor import predict_service1_result
+from .services import weather_collector
 
 from datetime import datetime
 from django.db.models import Max
@@ -85,7 +86,6 @@ def predict_service1(request):
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         date_time = data.get("date_time")
-        precipitation = data.get("precipitation", 0)
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
@@ -96,14 +96,31 @@ def predict_service1(request):
                 status=400,
             )
 
+        forecast_data = weather_collector.collect_forecast(
+            station_id=station_id,
+            target_dt=date_time,
+        )
+
+        forecast = forecast_data["forecast"]
+
+        weather_main = forecast["weather"][0]["main"]
+
+        precipitation = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0 # 이슬비는 빼도 되면 빼자
+
         result = predict_service1_result(
             route_id=route_id,
             station_id=station_id,
             date_time=date_time,
             precipitation=precipitation,
         )
+        
 
-        return JsonResponse({"success": True, "data": result})
+        return JsonResponse(
+            {
+                "success": True,
+                "data": convert_numpy(result),
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse(
@@ -451,3 +468,16 @@ def get_route_name(request):
         }
     )
 
+def convert_numpy(obj):
+    import numpy as np
+
+    if isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy(v) for v in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    else:
+        return obj
