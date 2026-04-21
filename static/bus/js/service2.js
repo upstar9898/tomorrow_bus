@@ -176,6 +176,10 @@ function renderRouteResult(routeName, stationName, data) {
         const isSelected =
             String(stop.station_id) === String(data.base_station_id);
 
+        const predictedTimeText = stop.predicted_time
+            ? stop.predicted_time.slice(11, 16)
+            : "";
+
         const li = document.createElement("li");
         console.log(stop)
         li.className = "stop-item";
@@ -189,10 +193,11 @@ function renderRouteResult(routeName, stationName, data) {
                 
                 <div class="stop-top">
                     <div>
-                        <div class="stop-name">${stop.station_name || stop.station_id}</div>
+                        <div class="stop-name">${stop.station_name}</div>
                         <div class="stop-meta">
                             ${stop.ars_id ? `${stop.ars_id}` : ""}
-                            ${stop.relative_stop_label ? ` · ${stop.relative_stop_label}` : ""}
+                            ${predictedTimeText ? ` · 도착예정 ${predictedTimeText}` : ""}
+                            ${stop.relative_time_label ? ` (${stop.relative_time_label})` : ""}
                         </div>
                     </div>
 
@@ -210,6 +215,7 @@ function renderRouteResult(routeName, stationName, data) {
                 <div class="stop-bottom">
                     <span>예상 만차확률 ${(Number(stop.full_prob) * 100).toFixed(1)}%</span>
                 </div>
+                </dev>
         `;
 
         routeList.appendChild(li);
