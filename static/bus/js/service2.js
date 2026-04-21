@@ -91,15 +91,7 @@ predictForm.addEventListener("submit", async function (e) {
 
 
 function getSeatState(stop) {
-    if (stop.is_virtual === 1) {
-        return {
-            text: "가상 정류소",
-            dotClass: "status-gray",
-            badgeClass: "state-gray",
-        };
-    }
-
-    const seat = stop.remaining_seat;
+    const seat = Number(stop.remaining_seat);
 
     if (seat <= 2) {
         return {
@@ -108,6 +100,7 @@ function getSeatState(stop) {
             badgeClass: "state-red",
         };
     }
+
     if (seat <= 12) {
         return {
             text: "혼잡",
@@ -115,6 +108,7 @@ function getSeatState(stop) {
             badgeClass: "state-yellow",
         };
     }
+
     return {
         text: "여유",
         dotClass: "status-green",
@@ -124,8 +118,10 @@ function getSeatState(stop) {
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
+    const predictions = data.predictions || [];
+
     // 상단 요약
-    const formattedDate = formatDateTime(data.date_time);
+    const formattedDate = formatDateTime(data.base_date_time);
     resultSummary.textContent = `${routeName} · ${stationName} · ${formattedDate}`;
 
     if (selectedStopName) {
@@ -138,14 +134,16 @@ function renderRouteResult(routeName, stationName, data) {
     }
 
     if (summaryTotalStops) {
-        summaryTotalStops.textContent = data.stops.length;
+        summaryTotalStops.textContent = predictions.length;
     }
 
     // 기준 정류소 찾기
-    const selectedStop = data.stops.find((stop) => stop.is_selected);
+    const selectedStop = predictions.find(
+    (stop) => String(stop.station_id) === String(data.base_station_id)
+    );
 
     if (selectedSeatPrediction) {
-        if (!selectedStop || selectedStop.is_virtual === 1) {
+        if (!selectedStop) {
             selectedSeatPrediction.textContent = "-";
         } else {
             selectedSeatPrediction.textContent = `${selectedStop.remaining_seat}석`;
@@ -154,8 +152,8 @@ function renderRouteResult(routeName, stationName, data) {
 
     // 혼잡 정류소 수
     if (summaryBusyStops) {
-        const busyCount = data.stops.filter(
-            (stop) => stop.is_virtual !== 1 && stop.remaining_seat <= 12,
+        const busyCount = predictions.filter(
+            (stop) => Number(stop.remaining_seat) <= 12,
         ).length;
         summaryBusyStops.textContent = busyCount;
     }
@@ -163,53 +161,24 @@ function renderRouteResult(routeName, stationName, data) {
     // 가상 정류소 수
     const summaryVirtualStops = document.getElementById("summaryVirtualStops");
     if (summaryVirtualStops) {
-        const virtualCount = data.stops.filter(
-            (stop) => stop.is_virtual === 1,
-        ).length;
-        summaryVirtualStops.textContent = virtualCount;
+        summaryVirtualStops.textContent = 0;
     }
 
     // 리스트 초기화
     routeList.classList.remove("route-list-empty");
     routeList.innerHTML = "";
 
-    // 상태 판단 함수
-    function getSeatState(stop) {
-        if (stop.is_virtual === 1) {
-            return {
-                text: "가상 정류소",
-                dotClass: "status-gray",
-                badgeClass: "state-gray",
-            };
-        }
-
-        const seat = stop.remaining_seat;
-
-        if (seat <= 2) {
-            return {
-                text: "만차임박",
-                dotClass: "status-red",
-                badgeClass: "state-red",
-            };
-        }
-        if (seat <= 12) {
-            return {
-                text: "혼잡",
-                dotClass: "status-yellow",
-                badgeClass: "state-yellow",
-            };
-        }
-        return {
-            text: "여유",
-            dotClass: "status-green",
-            badgeClass: "state-green",
-        };
-    }
 
     // 리스트 렌더링
-    for (const stop of data.stops) {
+    for (const stop of predictions) {
         const state = getSeatState(stop);
-        const isVirtual = stop.is_virtual === 1;
+
+        const isSelected =
+            String(stop.station_id) === String(data.base_station_id);
+
+        const predictedTimeText = stop.predicted_time
+            ? stop.predicted_time.slice(11, 16)
+            : "";
 
         const li = document.createElement("li");
         console.log(stop)
@@ -220,27 +189,22 @@ function renderRouteResult(routeName, stationName, data) {
                 <span class="stop-dot ${state.dotClass}"></span>
             </div>
 
-            <div class="stop-card 
-                ${stop.is_selected ? "selected" : ""} 
-                ${isVirtual ? "virtual" : ""}">
+            <div class="stop-card ${isSelected ? "selected" : ""}">
                 
                 <div class="stop-top">
                     <div>
                         <div class="stop-name">${stop.station_name}</div>
                         <div class="stop-meta">
                             ${stop.ars_id ? `${stop.ars_id}` : ""}
-                            ${stop.predicted_time ? ` · 예측 도착 ${stop.predicted_time}` : ""}
+                            ${predictedTimeText ? ` · 도착예정 ${predictedTimeText}` : ""}
+                            ${stop.relative_time_label ? ` (${stop.relative_time_label})` : ""}
                         </div>
                     </div>
 
                     <div class="stop-badges">
-                        ${stop.is_selected ? `<span class="selected-badge">기준 정류소</span>` : ""}
+                        ${isSelected ? `<span class="selected-badge">기준 정류소</span>` : ""}
 
-                        ${
-                            isVirtual
-                                ? ``
-                                : `<span class="seat-badge">${stop.remaining_seat}석</span>`
-                        }
+                        <span class="seat-badge">${stop.remaining_seat}석</span>
 
                         <span class="state-badge ${state.badgeClass}">
                             ${state.text}
@@ -249,13 +213,9 @@ function renderRouteResult(routeName, stationName, data) {
                 </div>
 
                 <div class="stop-bottom">
-                    ${
-                        isVirtual
-                            ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
-                            : `<span>예상 만차확률 ${(stop.full_prob * 100).toFixed(1)}%</span>`
-                    }
+                    <span>예상 만차확률 ${(Number(stop.full_prob) * 100).toFixed(1)}%</span>
                 </div>
-            </div>
+                </dev>
         `;
 
         routeList.appendChild(li);
