@@ -12,6 +12,19 @@ import pandas as pd
 # import holidays
 import os
 
+from utils import to_int, to_float, normalize_arrmsg, load_csv  # 유틸 함수
+from config.constants import (
+    # 총 좌석수 clip, eta 제한
+    TOTAL_SEATS,
+    MAX_VALID_ETA_SEC,
+    # trip의 정의에 관한 상수
+    TIME_GAP_MINUTES,
+    STAORD_BACKWARD_THRESHOLD,
+)
+
+# 필요한 컬럼만 사용
+from config.columns import USE_COLS, FINAL_COLS, NUMERIC_COLS
+
 
 # =========================================================
 # 1. 설정
@@ -21,59 +34,18 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
 PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_traveltime")
+OUTPUT_SUFFIX = "_preprocessed_traveltime.csv"
+
+
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
-TOTAL_SEATS = 45
-MAX_VALID_ETA_SEC = 3600
+MODE = "traveltime"
 
-# 필요한 컬럼만 사용
-USE_COLS = [
-    "stId",
-    "arsId",
-    "busRouteId",
-    "mkTm",
-    "staOrd",
-    "vehId1",
-    "exps1",
-    "arrmsg1",
-    "reride_Num1",
-    "full1",
-]
+SKIP_IF_EXIST = False  # 이미 output 파일이 존재할 경우 skip할지 여부
 
 
 # =========================================================
-# 2. 유틸
-# =========================================================
-def to_int(series, fill_value=0):
-    return pd.to_numeric(series, errors="coerce").fillna(fill_value).astype(int)
-
-
-def to_float(series, fill_value=np.nan):
-    return pd.to_numeric(series, errors="coerce").fillna(fill_value)
-
-
-def cyclical_encode(series, max_value):
-    angle = 2 * np.pi * series / max_value
-    return np.sin(angle), np.cos(angle)
-
-
-def normalize_arrmsg(text):
-    if pd.isna(text):
-        return ""
-    return str(text).strip()
-
-
-# =========================================================
-# 3. 로드
-# =========================================================
-def load_csv(path, use_cols):
-    df = pd.read_csv(path, usecols=use_cols, low_memory=False)
-    print(f"로드 완료: {path}, shape={df.shape}")
-    return df
-
-
-# =========================================================
-# 4. 전처리
+# 2. 전처리
 # =========================================================
 def preprocess(df):
     # -----------------------------
@@ -90,9 +62,6 @@ def preprocess(df):
     mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
 
     df = df[mask1 | mask2].copy()
-
-    df["full1"] = df["full1"].astype(str).str.strip()
-    df["full_flag"] = df["full1"].isin(["1", "Y", "y", "True", "true"]).astype(int)
 
     # -----------------------------
     # 기본 클리닝
@@ -134,9 +103,6 @@ def preprocess(df):
     # ETA가 더 작고 좌석정보가 있는 쪽을 우선
     # 그 후 같은 운행 안에서 우선순위를 정해서 하나의 행만 남김
 
-    TIME_GAP_MINUTES = 40
-    STAORD_BACKWARD_THRESHOLD = 5
-
     df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
 
     df["time_diff"] = (
@@ -155,8 +121,8 @@ def preprocess(df):
     df["trip_group"] = df.groupby(["busRouteId", "vehId1"])["new_trip_flag"].cumsum()
     df["arr_priority"] = 99
 
-    df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 0
-    df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 1
+    df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 1
+    df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 0
     df.loc[df["arrmsg1"].str.contains(r"\[1번째 전\]", na=False), "arr_priority"] = 2
 
     df = df.sort_values(
@@ -192,28 +158,12 @@ def preprocess(df):
     # -----------------------------
     # 최종 정리
     # -----------------------------
-    final_cols = [
-        # 원본/식별
-        "mkTm",
-        # 여행 시간
-        "arrival_time",
-        # 원본/식별 - 이어서
-        "busRouteId",
-        "stId",
-        "arsId",
-        "staOrd",
-        "vehId1",
-        "travel_time",
-    ]
+    final_cols = FINAL_COLS[MODE]
 
     df = df[final_cols].copy()
 
     # feature 컬럼 숫자형 보정
-    numeric_cols = [
-        "staOrd",
-        # 여행 시간 관련
-        "travel_time",
-    ]
+    numeric_cols = NUMERIC_COLS[MODE]
 
     for c in numeric_cols:
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -224,7 +174,7 @@ def preprocess(df):
 
 
 # =========================================================
-# 5. 실행
+# 3. 실행
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
@@ -233,7 +183,7 @@ if __name__ == "__main__":
 
     for filename in file_list:
         input_path = os.path.join(BUS_API_DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed_traveltime.csv")
+        output_filename = filename.replace(".csv", OUTPUT_SUFFIX)
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
         if os.path.exists(output_path):
@@ -241,7 +191,7 @@ if __name__ == "__main__":
             continue
         print(f"\n===== 처리 중: {filename} =====")
 
-        raw_df = load_csv(input_path, USE_COLS)
+        raw_df = load_csv(input_path, USE_COLS[MODE])
         processed_df = preprocess(raw_df)
 
         processed_df.to_csv(output_path, index=False, encoding="utf-8-sig")
