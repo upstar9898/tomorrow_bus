@@ -6,7 +6,7 @@ from datetime import datetime
 
 
 def download_file(file_url, save_path):
-    response = requests.get(file_url, timeout=60)
+    response = requests.get(file_url, timeout=180)
 
     if response.status_code == 200:
         # 🔥 핵심: 기상청은 EUC-KR
