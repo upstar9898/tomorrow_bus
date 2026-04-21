@@ -40,7 +40,7 @@ USE_COLS = [
     "exps1",
     "arrmsg1",
     "reride_Num1",
-    "full1",
+    "rerdie_Div1",
 ]
 
 # # 최종 학습용 feature 컬럼
@@ -266,9 +266,6 @@ def preprocess(df):
 
     df = df[mask1 | mask2].copy()
 
-    df["full1"] = df["full1"].astype(str).str.strip()
-    df["full_flag"] = df["full1"].isin(["1", "Y", "y", "True", "true"]).astype(int)
-
     # -----------------------------
     # 기본 클리닝
     # -----------------------------
@@ -277,6 +274,7 @@ def preprocess(df):
     df = df[df["busRouteId"] > 0].copy()
     df = df[df["staOrd"] > 0].copy()
     df = df[df["vehId1"] != 0].copy()
+    df = df[df["rerdie_Div1"] != 0].copy()
 
     # ETA 범위 제한
     df["exps1"] = df["exps1"].where(
@@ -290,11 +288,8 @@ def preprocess(df):
     df["remaining_seat"] = to_int(df["reride_Num1"], fill_value=np.nan)
     df["remaining_seat"] = df["remaining_seat"].clip(lower=0, upper=TOTAL_SEATS)
 
-    # 만차 플래그가 있으면 0석 처리
-    df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
-
-    # remaining_seat가 0이면 무조건 만차 처리
-    df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
+    # remaining_seat가 0이면 만차처리
+    df["full_flag"] = (df["remaining_seat"] == 0).astype(int)
 
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
@@ -336,13 +331,13 @@ def preprocess(df):
 
     TIME_GAP_MINUTES = 40
     STAORD_BACKWARD_THRESHOLD = 5
-    
+
     df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
 
     df["time_diff"] = (
         df.groupby(["busRouteId", "vehId1"])["mkTm"].diff().dt.total_seconds().div(60)
     )
-    
+
     # 같은 노선-차량 내 정류장 순번 차이
     df["staOrd_diff"] = df.groupby(["busRouteId", "vehId1"])["staOrd"].diff()
 
