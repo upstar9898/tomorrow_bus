@@ -1075,6 +1075,71 @@ print("\n저장 완료:", service_result_path)
 print("\n[test_service_result 샘플]")
 print(service_result[save_cols].head(10))
 
+# =========================================================
+# 32-A. 구간 이동시간 통계 생성 및 저장
+# 조건:
+# - 같은 busRouteId, 같은 vehId1 안에서 시간순 정렬
+# - 이전 정류소와 현재 정류소가 인접(staOrd 차이 1)일 때만 사용
+# - mkTm 차이를 이동시간(초)로 계산
+# =========================================================
+if "vehId1" in df.columns:
+    travel_df = df.copy()
+
+    travel_df["vehId1"] = travel_df["vehId1"].astype(str).str.strip()
+    travel_df = travel_df.dropna(subset=["mkTm", "busRouteId", "vehId1", "staOrd"]).copy()
+
+    travel_df = travel_df.sort_values(["busRouteId", "vehId1", "mkTm"]).reset_index(drop=True)
+
+    travel_df["prev_staOrd"] = travel_df.groupby(["busRouteId", "vehId1"])["staOrd"].shift(1)
+    travel_df["prev_mkTm"] = travel_df.groupby(["busRouteId", "vehId1"])["mkTm"].shift(1)
+
+    travel_df["staOrd_gap"] = travel_df["staOrd"] - travel_df["prev_staOrd"]
+    travel_df["travel_sec"] = (travel_df["mkTm"] - travel_df["prev_mkTm"]).dt.total_seconds()
+
+    # 인접 정류소만 사용
+    segment_df = travel_df[
+        (travel_df["staOrd_gap"] == 1) &
+        (travel_df["travel_sec"] > 0) &
+        (travel_df["travel_sec"] <= 1800)   # 30분 이상은 이상치로 제외
+    ].copy()
+
+    if len(segment_df) > 0:
+        segment_df["from_staOrd"] = segment_df["prev_staOrd"].astype(int)
+        segment_df["to_staOrd"] = segment_df["staOrd"].astype(int)
+
+        route_segment_travel_time = (
+            segment_df.groupby(["busRouteId", "from_staOrd", "to_staOrd"])
+            .agg(
+                avg_travel_sec=("travel_sec", "mean"),
+                median_travel_sec=("travel_sec", "median"),
+                std_travel_sec=("travel_sec", "std"),
+                segment_count=("travel_sec", "count"),
+            )
+            .reset_index()
+        )
+
+        # 결측 보정
+        route_segment_travel_time["std_travel_sec"] = (
+            route_segment_travel_time["std_travel_sec"].fillna(0)
+        )
+
+        route_segment_travel_time_path = os.path.join(
+            ARTIFACT_DIR,
+            "route_segment_travel_time.csv"
+        )
+
+        route_segment_travel_time.to_csv(
+            route_segment_travel_time_path,
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        print("\n구간 이동시간 통계 저장 완료:", route_segment_travel_time_path)
+        print(route_segment_travel_time.head())
+    else:
+        print("\n[경고] 구간 이동시간 통계를 만들 수 있는 인접 정류소 데이터가 없습니다.")
+else:
+    print("\n[경고] vehId1 컬럼이 없어 route_segment_travel_time.csv를 생성할 수 없습니다.")
 
 # =========================================================
 # 32. 노선별 정류소 순서 저장
@@ -1093,6 +1158,7 @@ route_station_order.to_csv(
     encoding="utf-8-sig"
 )
 print("\n정류소 순서 저장 완료:", route_station_order_path)
+
 
 
 # =========================================================
