@@ -42,6 +42,7 @@ USE_COLS = [
     "exps1",
     "arrmsg1",
     "reride_Num1",
+    "rerdie_Div1",
     "full1",
 ]
 
@@ -279,6 +280,7 @@ def preprocess(df):
     df = df[df["busRouteId"] > 0].copy()
     df = df[df["staOrd"] > 0].copy()
     df = df[df["vehId1"] != 0].copy()
+    df = df[df["rerdie_Div1"] != 0].copy()
 
     # ETA 범위 제한
     df["exps1"] = df["exps1"].where(
@@ -292,11 +294,8 @@ def preprocess(df):
     df["remaining_seat"] = to_int(df["reride_Num1"], fill_value=np.nan)
     df["remaining_seat"] = df["remaining_seat"].clip(lower=0, upper=TOTAL_SEATS)
 
-    # # 만차 플래그가 있으면 0석 처리
-    # df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
-
-    # # remaining_seat가 0이면 무조건 만차 처리
-    # df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
+    # remaining_seat가 0이면 만차처리
+    # df["full_flag"] = (df["remaining_seat"] == 0).astype(int)
 
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
@@ -424,8 +423,6 @@ def preprocess(df):
     # 이름 변경
     df = df.rename(columns={"stNm": "station_name"})
 
-    
-    
     # -----------------------------
     # 최종 정리
     # -----------------------------
@@ -507,16 +504,13 @@ def preprocess(df):
 
     # 같은 trip 안에서 "이상 행의 다음 행" 표시
     next_mask = (
-        invalid_mask.groupby([df["busRouteId"], df["vehId1"], df["trip_id"]]).shift(
-            1
-        )
+        invalid_mask.groupby([df["busRouteId"], df["vehId1"], df["trip_id"]]).shift(1)
     ).fillna(False)
 
     final_mask = invalid_mask | next_mask
 
     df_invalid_with_next = df[final_mask].copy()
-    
-    
+
     return df_invalid_with_next
 
 
@@ -534,13 +528,13 @@ if __name__ == "__main__":
         file_date = file_date.replace("_", "")[2:]  # 20260312 → 260312
         input_path = os.path.join(BUS_API_DATA_DIR, filename)
         output_filename = filename.replace(
-            ".csv", "_preprocessed_errors.csv"
+            ".csv", "_preprocessed_withweather_foranalysis_error.csv"
         )
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
-        if os.path.exists(output_path):
-            print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
-            continue
+        # if os.path.exists(output_path):
+        #     print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
+        #     continue
         print(f"\n===== 처리 중: {filename} =====")
 
         raw_df = load_csv(input_path, USE_COLS)
