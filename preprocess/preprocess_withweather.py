@@ -11,6 +11,25 @@ import pandas as pd
 import holidays
 import os
 
+from utils import (
+    to_int,
+    to_float,
+    cyclical_encode,
+    normalize_arrmsg,
+    load_csv,
+)  # 유틸 함수
+from weather_features import add_weather_features
+from config.constants import (
+    # 총 좌석수 clip, eta 제한
+    TOTAL_SEATS,
+    MAX_VALID_ETA_SEC,
+    # trip의 정의에 관한 상수
+    TIME_GAP_MINUTES,
+    STAORD_BACKWARD_THRESHOLD,
+)
+
+# 필요한 컬럼만 사용
+from config.columns import USE_COLS, FINAL_COLS, NUMERIC_COLS
 
 # =========================================================
 # 1. 설정
@@ -19,236 +38,18 @@ import os
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
-WEATHER_DATA_DIR = os.path.join(DATA_DIR, "data_for_weather_process")
-STATION_PATH = os.path.join(WEATHER_DATA_DIR, "bus_station_for_admin_260409.csv")
-WEATHER_PATH = os.path.join(WEATHER_DATA_DIR, "weather_260413_first_processed.csv")
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather_re")
+OUTPUT_SUFFIX = "_preprocessed_withweather.csv"
 
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
-TOTAL_SEATS = 45
-MAX_VALID_ETA_SEC = 3600
+MODE = "training"
 
-# 필요한 컬럼만 사용
-USE_COLS = [
-    "stId",
-    "arsId",
-    "busRouteId",
-    "mkTm",
-    "staOrd",
-    "vehId1",
-    "exps1",
-    "arrmsg1",
-    "reride_Num1",
-    "rerdie_Div1",
-]
-
-# # 최종 학습용 feature 컬럼
-# FEATURE_COLS = [
-#     "staOrd",
-#     "hour",
-#     "minute",
-#     "dayofweek",
-#     "is_weekend",
-#     "is_holiday",
-#     "is_peak",
-#     "month_sin",
-#     "month_cos",
-#     "day_sin",
-#     "day_cos",
-#     "hour_sin",
-#     "hour_cos",
-#     "minute_sin",
-#     "minute_cos",
-#     "dow_sin",
-#     "dow_cos",
-#     "exps1",
-#     "remaining_seat",
-# ]
+SKIP_IF_EXIST = False  # 이미 output 파일이 존재할 경우 skip할지 여부
 
 
 # =========================================================
-# 2. 유틸
-# =========================================================
-def to_int(series, fill_value=0):
-    return pd.to_numeric(series, errors="coerce").fillna(fill_value).astype(int)
-
-
-def to_float(series, fill_value=np.nan):
-    return pd.to_numeric(series, errors="coerce").fillna(fill_value)
-
-
-def cyclical_encode(series, max_value):
-    angle = 2 * np.pi * series / max_value
-    return np.sin(angle), np.cos(angle)
-
-
-def normalize_arrmsg(text):
-    if pd.isna(text):
-        return ""
-    return str(text).strip()
-
-
-# 날씨 데이터 추가 함수
-def add_weather_features(df):
-    station_df = pd.read_csv(STATION_PATH, dtype={"stationId": str, "stn": str})
-
-    weather_df = pd.read_csv(WEATHER_PATH, dtype={"STN": str})
-
-    # -----------------------------
-    # 1) 정류장별 기상관측소 번호(stn) 붙이기
-    # -----------------------------
-    df["stId"] = df["stId"].astype(str)
-
-    station_map = (
-        station_df[["stationId", "stn"]]
-        .dropna(subset=["stationId", "stn"])
-        .drop_duplicates(subset=["stationId"])
-        .rename(columns={"stationId": "stId"})
-    )
-
-    df = df.merge(station_map, on="stId", how="left")
-
-    # -----------------------------
-    # 2) mkTm을 가장 가까운 정시로 반올림
-    # -----------------------------
-    df["weather_time"] = df["mkTm"].dt.round("h")
-
-    df["weather_year"] = df["weather_time"].dt.year
-    df["weather_month"] = df["weather_time"].dt.month
-    df["weather_day"] = df["weather_time"].dt.day
-    df["weather_hour"] = df["weather_time"].dt.hour
-
-    # -----------------------------
-    # 3) weather 파일과 merge
-    # -----------------------------
-    weather_df = weather_df.rename(columns={"STN": "stn"})
-    weather_df["stn"] = weather_df["stn"].astype(str)
-
-    weather_use = weather_df[
-        [
-            "year",
-            "month",
-            "day",
-            "hour",
-            "stn",
-            "precipitation",
-            "TA",
-            "RN",
-        ]
-    ].copy()
-
-    df["stn"] = df["stn"].astype(str)
-
-    weather_use = weather_df.rename(
-        columns={
-            "year": "w_year",
-            "month": "w_month",
-            "day": "w_day",
-            "hour": "w_hour",
-            "STN": "stn",
-            "TA": "temperature",
-            "RN": "rainfall",
-        }
-    )
-
-    df = df.merge(
-        weather_use,
-        left_on=["weather_year", "weather_month", "weather_day", "weather_hour", "stn"],
-        right_on=["w_year", "w_month", "w_day", "w_hour", "stn"],
-        how="left",
-    )
-
-    # merge 후 보조 컬럼 정리
-    df = df.drop(
-        columns=[
-            "weather_time",
-            "weather_year",
-            "weather_month",
-            "weather_day",
-            "weather_hour",
-        ],
-        errors="ignore",
-    )
-
-    # 결측치가 있을 경우 그 시간대 평균/최빈값으로 처리
-
-    # 강수 여부는 최빈값 처리
-    df["precipitation"] = df["precipitation"].fillna(
-        df.groupby(["year", "month", "day", "hour"])["precipitation"].transform(
-            lambda x: x.mode().iloc[0] if not x.mode().empty else 0
-        )
-    )
-    df["precipitation"] = df["precipitation"].fillna(0)
-
-    # 안개 여부도 최빈값 처리
-    df["fog"] = df["fog"].fillna(
-        df.groupby(["year", "month", "day", "hour"])["precipitation"].transform(
-            lambda x: x.mode().iloc[0] if not x.mode().empty else 0
-        )
-    )
-    df["fog"] = df["fog"].fillna(0)
-
-    # precipitation == 0 이면 rainfall은 무조건 0
-    df.loc[df["precipitation"] == 0, "rainfall"] = 0
-
-    # precipitation == 1 이고 rainfall이 결측인 경우만 처리
-    mask = (df["precipitation"] == 1) & (df["rainfall"].isna())
-
-    # 1차: 그 날짜의 그 시간 평균
-    rain_date_hour_mean = (
-        df.loc[df["precipitation"] == 1]
-        .groupby(["year", "month", "day", "hour"])["rainfall"]
-        .mean()
-    )
-
-    df.loc[mask, "rainfall"] = (
-        df.loc[mask, ["year", "month", "day", "hour"]]
-        .apply(tuple, axis=1)
-        .map(rain_date_hour_mean)
-    )
-
-    # 2차: 그래도 못 채운 경우 같은 날짜 평균
-    mask = (df["precipitation"] == 1) & (df["rainfall"].isna())
-
-    rain_date_mean = (
-        df.loc[df["precipitation"] == 1]
-        .groupby(["year", "month", "day"])["rainfall"]
-        .mean()
-    )
-
-    df.loc[mask, "rainfall"] = (
-        df.loc[mask, ["year", "month", "day"]].apply(tuple, axis=1).map(rain_date_mean)
-    )
-
-    # 마지막 안전장치
-    df["rainfall"] = df["rainfall"].fillna(0)
-
-    # 기온 평균값 대체
-    df["temperature"] = df["temperature"].fillna(
-        df.groupby(["year", "month", "day", "hour"])["temperature"].transform("mean")
-    )
-
-    df["temperature"] = df["temperature"].fillna(
-        df.groupby(["year", "month", "day"])["temperature"].transform("mean")
-    )
-
-    df["temperature"] = df["temperature"].fillna(df["temperature"].mean())
-
-    return df
-
-
-# =========================================================
-# 3. 로드
-# =========================================================
-def load_csv(path, use_cols):
-    df = pd.read_csv(path, usecols=use_cols, low_memory=False)
-    print(f"로드 완료: {path}, shape={df.shape}")
-    return df
-
-
-# =========================================================
-# 4. 전처리
+# 2. 전처리
 # =========================================================
 def preprocess(df):
     # -----------------------------
@@ -329,9 +130,6 @@ def preprocess(df):
     # ETA가 더 작고 좌석정보가 있는 쪽을 우선
     # 그 후 같은 운행 안에서 우선순위를 정해서 하나의 행만 남김
 
-    TIME_GAP_MINUTES = 40
-    STAORD_BACKWARD_THRESHOLD = 5
-
     df = df.sort_values(["busRouteId", "vehId1", "mkTm"]).copy()
 
     df["time_diff"] = (
@@ -352,7 +150,6 @@ def preprocess(df):
 
     df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 0
     df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 1
-    df.loc[df["arrmsg1"].str.contains(r"\[1번째 전\]", na=False), "arr_priority"] = 2
 
     df = df.sort_values(
         ["busRouteId", "stId", "vehId1", "trip_group", "arr_priority", "mkTm"],
@@ -374,79 +171,11 @@ def preprocess(df):
     # -----------------------------
     # 최종 정리
     # -----------------------------
-    final_cols = [
-        # 원본/식별
-        "mkTm",
-        "busRouteId",
-        "stId",
-        "arsId",
-        "staOrd",
-        "vehId1",
-        # 원본 기반 현재 정보
-        "exps1",
-        "arrmsg1",
-        "remaining_seat",
-        "full_flag",
-        # 시간 파생
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minute",
-        "dayofweek",
-        "is_weekend",
-        "is_holiday",
-        "is_peak",
-        "month_sin",
-        "month_cos",
-        "day_sin",
-        "day_cos",
-        "hour_sin",
-        "hour_cos",
-        "minute_sin",
-        "minute_cos",
-        "dow_sin",
-        "dow_cos",
-        # 날씨 데이터
-        "precipitation",
-        "fog",
-        "temperature",
-        "rainfall",
-    ]
+    final_cols = FINAL_COLS[MODE]
 
     df = df[final_cols].copy()
 
-    # feature 컬럼 숫자형 보정
-    numeric_cols = [
-        "staOrd",
-        "exps1",
-        "remaining_seat",
-        "full_flag",
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minute",
-        "dayofweek",
-        "is_weekend",
-        "is_holiday",
-        "is_peak",
-        "month_sin",
-        "month_cos",
-        "day_sin",
-        "day_cos",
-        "hour_sin",
-        "hour_cos",
-        "minute_sin",
-        "minute_cos",
-        "dow_sin",
-        "dow_cos",
-        # 날씨 데이터
-        "precipitation",
-        "fog",
-        "temperature",
-        "rainfall",
-    ]
+    numeric_cols = NUMERIC_COLS[MODE]
 
     for c in numeric_cols:
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -457,24 +186,27 @@ def preprocess(df):
 
 
 # =========================================================
-# 5. 실행
+# 3. 실행
 # =========================================================
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
-    file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
-    # file_list = ["bus_data_2026_03_12.csv"]
+    # file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
+    file_list = ["bus_data_2026_03_12.csv"]
+
+    use_cols = USE_COLS[MODE]
 
     for filename in file_list:
         input_path = os.path.join(BUS_API_DATA_DIR, filename)
-        output_filename = filename.replace(".csv", "_preprocessed_withweather.csv")
+        output_filename = filename.replace(".csv", OUTPUT_SUFFIX)
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
-        # 이미 존재하면 skip
-        if os.path.exists(output_path):
-            print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
-            continue
+        # 이미 존재하면 skip, SKIP_IF_EXIST가 True일 때만
+        if SKIP_IF_EXIST:
+            if os.path.exists(output_path):
+                print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
+                continue
         print(f"\n===== 처리 중: {filename} =====")
 
-        raw_df = load_csv(input_path, USE_COLS)
+        raw_df = load_csv(input_path, use_cols)
         processed_df = preprocess(raw_df)
 
         processed_df.to_csv(output_path, index=False, encoding="utf-8-sig")
