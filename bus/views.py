@@ -5,11 +5,13 @@ from django.views.decorators.http import require_GET, require_POST
 
 from service_test.backend_test import dummy_service2
 
+
 import json
 from datetime import datetime
 
 from .models import Bus_route, Route_station, Bus_arrival_info
 from .services.ml_predictor import predict_service1_result
+from .services.ml_route_predictor import predict_service2_result
 
 from datetime import datetime
 from django.db.models import Max
@@ -349,6 +351,7 @@ def predict_service2(request):
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         date_time = data.get("date_time")
+        precipitation = data.get("precipitation", 0)
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
@@ -359,15 +362,19 @@ def predict_service2(request):
                 status=400,
             )
 
-        result = dummy_service2(
-            route_id, station_id, date_time
-        )  # 실제 서비스로 변경 필요
+        result = predict_service2_result(
+            route_id=route_id,
+            station_id=station_id,
+            date_time=date_time,
+            precipitation=precipitation,
+        )
 
         return JsonResponse(
             {
                 "success": True,
                 "data": result,
-            }
+            },
+            status=200,
         )
 
     except json.JSONDecodeError:
@@ -375,13 +382,17 @@ def predict_service2(request):
             {"success": False, "error": "잘못된 JSON 요청입니다."},
             status=400,
         )
+    except ValueError as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)},
+            status=400,
+        )
     except Exception as e:
         return JsonResponse(
             {"success": False, "error": str(e)},
             status=500,
         )
-
-
+    
 @require_GET
 def get_route_map_data(request):
     route_id = request.GET.get("route_id")
