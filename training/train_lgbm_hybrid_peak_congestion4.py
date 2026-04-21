@@ -15,6 +15,7 @@ import json
 import joblib
 import pandas as pd
 import numpy as np
+import time
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import (
@@ -28,6 +29,8 @@ from sklearn.metrics import (
 )
 
 from lightgbm import LGBMRegressor, LGBMClassifier
+
+from utils.encoder_utils import load_label_encoders, transform_with_encoders
 
 
 # =========================================================
@@ -344,19 +347,7 @@ print(df["is_rain"].value_counts())
 
 
 # =========================================================
-# 16. 범주형 ID 인코딩
-# =========================================================
-route_le = LabelEncoder()
-stid_le = LabelEncoder()
-arsid_le = LabelEncoder()
-
-df["route_enc"] = route_le.fit_transform(df["busRouteId"])
-df["stid_enc"] = stid_le.fit_transform(df["stId"])
-df["arsid_enc"] = arsid_le.fit_transform(df["arsId"])
-
-
-# =========================================================
-# 17. 날짜 기준 train / valid / test 분할
+# 16. 날짜 기준 train / valid / test 분할
 # =========================================================
 df = df.sort_values("mkTm").reset_index(drop=True)
 
@@ -382,6 +373,11 @@ print("test dates :", test_dates[0], "~", test_dates[-1], f"({len(test_dates)}�
 train_df = df[df["date"].isin(train_dates)].copy()
 valid_df = df[df["date"].isin(valid_dates)].copy()
 test_df = df[df["date"].isin(test_dates)].copy()
+
+# =========================================================
+# 17. 범주형 ID 인코딩
+# =========================================================
+encoders = load_label_encoders(model_dir)
 
 
 # =========================================================
@@ -494,7 +490,6 @@ def add_pattern_features(train_base, target_df):
 train_df = add_pattern_features(train_df, train_df)
 valid_df = add_pattern_features(train_df, valid_df)
 test_df = add_pattern_features(train_df, test_df)
-
 
 # =========================================================
 # 20. train 기준 패턴 통계 저장
@@ -662,6 +657,8 @@ lgbm_reg = LGBMRegressor(
     n_jobs=-1
 )
 
+start = time.time()
+
 lgbm_reg.fit(
     X_train,
     y_train_reg,
@@ -669,6 +666,7 @@ lgbm_reg.fit(
     eval_metric="l1"
 )
 
+reg_train_time = time.time() - start
 
 # =========================================================
 # 24. 출퇴근 시간대 전용 4단계 혼잡도 분류 모델 학습
@@ -690,6 +688,8 @@ lgbm_peak_congestion_cls = LGBMClassifier(
     n_jobs=-1
 )
 
+start = time.time()
+
 lgbm_peak_congestion_cls.fit(
     X_train_peak,
     y_train_peak_cong,
@@ -697,6 +697,7 @@ lgbm_peak_congestion_cls.fit(
     eval_metric="multi_logloss"
 )
 
+peak_cls_train_time = time.time() - start
 
 # =========================================================
 # 25. 만차 여부 이진 분류 모델 학습
@@ -717,12 +718,16 @@ lgbm_full_cls = LGBMClassifier(
     n_jobs=-1
 )
 
+start = time.time()
+
 lgbm_full_cls.fit(
     X_train,
     y_train_full,
     eval_set=[(X_train, y_train_full), (X_valid, y_valid_full)],
     eval_metric="binary_logloss"
 )
+
+full_cls_train_time = time.time() - start
 
 
 # =========================================================
@@ -859,6 +864,7 @@ logger.log_regression_result(
     split_version=SPLIT_VERSION,
     feature_version=FEATURE_VERSION,
     hyperparams=lgbm_reg.get_params(),
+    train_time_sec=reg_train_time,
     notes="VALID regression result / clip 0~45 적용"
 )
 
@@ -873,6 +879,7 @@ logger.log_regression_result(
     split_version=SPLIT_VERSION,
     feature_version=FEATURE_VERSION,
     hyperparams=lgbm_reg.get_params(),
+    train_time_sec=reg_train_time,
     notes="TEST regression result / clip 0~45 적용"
 )
 
@@ -891,6 +898,7 @@ logger.log_classification_result(
     label_definition_detail=LABEL_DEFINITION_DETAIL,
     hyperparams=lgbm_peak_congestion_cls.get_params(),
     class_labels=CONGESTION_CLASS_LABELS,
+    train_time_sec=peak_cls_train_time,
     notes="VALID peak-only 4class congestion classification / 0,1~20,21~30,31~45 / class_weight=balanced / threshold applied"
 )
 
@@ -908,6 +916,7 @@ logger.log_classification_result(
     label_definition_detail=LABEL_DEFINITION_DETAIL,
     hyperparams=lgbm_peak_congestion_cls.get_params(),
     class_labels=CONGESTION_CLASS_LABELS,
+    train_time_sec=peak_cls_train_time,
     notes="TEST peak-only 4class congestion classification / 0,1~20,21~30,31~45 / class_weight=balanced / threshold applied"
 )
 
@@ -929,6 +938,7 @@ logger.log_classification_result(
     },
     hyperparams=lgbm_full_cls.get_params(),
     class_labels=FULL_BINARY_LABELS,
+    train_time_sec=full_cls_train_time,
     notes="VALID full/not-full binary classification / class_weight=balanced / threshold applied"
 )
 
@@ -949,6 +959,7 @@ logger.log_classification_result(
     },
     hyperparams=lgbm_full_cls.get_params(),
     class_labels=FULL_BINARY_LABELS,
+    train_time_sec=full_cls_train_time,
     notes="TEST full/not-full binary classification / class_weight=balanced / threshold applied"
 )
 
@@ -1171,10 +1182,6 @@ joblib.dump(lgbm_reg, os.path.join(model_dir, "reg.pkl"))
 joblib.dump(lgbm_peak_congestion_cls, os.path.join(model_dir, "peak_congestion_cls.pkl"))
 joblib.dump(lgbm_full_cls, os.path.join(model_dir, "full_cls.pkl"))
 
-joblib.dump(route_le, os.path.join(model_dir, "route_encoder.pkl"))
-joblib.dump(stid_le, os.path.join(model_dir, "stid_encoder.pkl"))
-joblib.dump(arsid_le, os.path.join(model_dir, "arsid_encoder.pkl"))
-
 with open(os.path.join(model_dir, "feature_cols.json"), "w", encoding="utf-8") as f:
     json.dump(FEATURE_COLS, f, ensure_ascii=False, indent=2)
 
@@ -1202,6 +1209,7 @@ with open(os.path.join(model_dir, "label_definition.json"), "w", encoding="utf-8
         ensure_ascii=False,
         indent=2
     )
+
 
 # =========================================================
 # 34. 프론트 전달용 JSON 미리보기
