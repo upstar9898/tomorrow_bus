@@ -84,12 +84,6 @@ def preprocess(df):
     df["remaining_seat"] = to_int(df["reride_Num1"], fill_value=np.nan)
     df["remaining_seat"] = df["remaining_seat"].clip(lower=0, upper=TOTAL_SEATS)
 
-    # 만차 플래그가 있으면 0석 처리
-    df.loc[df["full_flag"] == 1, "remaining_seat"] = 0
-
-    # remaining_seat가 0이면 무조건 만차 처리
-    df.loc[df["remaining_seat"] == 0, "full_flag"] = 1
-
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
 
