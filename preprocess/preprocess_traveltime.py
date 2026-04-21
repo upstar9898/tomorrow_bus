@@ -186,9 +186,10 @@ if __name__ == "__main__":
         output_filename = filename.replace(".csv", OUTPUT_SUFFIX)
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
         # 이미 존재하면 skip
-        if os.path.exists(output_path):
-            print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
-            continue
+        if SKIP_IF_EXIST:
+            if os.path.exists(output_path):
+                print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
+                continue
         print(f"\n===== 처리 중: {filename} =====")
 
         raw_df = load_csv(input_path, USE_COLS[MODE])
