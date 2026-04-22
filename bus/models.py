@@ -217,7 +217,7 @@ class Weather_station(models.Model):
 
     class Meta:
         db_table = "weather_station"
-        ordering = ["stn_id"]
+        ordering = ["stnId"]
 
     def __str__(self):
-        return f"{self.stn_id} - {self.name_ko}"    
+        return f"{self.stnId} - {self.stnName}"
