@@ -61,7 +61,7 @@ from utils.feature_utils import (
 )
 from utils.inference_utils import run_service_inference
 from utils.pattern_stats_utils import load_pattern_stats, merge_pattern_features
-
+from utils.model_save_utils import save_model_artifacts
 
 # =========================================================
 # 4. 프로젝트 경로 및 출력 폴더 설정
@@ -109,7 +109,7 @@ print(
 # =========================================================
 # 5. 학습 데이터 파일 경로 설정
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_traveltime_260422.csv")
+file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260421.csv")
 
 # 파일 존재 여부 확인
 if not os.path.exists(file_path):
@@ -234,7 +234,9 @@ print("test_df :", test_df.shape)
 # 11. 모델 입력 feature 정의
 # =========================================================
 FEATURE_COLS = get_feature_cols()
-
+missing_cols = [col for col in FEATURE_COLS if col not in train_df.columns]
+print("\n[FEATURE_COLS 누락 확인]")
+print(missing_cols)
 
 # =========================================================
 # 12. 학습 / 평가용 데이터셋 구성
@@ -649,7 +651,21 @@ print("\n[INFO] experiment_logger 저장 완료")
 
 
 # =========================================================
-# 20. 서비스 추론 샘플 실행
+# 20. 모델 아티팩트 저장
+# =========================================================
+save_model_artifacts(
+    model_dir=MODEL_DIR,
+    reg_model=lgbm_reg,
+    peak_congestion_model=lgbm_peak_congestion_cls,
+    full_model=lgbm_full_cls,
+    feature_cols=FEATURE_COLS,
+    peak_thresholds=PEAK_THRESHOLDS,
+    full_binary_threshold=FULL_BINARY_THRESHOLD,
+    label_definition_detail=LABEL_DEFINITION_DETAIL,
+)
+
+# =========================================================
+# 21. 서비스 추론 샘플 실행
 # =========================================================
 # test_df_raw를 기반으로 실제 서비스 추론 함수가 잘 동작하는지 확인
 service_result = run_service_inference(
@@ -658,159 +674,5 @@ service_result = run_service_inference(
     artifact_dir=ARTIFACT_DIR,
 )
 
-
-# =========================================================
-# 21. 구간 이동시간 통계 생성 및 저장
-# =========================================================
-# 목적:
-# - 같은 노선(busRouteId) + 같은 차량(vehId1)이
-#   인접 정류소를 이동하는 데 걸린 시간을 계산
-# - 이후 서비스에서 정류소 간 ETA 보정용 통계로 활용 가능
-if "vehId1" in df.columns:
-    travel_df = df.copy()
-
-    travel_df["vehId1"] = travel_df["vehId1"].astype(str).str.strip()
-    travel_df = travel_df.dropna(subset=["mkTm", "busRouteId", "vehId1", "staOrd"]).copy()
-    travel_df = travel_df.sort_values(["busRouteId", "vehId1", "mkTm"]).reset_index(drop=True)
-
-    # 같은 차량 흐름에서 직전 정류소 순번 / 직전 시각 구하기
-    travel_df["prev_staOrd"] = travel_df.groupby(["busRouteId", "vehId1"])["staOrd"].shift(1)
-    travel_df["prev_mkTm"] = travel_df.groupby(["busRouteId", "vehId1"])["mkTm"].shift(1)
-
-    # 현재 행과 직전 행 사이 정류소 순번 차이 / 이동시간 계산
-    travel_df["staOrd_gap"] = travel_df["staOrd"] - travel_df["prev_staOrd"]
-    travel_df["travel_sec"] = (travel_df["mkTm"] - travel_df["prev_mkTm"]).dt.total_seconds()
-
-    # 인접 정류소(차이 1)만 남기고,
-    # 비정상적으로 긴 이동시간은 제외
-    segment_df = travel_df[
-        (travel_df["staOrd_gap"] == 1) &
-        (travel_df["travel_sec"] > 0) &
-        (travel_df["travel_sec"] <= 1800)
-    ].copy()
-
-    if len(segment_df) > 0:
-        segment_df["from_staOrd"] = segment_df["prev_staOrd"].astype(int)
-        segment_df["to_staOrd"] = segment_df["staOrd"].astype(int)
-
-        route_segment_travel_time = (
-            segment_df.groupby(["busRouteId", "from_staOrd", "to_staOrd"])
-            .agg(
-                avg_travel_sec=("travel_sec", "mean"),
-                median_travel_sec=("travel_sec", "median"),
-                std_travel_sec=("travel_sec", "std"),
-                segment_count=("travel_sec", "count"),
-            )
-            .reset_index()
-        )
-
-        route_segment_travel_time["std_travel_sec"] = (
-            route_segment_travel_time["std_travel_sec"].fillna(0)
-        )
-
-        route_segment_travel_time_path = os.path.join(
-            ARTIFACT_DIR,
-            "route_segment_travel_time.csv"
-        )
-
-        route_segment_travel_time.to_csv(
-            route_segment_travel_time_path,
-            index=False,
-            encoding="utf-8-sig"
-        )
-
-        print("\n구간 이동시간 통계 저장 완료:", route_segment_travel_time_path)
-        print(route_segment_travel_time.head())
-    else:
-        print("\n[경고] 구간 이동시간 통계를 만들 수 있는 인접 정류소 데이터가 없습니다.")
-else:
-    print("\n[경고] vehId1 컬럼이 없어 route_segment_travel_time.csv를 생성할 수 없습니다.")
-
-
-# =========================================================
-# 22. 노선별 정류소 순서 저장
-# =========================================================
-# 목적:
-# - 노선 내 정류소 순서를 프론트/백엔드 서비스에서 재사용 가능하도록 저장
-route_station_order = (
-    df[["busRouteId", "stId", "arsId", "staOrd"]]
-    .drop_duplicates()
-    .sort_values(["busRouteId", "staOrd"])
-    .reset_index(drop=True)
-)
-
-route_station_order_path = os.path.join(ARTIFACT_DIR, "route_station_order.csv")
-route_station_order.to_csv(
-    route_station_order_path,
-    index=False,
-    encoding="utf-8-sig"
-)
-print("\n정류소 순서 저장 완료:", route_station_order_path)
-
-
-# =========================================================
-# 23. 모델 / threshold / label 정의 저장
-# =========================================================
-# ---------- 모델 저장 ----------
-joblib.dump(lgbm_reg, os.path.join(MODEL_DIR, "reg.pkl"))
-joblib.dump(lgbm_peak_congestion_cls, os.path.join(MODEL_DIR, "peak_congestion_cls.pkl"))
-joblib.dump(lgbm_full_cls, os.path.join(MODEL_DIR, "full_cls.pkl"))
-
-# ---------- feature 목록 저장 ----------
-with open(os.path.join(MODEL_DIR, "feature_cols.json"), "w", encoding="utf-8") as f:
-    json.dump(FEATURE_COLS, f, ensure_ascii=False, indent=2)
-
-# ---------- threshold 저장 ----------
-with open(os.path.join(MODEL_DIR, "thresholds.json"), "w", encoding="utf-8") as f:
-    json.dump(
-        {
-            "peak_congestion_thresholds": PEAK_THRESHOLDS,
-            "full_binary_threshold": FULL_BINARY_THRESHOLD,
-        },
-        f,
-        ensure_ascii=False,
-        indent=2
-    )
-
-# ---------- 라벨 정의 저장 ----------
-with open(os.path.join(MODEL_DIR, "label_definition.json"), "w", encoding="utf-8") as f:
-    json.dump(
-        {
-            "peak_congestion_4class": LABEL_DEFINITION_DETAIL,
-            "full_binary": {
-                "0": "여석있음",
-                "1": "만차",
-            }
-        },
-        f,
-        ensure_ascii=False,
-        indent=2
-    )
-
-
-# =========================================================
-# 24. 프론트 전달용 JSON 미리보기
-# =========================================================
-# 실제 API 응답 예시 형태를 콘솔에 출력해 프론트 연동 확인용으로 사용
-single_response_json = {
-    "success": True,
-    "message": "예측이 완료되었습니다.",
-    "data": {
-        "remaining_seat": int(service_result.iloc[0]["pred_remaining_seat_rounded"]),
-        "full_probability": round(float(service_result.iloc[0]["pred_full_prob"]), 4),
-    }
-}
-
-print("\n[최종 API 응답 형태 JSON]")
-print(json.dumps(single_response_json, ensure_ascii=False, indent=2))
-
-print("\n모델 저장 완료")
-print(f"- {os.path.join(MODEL_DIR, 'reg.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'peak_congestion_cls.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'full_cls.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'route_encoder.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'stid_encoder.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'arsid_encoder.pkl')}")
-print(f"- {os.path.join(MODEL_DIR, 'feature_cols.json')}")
-print(f"- {os.path.join(MODEL_DIR, 'thresholds.json')}")
-print(f"- {os.path.join(MODEL_DIR, 'label_definition.json')}")
+print("\n[서비스 추론 샘플 결과]")
+print(service_result.head())
