@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.urls import path
 
 from .forms import CsvImportForm
-from .models import Bus_route, Bus_station, Route_station
+from .models import Bus_route, Bus_station, Route_station,  Weather_station
 
 
 class CsvUploadAdminMixin:
@@ -267,3 +267,56 @@ class RouteStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
         Route_station.objects.all().delete()
         Route_station.objects.bulk_create(route_station_list)
         return len(route_station_list)
+    
+@admin.register(Weather_station)
+class WeatherStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
+    list_display = ("stnId", "stnName", "locationX", "locationY")
+    search_fields = ("stnId", "stnName")
+    ordering = ("stnId",)
+
+    @transaction.atomic
+    def process_csv(self, reader):
+        required_headers = ["STN_ID", "LON", "LAT", "STN_KO"]
+        missing_headers = [h for h in required_headers if h not in reader.fieldnames]
+        if missing_headers:
+            raise ValueError(f"헤더가 맞지 않습니다. 필요한 헤더: {required_headers}")
+
+        weather_station_list = []
+        seen_stn_ids = set()
+
+        for row_num, row in enumerate(reader, start=2):
+            stn_id = (row.get("STN_ID") or "").strip()
+            stn_name = (row.get("STN_KO") or "").strip()
+            location_x = (row.get("LON") or "").strip()   # 경도
+            location_y = (row.get("LAT") or "").strip()   # 위도
+
+            if not stn_id or not stn_name or not location_x or not location_y:
+                raise ValueError(f"{row_num}행: 필수값이 비어 있습니다.")
+
+            try:
+                stn_id = int(stn_id)
+            except ValueError:
+                raise ValueError(f"{row_num}행: STN_ID는 정수여야 합니다.")
+
+            if stn_id in seen_stn_ids:
+                raise ValueError(f"{row_num}행: 중복 STN_ID({stn_id})가 있습니다.")
+            seen_stn_ids.add(stn_id)
+
+            try:
+                location_x = float(location_x)
+                location_y = float(location_y)
+            except ValueError:
+                raise ValueError(f"{row_num}행: LON/LAT 값이 숫자가 아닙니다.")
+
+            weather_station_list.append(
+                Weather_station(
+                    stnId=stn_id,
+                    stnName=stn_name,
+                    locationX=location_x,
+                    locationY=location_y,
+                )
+            )
+
+        Weather_station.objects.all().delete()
+        Weather_station.objects.bulk_create(weather_station_list)
+        return len(weather_station_list)
