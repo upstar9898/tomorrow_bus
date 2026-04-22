@@ -399,7 +399,7 @@ print(f"cat_features: {CAT_FEATURES}")
 # =========================================================
 
 cat_reg = CatBoostRegressor(
-    iterations=800,
+    iterations=1200, # 800 → 1200
     learning_rate=0.05,
     depth=8,
     l2_leaf_reg=3,
