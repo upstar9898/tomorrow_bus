@@ -215,7 +215,7 @@ def plot_departure_seat(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     plot_staord_curve(df)
     plot_staord_hour_heatmap(df)

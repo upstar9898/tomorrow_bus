@@ -43,9 +43,9 @@ def overview_weather(df: pd.DataFrame):
     # 날짜별 날씨 (중복 제거 — 하루 하나의 날씨값)
     daily_weather = (
         df.groupby("date")[available]
-        .first()
+        .max()
         .reset_index()
-    )
+        )
 
     print(f"  날씨 데이터 기간: {daily_weather['date'].min()} ~ {daily_weather['date'].max()}")
     print(f"  총 일수: {len(daily_weather)}일")
@@ -255,7 +255,7 @@ def plot_rainfall_seat(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     overview_weather(df)
     plot_rain_congestion(df)
