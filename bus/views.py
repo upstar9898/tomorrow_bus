@@ -8,7 +8,7 @@ from service_test.backend_test import dummy_service2
 import json
 from datetime import datetime
 
-from .models import Bus_route, Route_station, Bus_arrival_info
+from .models import Bus_route, Route_station, Bus_arrival_info, Weather_station
 from .services.ml_predictor import predict_service1_result
 from .services import weather_collector
 
@@ -380,6 +380,46 @@ def predict_service2(request):
         result = dummy_service2(
             route_id, station_id, date_time
         )  # 실제 서비스로 변경 필요
+
+        # print(result)
+
+        stops = result["stops"]
+
+        # 1. stn 수집
+        unique_stn_ids = {
+            int(stop["stn"])
+            for stop in stops
+            if stop.get("stn") not in [None, ""]
+        }
+
+        # 2. API 호출
+        forecast_map = {}
+        for stn_id in unique_stn_ids:
+            forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
+                stn_id=stn_id,
+                target_dt=date_time,
+            )
+
+        # 3. 매핑
+        for stop in stops:
+            stn = stop.get("stn")
+
+            if stn in [None, ""]:
+                stop["precipitation"] = 0
+                continue
+
+            stn = int(stn)
+            forecast_data = forecast_map.get(stn)
+
+            if not forecast_data:
+                stop["precipitation"] = 0
+                continue
+
+            weather_main = forecast_data["forecast"]["weather"][0]["main"]
+
+            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
+
+        result["stops"] = stops
 
         return JsonResponse(
             {

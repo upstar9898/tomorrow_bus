@@ -56,12 +56,14 @@ def dummy_service2(route_id, station_id, date_time):
                 "station_id": rs.station.stationId,
                 "station_name": rs.station.stationName,
                 "ars_id": rs.station.arsId,
+                "stn": rs.station.stn,
                 "predicted_time": predicted_time,
                 "remaining_seat": remaining_seat,
                 "full_prob": full_prob,
                 "is_selected": is_selected,
                 "is_virtual": is_virtual,
                 "staOrd" : rs.staOrd,
+                
             }
         )
 
