@@ -34,7 +34,7 @@ os.makedirs(ARTIFACT_DIR, exist_ok=True)
 # =========================================================
 # 2. 데이터 파일 경로
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_data_날짜별여행시간.csv")
+file_path = os.path.join(DATA_DIR, "bus_traveltime_merged_260422.csv")
 
 if not os.path.exists(file_path):
     raise FileNotFoundError(
