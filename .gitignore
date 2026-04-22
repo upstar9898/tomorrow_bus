@@ -108,3 +108,6 @@ outputs_peak_v2/
 *.csv
 *.log
 *.pkl
+
+# initdb 폴더
+initdb/*
