@@ -7,9 +7,9 @@
 import pandas as pd
 import numpy as np
 
-
-MAX_SEAT = 45
-LOW_SEAT_THRESHOLD = 10
+from utils.config import (
+    MAX_SEAT, LOW_SEAT_THRESHOLD
+)
 
 
 def seat_to_congestion_4(seat, max_seat=MAX_SEAT):
