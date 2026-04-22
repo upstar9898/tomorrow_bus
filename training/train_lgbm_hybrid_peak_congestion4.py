@@ -98,7 +98,7 @@ FULL_BINARY_LABELS = ["여석있음", "만차"]
 # =========================================================
 # 4. 데이터 파일 경로 설정
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_all_raw_weather.csv")
+file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_traveltime_260422.csv")
 
 if not os.path.exists(file_path):
     raise FileNotFoundError(
