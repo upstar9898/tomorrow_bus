@@ -1,97 +1,117 @@
 # =========================================================
 # [통합 최종 실행본]
-# LightGBM 회귀 + 출퇴근 시간대 전용 4단계 혼잡도 분류기 + 만차 여부 이진 분류
+# LightGBM 회귀 + 출퇴근 시간대 전용 4단계 혼잡도 분류기
+# + 만차 여부 이진 분류
 # + 저장된 encoder / pattern stats 로드 사용
 # + experiment_logger 연동
 # =========================================================
 
 # =========================================================
-# 1. 라이브러리 import
+# 1. 표준 라이브러리 import
 # =========================================================
+import json
 import os
 import sys
-import json
-import joblib
-import pandas as pd
-import numpy as np
 import time
 
+# =========================================================
+# 2. 외부 라이브러리 import
+# =========================================================
+import joblib
+import numpy as np
+import pandas as pd
+from lightgbm import LGBMClassifier, LGBMRegressor
 from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
-    accuracy_score,
-    f1_score,
-    classification_report,
-    confusion_matrix
 )
 
-from lightgbm import LGBMRegressor, LGBMClassifier
-
+# =========================================================
+# 3. 사용자 정의 모듈 import
+# =========================================================
+from utils.config import (
+    CONGESTION_CLASS_LABELS,
+    DATASET_NAME,
+    DATA_VERSION,
+    FEATURE_VERSION,
+    FULL_BINARY_LABELS,
+    FULL_BINARY_THRESHOLD,
+    FULL_MODEL_NAME,
+    LABEL_DEFINITION_DETAIL,
+    LABEL_DEFINITION_NAME,
+    MODEL_VERSION,
+    PEAK_CONGESTION_MODEL_NAME,
+    PEAK_THRESHOLDS,
+    REG_MODEL_NAME,
+    RUNNER,
+    SPLIT_VERSION,
+)
 from utils.encoder_utils import load_label_encoders, transform_with_encoders
-from utils.pattern_stats_utils import load_pattern_stats, merge_pattern_features
 from utils.experiment_logger import ExperimentLogger
 from utils.feature_utils import (
     MAX_SEAT,
+    get_feature_cols,
     prepare_training_base_dataframe,
     split_by_date,
-    get_feature_cols,
-    seat_to_congestion_4,
-    congestion_label_text,
-    full_binary_label_text,
 )
 from utils.inference_utils import run_service_inference
-
-from utils.config import (
-    PEAK_THRESHOLDS,
-    FULL_BINARY_THRESHOLD,
-    RUNNER,
-    DATASET_NAME,
-    DATA_VERSION,
-    SPLIT_VERSION,
-    FEATURE_VERSION,
-    REG_MODEL_NAME,
-    PEAK_CONGESTION_MODEL_NAME,
-    FULL_MODEL_NAME,
-    MODEL_VERSION,
-    LABEL_DEFINITION_NAME,
-    LABEL_DEFINITION_DETAIL,
-    CONGESTION_CLASS_LABELS,
-    FULL_BINARY_LABELS,
-)
+from utils.pattern_stats_utils import load_pattern_stats, merge_pattern_features
 
 
 # =========================================================
-# 2. 프로젝트 경로 설정
+# 4. 프로젝트 경로 및 출력 폴더 설정
 # =========================================================
+# 현재 실행 파일 기준 경로
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 프로젝트 루트 경로 (예: training 상위 폴더)
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
+# 데이터 폴더 경로
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
+# 결과물 저장 루트
 OUTPUT_ROOT = os.path.join(BASE_DIR, "outputs_peak_v2")
+
+# 실험 로그 / 통계 산출물 저장 폴더
 ARTIFACT_DIR = os.path.join(OUTPUT_ROOT, "artifacts")
+
+# 모델 저장 상위 폴더
 MODEL_BASE_DIR = os.path.join(OUTPUT_ROOT, "models")
+
+# 실제 현재 실험 모델 저장 폴더
 MODEL_DIR = os.path.join(MODEL_BASE_DIR, "lgbm_hybrid_peak_congestion4")
 
+# 폴더가 없으면 자동 생성
 os.makedirs(ARTIFACT_DIR, exist_ok=True)
 os.makedirs(MODEL_BASE_DIR, exist_ok=True)
 os.makedirs(MODEL_DIR, exist_ok=True)
 
+# utils import가 꼬일 수 있는 환경을 대비해 현재 실행 경로를 sys.path에 추가
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
+# 실험 결과 기록용 로거 객체 생성
 logger = ExperimentLogger(artifact_dir=ARTIFACT_DIR)
 
 print("MODEL_DIR real path:", os.path.abspath(MODEL_DIR))
-print("stid encoder file exists?:", os.path.exists(os.path.join(MODEL_DIR, "stid_encoder.pkl")))
+print(
+    "stid encoder file exists?:",
+    os.path.exists(os.path.join(MODEL_DIR, "stid_encoder.pkl"))
+)
 
 
 # =========================================================
-# 4. 데이터 파일 경로 설정
+# 5. 학습 데이터 파일 경로 설정
 # =========================================================
 file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_traveltime_260422.csv")
 
+# 파일 존재 여부 확인
 if not os.path.exists(file_path):
     raise FileNotFoundError(
         f"데이터 파일을 찾을 수 없습니다.\n"
@@ -107,26 +127,34 @@ print(f"[INFO] OUTPUT_ROOT   : {OUTPUT_ROOT}")
 print(f"[INFO] MODEL_DIR     : {MODEL_DIR}")
 
 
-
 # =========================================================
-# 7. 원본 파일 불러오기
+# 6. 원본 데이터 불러오기
 # =========================================================
+# ID 계열 컬럼은 문자열로 고정해서 읽는다.
+# 그래야 앞자리 0 유실, dtype 혼합 문제를 줄일 수 있다.
 df = pd.read_csv(
     file_path,
     dtype={
         "busRouteId": str,
         "stId": str,
-        "arsId": str
+        "arsId": str,
     },
     low_memory=False
 )
 
+# 시간 컬럼 datetime 변환
 df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
 
 
 # =========================================================
-# 8. 공통 전처리 + 파생변수 생성
+# 7. 공통 전처리 및 파생변수 생성
 # =========================================================
+# 이 함수 내부에서 다음이 처리된다고 가정:
+# - 기본 결측/형식 정리
+# - 날씨 관련 전처리
+# - 시간 파생변수 생성
+# - 주기형(sin/cos) feature 생성
+# - target 및 관련 feature 생성
 df = prepare_training_base_dataframe(df)
 
 print("총 데이터 수:", len(df))
@@ -144,9 +172,12 @@ print(df["is_rain"].value_counts())
 
 
 # =========================================================
-# 9. 날짜 기준 train / valid / test 분할
+# 8. 날짜 기준 train / valid / test 분할
 # =========================================================
+# 시간 누수를 막기 위해 날짜 단위로 분리
 train_df, valid_df, test_df, split_info = split_by_date(df)
+
+# 서비스 추론용 원본 테스트셋 백업
 test_df_raw = test_df.copy()
 
 unique_dates = split_info["unique_dates"]
@@ -160,9 +191,13 @@ print("train dates:", train_dates[0], "~", train_dates[-1], f"({len(train_dates)
 print("valid dates:", valid_dates[0], "~", valid_dates[-1], f"({len(valid_dates)}일)")
 print("test dates :", test_dates[0], "~", test_dates[-1], f"({len(test_dates)}일)")
 
+
 # =========================================================
-# 17. 범주형 ID 인코딩
+# 9. 범주형 ID 인코딩
 # =========================================================
+# 학습 때 저장해둔 encoder를 불러온다.
+# train은 strict=True로 학습 클래스만 허용,
+# valid/test는 strict=False로 unseen 값을 -1 등으로 처리하도록 설계된 것으로 보인다.
 encoders = load_label_encoders(MODEL_DIR)
 
 train_df = transform_with_encoders(train_df, encoders, strict=True)
@@ -179,8 +214,10 @@ print("test unseen arsid 개수 :", (test_df["arsid_enc"] == -1).sum())
 
 
 # =========================================================
-# 18. 패턴 통계 로드 + feature merge
+# 10. 패턴 통계 로드 및 feature merge
 # =========================================================
+# 기존에 저장해둔 pattern stats를 불러와서
+# route / stop / 시간대 기반 통계 feature를 붙인다.
 stats_dict, pattern_meta = load_pattern_stats(ARTIFACT_DIR)
 
 train_df = merge_pattern_features(train_df, stats_dict, pattern_meta)
@@ -194,14 +231,15 @@ print("test_df :", test_df.shape)
 
 
 # =========================================================
-# 19. feature 정의
+# 11. 모델 입력 feature 정의
 # =========================================================
 FEATURE_COLS = get_feature_cols()
 
 
 # =========================================================
-# 20. 학습 데이터 준비
+# 12. 학습 / 평가용 데이터셋 구성
 # =========================================================
+# ---------- 회귀 ----------
 X_train = train_df[FEATURE_COLS]
 X_valid = valid_df[FEATURE_COLS]
 X_test = test_df[FEATURE_COLS]
@@ -210,10 +248,12 @@ y_train_reg = train_df["remaining_seat"]
 y_valid_reg = valid_df["remaining_seat"]
 y_test_reg = test_df["remaining_seat"]
 
+# ---------- 만차 여부 이진 분류 ----------
 y_train_full = train_df["is_full_target"]
 y_valid_full = valid_df["is_full_target"]
 y_test_full = test_df["is_full_target"]
 
+# ---------- 출퇴근 시간대 전용 4클래스 혼잡도 분류 ----------
 peak_train_df = train_df[train_df["is_peak"] == 1].copy()
 peak_valid_df = valid_df[valid_df["is_peak"] == 1].copy()
 peak_test_df = test_df[test_df["is_peak"] == 1].copy()
@@ -247,8 +287,10 @@ print(y_test_peak_cong.value_counts(normalize=True).sort_index())
 
 
 # =========================================================
-# 21. 회귀 모델 학습
+# 13. 회귀 모델 학습
 # =========================================================
+# 목적:
+# - 실제 남은 좌석 수(remaining_seat)를 직접 예측
 lgbm_reg = LGBMRegressor(
     objective="regression",
     n_estimators=800,
@@ -261,7 +303,7 @@ lgbm_reg = LGBMRegressor(
     reg_alpha=0.1,
     reg_lambda=0.1,
     random_state=42,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 start = time.time()
@@ -269,14 +311,17 @@ lgbm_reg.fit(
     X_train,
     y_train_reg,
     eval_set=[(X_train, y_train_reg), (X_valid, y_valid_reg)],
-    eval_metric="l1"
+    eval_metric="l1",
 )
 reg_train_time = time.time() - start
 
 
 # =========================================================
-# 22. 출퇴근 시간대 전용 4단계 혼잡도 분류 모델 학습
+# 14. 출퇴근 시간대 전용 4단계 혼잡도 분류 모델 학습
 # =========================================================
+# 목적:
+# - 출퇴근 시간대(is_peak == 1) 데이터만 따로 사용하여
+#   4단계 혼잡도 클래스를 분류
 lgbm_peak_congestion_cls = LGBMClassifier(
     objective="multiclass",
     num_class=4,
@@ -291,7 +336,7 @@ lgbm_peak_congestion_cls = LGBMClassifier(
     reg_lambda=0.2,
     class_weight="balanced",
     random_state=42,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 start = time.time()
@@ -299,14 +344,16 @@ lgbm_peak_congestion_cls.fit(
     X_train_peak,
     y_train_peak_cong,
     eval_set=[(X_train_peak, y_train_peak_cong), (X_valid_peak, y_valid_peak_cong)],
-    eval_metric="multi_logloss"
+    eval_metric="multi_logloss",
 )
 peak_cls_train_time = time.time() - start
 
 
 # =========================================================
-# 23. 만차 여부 이진 분류 모델 학습
+# 15. 만차 여부 이진 분류 모델 학습
 # =========================================================
+# 목적:
+# - 만차 / 비만차 여부를 별도 분류기로 예측
 lgbm_full_cls = LGBMClassifier(
     objective="binary",
     n_estimators=500,
@@ -320,7 +367,7 @@ lgbm_full_cls = LGBMClassifier(
     reg_lambda=0.2,
     class_weight="balanced",
     random_state=42,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 start = time.time()
@@ -328,15 +375,32 @@ lgbm_full_cls.fit(
     X_train,
     y_train_full,
     eval_set=[(X_train, y_train_full), (X_valid, y_valid_full)],
-    eval_metric="binary_logloss"
+    eval_metric="binary_logloss",
 )
 full_cls_train_time = time.time() - start
 
 
 # =========================================================
-# 24. threshold 적용 함수
+# 16. threshold 적용 예측 함수
 # =========================================================
-def predict_peak_congestion_with_thresholds(proba, thresholds):
+def predict_peak_congestion_with_thresholds(proba: np.ndarray, thresholds: list[float]) -> np.ndarray:
+    """
+    출퇴근 시간대 4클래스 혼잡도 분류 확률값에 대해
+    커스텀 threshold를 적용해 최종 클래스를 결정한다.
+
+    Parameters
+    ----------
+    proba : np.ndarray
+        predict_proba 결과. shape = (N, 4)
+    thresholds : list[float]
+        클래스별 기준 threshold.
+        예: [class0_threshold, class1_threshold, class2_threshold]
+
+    Returns
+    -------
+    np.ndarray
+        최종 예측 클래스 배열
+    """
     preds = []
 
     for row in proba:
@@ -355,9 +419,14 @@ def predict_peak_congestion_with_thresholds(proba, thresholds):
 
 
 # =========================================================
-# 25. 평가 함수
+# 17. 평가 함수 정의
 # =========================================================
 def evaluate_regression(model, X, y, name="dataset"):
+    """
+    회귀 모델 평가 함수
+    - 예측값은 물리적으로 가능한 좌석 범위(0 ~ MAX_SEAT)로 clip
+    - MAE / RMSE / R2 출력
+    """
     pred = np.clip(model.predict(X), 0, MAX_SEAT)
 
     mae = mean_absolute_error(y, pred)
@@ -373,6 +442,14 @@ def evaluate_regression(model, X, y, name="dataset"):
 
 
 def evaluate_multiclass(y_true, y_pred, name="dataset"):
+    """
+    다중분류 평가 함수
+    - ACC
+    - Macro F1
+    - Weighted F1
+    - Confusion Matrix
+    - Classification Report
+    """
     acc = accuracy_score(y_true, y_pred)
     macro_f1 = f1_score(y_true, y_pred, average="macro")
     weighted_f1 = f1_score(y_true, y_pred, average="weighted")
@@ -391,6 +468,14 @@ def evaluate_multiclass(y_true, y_pred, name="dataset"):
 
 
 def evaluate_binary(y_true, y_pred, name="dataset"):
+    """
+    이진분류 평가 함수
+    - ACC
+    - Macro F1
+    - Weighted F1
+    - Confusion Matrix
+    - Classification Report
+    """
     acc = accuracy_score(y_true, y_pred)
     macro_f1 = f1_score(y_true, y_pred, average="macro")
     weighted_f1 = f1_score(y_true, y_pred, average="weighted")
@@ -409,11 +494,13 @@ def evaluate_binary(y_true, y_pred, name="dataset"):
 
 
 # =========================================================
-# 26. 모델 평가
+# 18. 모델 평가
 # =========================================================
+# ---------- 회귀 ----------
 valid_pred_reg = evaluate_regression(lgbm_reg, X_valid, y_valid_reg, "VALID REG")
 test_pred_reg = evaluate_regression(lgbm_reg, X_test, y_test_reg, "TEST REG")
 
+# ---------- 출퇴근 시간대 4클래스 혼잡도 ----------
 valid_peak_proba = lgbm_peak_congestion_cls.predict_proba(X_valid_peak)
 test_peak_proba = lgbm_peak_congestion_cls.predict_proba(X_test_peak)
 
@@ -431,6 +518,7 @@ test_pred_peak_cong = evaluate_multiclass(
     "TEST PEAK CONGESTION CLS 4CLASS"
 )
 
+# ---------- 만차 여부 이진 분류 ----------
 valid_full_prob = lgbm_full_cls.predict_proba(X_valid)[:, 1]
 test_full_prob = lgbm_full_cls.predict_proba(X_test)[:, 1]
 
@@ -450,8 +538,9 @@ test_pred_full = evaluate_binary(
 
 
 # =========================================================
-# 27. experiment_logger 저장
+# 19. experiment_logger 결과 저장
 # =========================================================
+# ---------- 회귀 결과 저장 ----------
 logger.log_regression_result(
     y_true=y_valid_reg,
     y_pred=valid_pred_reg,
@@ -482,6 +571,7 @@ logger.log_regression_result(
     notes="TEST regression result / clip 0~45 적용"
 )
 
+# ---------- 출퇴근 시간대 4클래스 혼잡도 분류 결과 저장 ----------
 logger.log_classification_result(
     y_true=y_valid_peak_cong,
     y_pred=valid_pred_peak_cong,
@@ -518,6 +608,7 @@ logger.log_classification_result(
     notes="TEST peak-only 4class congestion classification / threshold applied"
 )
 
+# ---------- 만차 여부 이진 분류 결과 저장 ----------
 logger.log_classification_result(
     y_true=y_valid_full,
     y_pred=valid_pred_full,
@@ -557,16 +648,24 @@ logger.log_classification_result(
 print("\n[INFO] experiment_logger 저장 완료")
 
 
-# 서비스 추론 함수 변경함
+# =========================================================
+# 20. 서비스 추론 샘플 실행
+# =========================================================
+# test_df_raw를 기반으로 실제 서비스 추론 함수가 잘 동작하는지 확인
 service_result = run_service_inference(
     prepared_df=test_df_raw,
     model_dir=MODEL_DIR,
     artifact_dir=ARTIFACT_DIR,
 )
 
+
 # =========================================================
-# 30. 구간 이동시간 통계 생성 및 저장
+# 21. 구간 이동시간 통계 생성 및 저장
 # =========================================================
+# 목적:
+# - 같은 노선(busRouteId) + 같은 차량(vehId1)이
+#   인접 정류소를 이동하는 데 걸린 시간을 계산
+# - 이후 서비스에서 정류소 간 ETA 보정용 통계로 활용 가능
 if "vehId1" in df.columns:
     travel_df = df.copy()
 
@@ -574,12 +673,16 @@ if "vehId1" in df.columns:
     travel_df = travel_df.dropna(subset=["mkTm", "busRouteId", "vehId1", "staOrd"]).copy()
     travel_df = travel_df.sort_values(["busRouteId", "vehId1", "mkTm"]).reset_index(drop=True)
 
+    # 같은 차량 흐름에서 직전 정류소 순번 / 직전 시각 구하기
     travel_df["prev_staOrd"] = travel_df.groupby(["busRouteId", "vehId1"])["staOrd"].shift(1)
     travel_df["prev_mkTm"] = travel_df.groupby(["busRouteId", "vehId1"])["mkTm"].shift(1)
 
+    # 현재 행과 직전 행 사이 정류소 순번 차이 / 이동시간 계산
     travel_df["staOrd_gap"] = travel_df["staOrd"] - travel_df["prev_staOrd"]
     travel_df["travel_sec"] = (travel_df["mkTm"] - travel_df["prev_mkTm"]).dt.total_seconds()
 
+    # 인접 정류소(차이 1)만 남기고,
+    # 비정상적으로 긴 이동시간은 제외
     segment_df = travel_df[
         (travel_df["staOrd_gap"] == 1) &
         (travel_df["travel_sec"] > 0) &
@@ -601,7 +704,9 @@ if "vehId1" in df.columns:
             .reset_index()
         )
 
-        route_segment_travel_time["std_travel_sec"] = route_segment_travel_time["std_travel_sec"].fillna(0)
+        route_segment_travel_time["std_travel_sec"] = (
+            route_segment_travel_time["std_travel_sec"].fillna(0)
+        )
 
         route_segment_travel_time_path = os.path.join(
             ARTIFACT_DIR,
@@ -623,8 +728,10 @@ else:
 
 
 # =========================================================
-# 31. 노선별 정류소 순서 저장
+# 22. 노선별 정류소 순서 저장
 # =========================================================
+# 목적:
+# - 노선 내 정류소 순서를 프론트/백엔드 서비스에서 재사용 가능하도록 저장
 route_station_order = (
     df[["busRouteId", "stId", "arsId", "staOrd"]]
     .drop_duplicates()
@@ -642,33 +749,37 @@ print("\n정류소 순서 저장 완료:", route_station_order_path)
 
 
 # =========================================================
-# 32. 모델 / threshold / label 정의 저장
+# 23. 모델 / threshold / label 정의 저장
 # =========================================================
+# ---------- 모델 저장 ----------
 joblib.dump(lgbm_reg, os.path.join(MODEL_DIR, "reg.pkl"))
 joblib.dump(lgbm_peak_congestion_cls, os.path.join(MODEL_DIR, "peak_congestion_cls.pkl"))
 joblib.dump(lgbm_full_cls, os.path.join(MODEL_DIR, "full_cls.pkl"))
 
+# ---------- feature 목록 저장 ----------
 with open(os.path.join(MODEL_DIR, "feature_cols.json"), "w", encoding="utf-8") as f:
     json.dump(FEATURE_COLS, f, ensure_ascii=False, indent=2)
 
+# ---------- threshold 저장 ----------
 with open(os.path.join(MODEL_DIR, "thresholds.json"), "w", encoding="utf-8") as f:
     json.dump(
         {
             "peak_congestion_thresholds": PEAK_THRESHOLDS,
-            "full_binary_threshold": FULL_BINARY_THRESHOLD
+            "full_binary_threshold": FULL_BINARY_THRESHOLD,
         },
         f,
         ensure_ascii=False,
         indent=2
     )
 
+# ---------- 라벨 정의 저장 ----------
 with open(os.path.join(MODEL_DIR, "label_definition.json"), "w", encoding="utf-8") as f:
     json.dump(
         {
             "peak_congestion_4class": LABEL_DEFINITION_DETAIL,
             "full_binary": {
                 "0": "여석있음",
-                "1": "만차"
+                "1": "만차",
             }
         },
         f,
@@ -678,14 +789,15 @@ with open(os.path.join(MODEL_DIR, "label_definition.json"), "w", encoding="utf-8
 
 
 # =========================================================
-# 33. 프론트 전달용 JSON 미리보기
+# 24. 프론트 전달용 JSON 미리보기
 # =========================================================
+# 실제 API 응답 예시 형태를 콘솔에 출력해 프론트 연동 확인용으로 사용
 single_response_json = {
     "success": True,
     "message": "예측이 완료되었습니다.",
     "data": {
         "remaining_seat": int(service_result.iloc[0]["pred_remaining_seat_rounded"]),
-        "full_probability": round(float(service_result.iloc[0]["pred_full_prob"]), 4)
+        "full_probability": round(float(service_result.iloc[0]["pred_full_prob"]), 4),
     }
 }
 
