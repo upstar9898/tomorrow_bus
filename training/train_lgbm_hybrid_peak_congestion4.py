@@ -42,6 +42,24 @@ from utils.feature_utils import (
 )
 from utils.inference_utils import run_service_inference
 
+from utils.config import (
+    PEAK_THRESHOLDS,
+    FULL_BINARY_THRESHOLD,
+    RUNNER,
+    DATASET_NAME,
+    DATA_VERSION,
+    SPLIT_VERSION,
+    FEATURE_VERSION,
+    REG_MODEL_NAME,
+    PEAK_CONGESTION_MODEL_NAME,
+    FULL_MODEL_NAME,
+    MODEL_VERSION,
+    LABEL_DEFINITION_NAME,
+    LABEL_DEFINITION_DETAIL,
+    CONGESTION_CLASS_LABELS,
+    FULL_BINARY_LABELS,
+)
+
 
 # =========================================================
 # 2. 프로젝트 경로 설정
@@ -70,33 +88,6 @@ print("stid encoder file exists?:", os.path.exists(os.path.join(MODEL_DIR, "stid
 
 
 # =========================================================
-# 3. 실험 메타 정보 설정
-# =========================================================
-RUNNER = "eunbyeol"
-DATASET_NAME = "bus_all_raw_weather"
-DATA_VERSION = "20260416"
-SPLIT_VERSION = "date_70_15_15"
-FEATURE_VERSION = "pattern_weather_peak_congestion4_cleanlog_v1"
-
-REG_MODEL_NAME = "lgbm_reg"
-PEAK_CONGESTION_MODEL_NAME = "lgbm_peak_congestion_cls_4class"
-FULL_MODEL_NAME = "lgbm_full_binary_cls"
-
-MODEL_VERSION = "v2_peak_0_1to20_21to30_31to45_cleanlog"
-
-LABEL_DEFINITION_NAME = "peak_congestion_4class_0_1to20_21to30_31to45"
-LABEL_DEFINITION_DETAIL = {
-    "0": "만차(0석)",
-    "1": "혼잡(1~20석)",
-    "2": "보통(21~30석)",
-    "3": "여유(31~45석)"
-}
-
-CONGESTION_CLASS_LABELS = ["만차", "혼잡", "보통", "여유"]
-FULL_BINARY_LABELS = ["여석있음", "만차"]
-
-
-# =========================================================
 # 4. 데이터 파일 경로 설정
 # =========================================================
 file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_traveltime_260422.csv")
@@ -114,19 +105,6 @@ print(f"[INFO] DATA_DIR      : {DATA_DIR}")
 print(f"[INFO] file_path     : {file_path}")
 print(f"[INFO] OUTPUT_ROOT   : {OUTPUT_ROOT}")
 print(f"[INFO] MODEL_DIR     : {MODEL_DIR}")
-
-
-# =========================================================
-# 5. 설정값
-# =========================================================
-
-PEAK_THRESHOLDS = {
-    0: 0.15,   # 만차
-    1: 0.30,   # 혼잡
-    2: 0.40    # 보통
-}
-
-FULL_BINARY_THRESHOLD = 0.50
 
 
 
@@ -169,6 +147,7 @@ print(df["is_rain"].value_counts())
 # 9. 날짜 기준 train / valid / test 분할
 # =========================================================
 train_df, valid_df, test_df, split_info = split_by_date(df)
+test_df_raw = test_df.copy()
 
 unique_dates = split_info["unique_dates"]
 train_dates = split_info["train_dates"]
@@ -580,7 +559,7 @@ print("\n[INFO] experiment_logger 저장 완료")
 
 # 서비스 추론 함수 변경함
 service_result = run_service_inference(
-    prepared_df=test_df,
+    prepared_df=test_df_raw,
     model_dir=MODEL_DIR,
     artifact_dir=ARTIFACT_DIR,
 )

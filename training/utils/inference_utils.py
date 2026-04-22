@@ -21,12 +21,11 @@ import pandas as pd
 from utils.encoder_utils import load_label_encoders, transform_with_encoders
 from utils.pattern_stats_utils import load_pattern_stats, merge_pattern_features
 from utils.feature_utils import (
-    MAX_SEAT,
     seat_to_congestion_4,
     congestion_label_text,
     full_binary_label_text,
 )
-
+from utils.config import MAX_SEAT
 
 # =========================================================
 # 1. threshold 적용 함수
@@ -104,6 +103,12 @@ def load_inference_artifacts(model_dir: str, artifact_dir: str):
     with open(thresholds_path, "r", encoding="utf-8") as f:
         thresholds_info = json.load(f)
 
+    peak_thresholds = {
+        int(k): float(v)
+        for k, v in thresholds_info["peak_congestion_thresholds"].items()
+    }
+    full_binary_threshold = float(thresholds_info["full_binary_threshold"])
+
     encoders = load_label_encoders(model_dir)
     stats_dict, pattern_meta = load_pattern_stats(artifact_dir)
 
@@ -112,12 +117,12 @@ def load_inference_artifacts(model_dir: str, artifact_dir: str):
         "peak_model": peak_model,
         "full_model": full_model,
         "feature_cols": feature_cols,
-        "peak_thresholds": thresholds_info["peak_congestion_thresholds"],
-        "full_binary_threshold": thresholds_info["full_binary_threshold"],
+        "peak_thresholds": peak_thresholds,
+        "full_binary_threshold": full_binary_threshold,
         "encoders": encoders,
         "stats_dict": stats_dict,
         "pattern_meta": pattern_meta,
-    }
+}
 
 
 # =========================================================
