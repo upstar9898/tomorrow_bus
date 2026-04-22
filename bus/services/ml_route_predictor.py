@@ -126,20 +126,22 @@ def _make_relative_time_label(relative_time_sec):
         return "곧 도착"
 
     abs_sec = abs(int(relative_time_sec))
-    minutes = abs_sec // 60
-    seconds = abs_sec % 60
+    total_minutes = round(abs_sec / 60)
 
-    if minutes > 0 and seconds > 0:
-        time_text = f"{minutes}분 {seconds}초"
-    elif minutes > 0:
-        time_text = f"{minutes}분"
-    else:
-        time_text = f"{seconds}초"
+    # 1분 미만 → 곧 도착
+    if total_minutes < 1:
+        return "곧 도착"
 
-    if relative_time_sec > 0:
-        return f"{time_text} 후"
-    return f"{time_text} 전"
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
 
+    if hours == 0:
+        return f"약 {minutes}분"
+    
+    if minutes == 0:
+        return f"약 {hours}시간"
+    
+    return f"약 {hours}시간 {minutes}분"
 
 def _make_predicted_time(base_dt, relative_time_sec):
     if relative_time_sec is None:

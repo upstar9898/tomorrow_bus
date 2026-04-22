@@ -194,6 +194,7 @@ function renderRouteResult(routeName, stationName, data) {
                 <div class="stop-top">
                     <div>
                         <div class="stop-name">${stop.station_name}</div>
+                        
                         <div class="stop-meta">
                             ${stop.ars_id ? `${stop.ars_id}` : ""}
                             ${predictedTimeText ? ` · 도착예정 ${predictedTimeText}` : ""}
