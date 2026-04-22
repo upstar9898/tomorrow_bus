@@ -191,7 +191,7 @@ class Bus_arrival_info(models.Model):
     def __str__(self):
         return f"{self.mkTm} / {self.route_id} / {self.station_id} / {self.remaining_seat}"
     
-class WeatherStation(models.Model):
+class Weather_station(models.Model):
     stn_id = models.IntegerField(
         primary_key=True,
         verbose_name="관측소 ID",
