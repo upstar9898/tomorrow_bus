@@ -190,3 +190,34 @@ class Bus_arrival_info(models.Model):
 
     def __str__(self):
         return f"{self.mkTm} / {self.route_id} / {self.station_id} / {self.remaining_seat}"
+    
+class WeatherStation(models.Model):
+    stn_id = models.IntegerField(
+        primary_key=True,
+        verbose_name="관측소 ID",
+    )
+
+    name_ko = models.CharField(
+        max_length=100,
+        null=False,
+        verbose_name="관측소명",
+    )
+
+    # 경도
+    lon = models.FloatField(
+        null=False,
+        verbose_name="경도",
+    )
+
+    # 위도
+    lat = models.FloatField(
+        null=False,
+        verbose_name="위도",
+    )
+
+    class Meta:
+        db_table = "weather_station"
+        ordering = ["stn_id"]
+
+    def __str__(self):
+        return f"{self.stn_id} - {self.name_ko}"    
