@@ -210,9 +210,20 @@ def prepare_training_base_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     result = add_auxiliary_time_keys(result)
     result = add_route_progress_feature(result)
     result = add_target_and_weather_features(result)
+
+    for col in ["travel_time", "travel_arrival_gap_sec"]:
+        if col in result.columns:
+            result[col] = pd.to_numeric(result[col], errors="coerce")
+
+    if "travel_time_missing" in result.columns:
+        result["travel_time_missing"] = (
+            pd.to_numeric(result["travel_time_missing"], errors="coerce")
+            .fillna(1)
+            .astype(int)
+        )
+
     result = result.sort_values("mkTm").reset_index(drop=True)
     return result
-
 
 def split_by_date(df: pd.DataFrame, train_ratio: float = 0.7, valid_ratio: float = 0.15):
     result = df.copy()
@@ -266,5 +277,6 @@ def get_feature_cols():
         "route_stop_time_low_ratio", "route_staord_low_ratio",
         "route_time_low_ratio",
         "rainfall", "precipitation", "fog", "temperature",
-        "rainfall_missing", "is_rain", "rain_peak"
+        "rainfall_missing", "is_rain", "rain_peak",
+        "travel_time", "travel_time_missing", "travel_arrival_gap_sec",
     ]
