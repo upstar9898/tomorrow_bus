@@ -278,5 +278,4 @@ def get_feature_cols():
         "route_time_low_ratio",
         "rainfall", "precipitation", "fog", "temperature",
         "rainfall_missing", "is_rain", "rain_peak",
-        "travel_time", "travel_time_missing", "travel_arrival_gap_sec",
     ]

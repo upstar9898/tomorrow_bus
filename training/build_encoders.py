@@ -41,7 +41,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 # =========================================================
 # 2. 데이터 파일 경로
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_traveltime_260422.csv")
+file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260421.csv")
 
 if not os.path.exists(file_path):
     raise FileNotFoundError(
