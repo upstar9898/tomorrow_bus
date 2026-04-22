@@ -202,3 +202,68 @@ def collect_forecast(station_id="", target_dt=None):
         "arsId": station_info["arsId"],
         "forecast_list": data["list"],
     }
+
+def collect_forecast_by_stn(stn_id, station_map, target_dt=None):
+    """
+    stn 기준으로 OpenWeather 호출
+    (DB 안 쓰고 기존 CSV 활용)
+    """
+
+    station_info = station_map.get(stn_id)
+
+    if not station_info:
+        raise ValueError(f"stn_id {stn_id} 없음")
+
+    lat = station_info["lat"]
+    lon = station_info["lon"]
+
+    forecast = fetch_openweather_forecast(lat, lon, target_dt)
+
+    return {
+        "stn_id": stn_id,
+        "lat": lat,
+        "lon": lon,
+        "forecast": forecast,
+    }
+
+def fetch_openweather_forecast(lat, lon, target_dt=None):
+    api_key = os.environ.get("OPEN_WEATHER_API_KEY")
+    if not api_key:
+        raise ValueError("OPEN_WEATHER_API_KEY 없음")
+
+    url = "https://api.openweathermap.org/data/2.5/forecast"
+
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "appid": api_key,
+        "units": "metric",
+        "lang": "kr",
+    }
+
+    response = requests.get(url, params=params, timeout=10)
+    response.raise_for_status()
+
+    data = response.json()
+
+    if target_dt:
+
+        if isinstance(target_dt, str):
+            try:
+                target_dt = datetime.strptime(target_dt, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                try:
+                    target_dt = datetime.strptime(target_dt, "%Y-%m-%d %H:%M")
+                except ValueError:
+                    target_dt = datetime.strptime(target_dt, "%Y-%m-%dT%H:%M")
+
+        closest_item = min(
+            data["list"],
+            key=lambda item: abs(
+                datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S") - target_dt
+            ),
+        )
+
+        return closest_item
+
+    return data["list"]
