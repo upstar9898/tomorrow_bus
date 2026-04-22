@@ -192,25 +192,25 @@ class Bus_arrival_info(models.Model):
         return f"{self.mkTm} / {self.route_id} / {self.station_id} / {self.remaining_seat}"
     
 class Weather_station(models.Model):
-    stn_id = models.IntegerField(
+    stnId = models.IntegerField(
         primary_key=True,
         verbose_name="관측소 ID",
     )
 
-    name_ko = models.CharField(
+    stnName = models.CharField(
         max_length=100,
         null=False,
         verbose_name="관측소명",
     )
 
     # 경도
-    lon = models.FloatField(
+    locationX = models.FloatField(
         null=False,
         verbose_name="경도",
     )
 
     # 위도
-    lat = models.FloatField(
+    locationY = models.FloatField(
         null=False,
         verbose_name="위도",
     )
