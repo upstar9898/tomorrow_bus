@@ -40,6 +40,7 @@ from utils.feature_utils import (
     congestion_label_text,
     full_binary_label_text,
 )
+from utils.inference_utils import run_service_inference
 
 
 # =========================================================
@@ -577,112 +578,12 @@ logger.log_classification_result(
 print("\n[INFO] experiment_logger 저장 완료")
 
 
-# =========================================================
-# 28. 서비스 추론 함수
-# =========================================================
-def predict_service(row_df):
-    result = row_df.copy()
-
-    pred_seat = np.clip(lgbm_reg.predict(result[FEATURE_COLS]), 0, MAX_SEAT)
-    result["pred_remaining_seat"] = np.round(pred_seat, 2)
-    result["pred_remaining_seat_rounded"] = np.clip(np.round(pred_seat), 0, MAX_SEAT).astype(int)
-
-    result["reg_based_congestion_class"] = result["pred_remaining_seat_rounded"].apply(seat_to_congestion_4)
-    result["reg_based_congestion_label"] = result["reg_based_congestion_class"].apply(congestion_label_text)
-
-    peak_mask = result["is_peak"] == 1
-
-    result["pred_peak_congestion_class"] = np.nan
-    result["pred_peak_congestion_label"] = None
-    result["pred_peak_congestion_prob_0"] = np.nan
-    result["pred_peak_congestion_prob_1"] = np.nan
-    result["pred_peak_congestion_prob_2"] = np.nan
-    result["pred_peak_congestion_prob_3"] = np.nan
-
-    if peak_mask.sum() > 0:
-        peak_rows = result.loc[peak_mask, FEATURE_COLS]
-        peak_proba = lgbm_peak_congestion_cls.predict_proba(peak_rows)
-        peak_pred = predict_peak_congestion_with_thresholds(peak_proba, PEAK_THRESHOLDS)
-
-        result.loc[peak_mask, "pred_peak_congestion_class"] = peak_pred
-        result.loc[peak_mask, "pred_peak_congestion_label"] = [congestion_label_text(x) for x in peak_pred]
-
-        for i in range(4):
-            result.loc[peak_mask, f"pred_peak_congestion_prob_{i}"] = peak_proba[:, i]
-
-    full_prob = lgbm_full_cls.predict_proba(result[FEATURE_COLS])[:, 1]
-    result["pred_full_prob"] = full_prob
-    result["pred_is_full"] = (result["pred_full_prob"] >= FULL_BINARY_THRESHOLD).astype(int)
-    result["pred_is_full_label"] = result["pred_is_full"].apply(full_binary_label_text)
-    result["pred_not_full_prob"] = 1 - result["pred_full_prob"]
-
-    result["final_congestion_class"] = result["reg_based_congestion_class"]
-    result["final_congestion_label"] = result["reg_based_congestion_label"]
-
-    if peak_mask.sum() > 0:
-        result.loc[peak_mask, "final_congestion_class"] = result.loc[peak_mask, "pred_peak_congestion_class"]
-        result.loc[peak_mask, "final_congestion_label"] = result.loc[peak_mask, "pred_peak_congestion_label"]
-
-    full_override_mask = result["pred_full_prob"] >= FULL_BINARY_THRESHOLD
-    result.loc[full_override_mask, "final_congestion_class"] = 0
-    result.loc[full_override_mask, "final_congestion_label"] = "만차"
-
-    result["ui_expected_remaining_seat"] = result["pred_remaining_seat_rounded"].astype(str) + "석"
-    result["ui_congestion_with_full_prob"] = (
-        result["final_congestion_label"]
-        + " (만차확률 "
-        + (result["pred_full_prob"] * 100).round(1).astype(str)
-        + "%)"
-    )
-
-    return result
-
-
-# =========================================================
-# 29. 테스트셋 전체에 대해 서비스 방식으로 예측
-# =========================================================
-service_result = predict_service(test_df)
-
-save_cols = [
-    "mkTm", "busRouteId", "stId", "arsId", "staOrd",
-    "remaining_seat", "is_peak",
-    "rainfall", "precipitation", "fog", "temperature",
-    "is_rain", "rain_peak",
-    "pred_remaining_seat",
-    "pred_remaining_seat_rounded",
-    "reg_based_congestion_class",
-    "reg_based_congestion_label",
-    "pred_peak_congestion_class",
-    "pred_peak_congestion_label",
-    "pred_peak_congestion_prob_0",
-    "pred_peak_congestion_prob_1",
-    "pred_peak_congestion_prob_2",
-    "pred_peak_congestion_prob_3",
-    "pred_is_full",
-    "pred_is_full_label",
-    "pred_not_full_prob",
-    "pred_full_prob",
-    "final_congestion_class",
-    "final_congestion_label",
-    "ui_expected_remaining_seat",
-    "ui_congestion_with_full_prob"
-]
-
-service_result_path = os.path.join(
-    ARTIFACT_DIR,
-    "test_service_result_hybrid_peak_congestion4.csv"
+# 서비스 추론 함수 변경함
+service_result = run_service_inference(
+    prepared_df=test_df,
+    model_dir=MODEL_DIR,
+    artifact_dir=ARTIFACT_DIR,
 )
-
-service_result[save_cols].to_csv(
-    service_result_path,
-    index=False,
-    encoding="utf-8-sig"
-)
-
-print("\n저장 완료:", service_result_path)
-print("\n[test_service_result 샘플]")
-print(service_result[save_cols].head(10))
-
 
 # =========================================================
 # 30. 구간 이동시간 통계 생성 및 저장
