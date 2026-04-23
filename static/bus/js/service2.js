@@ -1,5 +1,5 @@
 import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
-import {routeSelectChangeEvent} from "./routeSelect.js"
+import { routeSelectChangeEvent } from "./routeSelect.js";
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
@@ -11,9 +11,7 @@ const routeList = document.getElementById("routeList");
 
 const selectedStopName = document.getElementById("selectedStopName");
 const selectedDateTime = document.getElementById("selectedDateTime");
-const selectedSeatPrediction = document.getElementById(
-    "selectedSeatPrediction",
-);
+const selectedSeatPrediction = document.getElementById("selectedSeatPrediction");
 const summaryTotalStops = document.getElementById("summaryTotalStops");
 const summaryBusyStops = document.getElementById("summaryBusyStops");
 
@@ -24,7 +22,6 @@ rideDateTime.value = getNowForDateTimeLocal();
 routeSelectChangeEvent(routeSelect, stationSelect);
 
 // 예측 버튼을 눌렀을 때, 예측 결과와 지도를 표시하는 이벤트
-
 predictForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -42,53 +39,60 @@ predictForm.addEventListener("submit", async function (e) {
 
     resultSummary.textContent = "예측 중...";
     routeList.innerHTML = `
-            <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
-        `;
+        <li class="text-center py-4 soft-note">전체 노선 예측 결과를 불러오는 중...</li>
+    `;
 
-        try {
-    const predictFetch = fetch("/ajax/predict/service2/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-        },
-        body: JSON.stringify({
-            route_id: routeId,
-            station_id: stationId,
-            date_time: dateTime
-        })
-    });
+    try {
+        const predictFetch = fetch("/ajax/predict/service2/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+                route_id: routeId,
+                station_id: stationId,
+                date_time: dateTime,
+            }),
+        });
 
-    const mapFetch = fetch(
-        `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
-    );
+        const mapFetch = fetch(
+            `/ajax/route-map-data/?route_id=${encodeURIComponent(routeId)}`
+        );
 
-    const [predictResponse, mapResponse] = await Promise.all([predictFetch, mapFetch]);
+        const [predictResponse, mapResponse] = await Promise.all([
+            predictFetch,
+            mapFetch,
+        ]);
 
-    const predictResult = await predictResponse.json();
-    const mapResult = await mapResponse.json();
-    
+        const predictResult = await predictResponse.json();
+        const mapResult = await mapResponse.json();
 
+        if (!predictResponse.ok || !predictResult.success) {
+            alert(predictResult.error || "예측 요청에 실패했습니다.");
+            return;
+        }
 
-    if (!predictResponse.ok || !predictResult.success) {
-        alert(predictResult.error || "예측 요청에 실패했습니다.");
-        return;
+        console.log("predictResult.data =", predictResult.data);
+        console.log("first stop =", predictResult.data?.[0]);
+
+        renderRouteResult(routeName, stationName, predictResult.data);
+
+        if (!mapResponse.ok || !mapResult.success) {
+            const mapSummary = document.getElementById("mapSummary");
+            if (mapSummary) {
+                mapSummary.textContent = "지도 데이터를 불러오지 못했습니다.";
+            }
+            return;
+        }
+
+        const mapResultData = mapResult.data;
+        drawRouteMap(mapResultData.stations, stationId);
+    } catch (error) {
+        console.error(error);
+        alert("서버 요청 중 오류가 발생했습니다.");
     }
-
-    renderRouteResult(routeName, stationName, predictResult.data);
-
-    if (!mapResponse.ok || !mapResult.success) {
-        document.getElementById("mapSummary").textContent = "지도 데이터를 불러오지 못했습니다.";
-        return;
-    }
-    const mapResultData = mapResult.data;
-    drawRouteMap(mapResultData.stations, stationId);
-
-} catch (error) {
-    console.error(error);
-    alert("서버 요청 중 오류가 발생했습니다.");
-}});
-
+});
 
 function getSeatState(stop) {
     const seat = Number(stop.remaining_seat);
@@ -101,9 +105,17 @@ function getSeatState(stop) {
         };
     }
 
-    if (seat <= 12) {
+    if (seat <= 10) {
         return {
             text: "혼잡",
+            dotClass: "status-orange",
+            badgeClass: "state-orange",
+        };
+    }
+
+    if (seat <= 20) {
+        return {
+            text: "보통",
             dotClass: "status-yellow",
             badgeClass: "state-yellow",
         };
@@ -118,15 +130,17 @@ function getSeatState(stop) {
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
-    const predictions = data.predictions || [];
+    const predictions = Array.isArray(data) ? data : [];
+
+    console.log("predictions =", predictions);
+    console.log("first stop =", predictions[0]);
 
     // 상단 요약
-    const formattedDate = formatDateTime(data.base_date_time);
+    const formattedDate = formatDateTime(rideDateTime.value);
     resultSummary.textContent = `${routeName} · ${stationName} · ${formattedDate}`;
 
     if (selectedStopName) {
-        selectedStopName.textContent =
-            data.selected_station_name || stationName;
+        selectedStopName.textContent = stationName;
     }
 
     if (selectedDateTime) {
@@ -139,7 +153,7 @@ function renderRouteResult(routeName, stationName, data) {
 
     // 기준 정류소 찾기
     const selectedStop = predictions.find(
-    (stop) => String(stop.station_id) === String(data.base_station_id)
+        (stop) => String(stop.station_id) === String(stationSelect.value)
     );
 
     if (selectedSeatPrediction) {
@@ -153,7 +167,7 @@ function renderRouteResult(routeName, stationName, data) {
     // 혼잡 정류소 수
     if (summaryBusyStops) {
         const busyCount = predictions.filter(
-            (stop) => Number(stop.remaining_seat) <= 12,
+            (stop) => Number(stop.remaining_seat) <= 12
         ).length;
         summaryBusyStops.textContent = busyCount;
     }
@@ -168,20 +182,27 @@ function renderRouteResult(routeName, stationName, data) {
     routeList.classList.remove("route-list-empty");
     routeList.innerHTML = "";
 
+    if (predictions.length === 0) {
+        routeList.innerHTML = `
+            <li class="text-center py-4 soft-note">표시할 예측 결과가 없습니다.</li>
+        `;
+        return;
+    }
 
     // 리스트 렌더링
     for (const stop of predictions) {
         const state = getSeatState(stop);
 
         const isSelected =
-            String(stop.station_id) === String(data.base_station_id);
+            String(stop.station_id) === String(stationSelect.value);
 
-        const predictedTimeText = stop.predicted_time
-            ? stop.predicted_time.slice(11, 16)
+        const predictedTimeText = stop.predicted_arrival_time
+            ? stop.predicted_arrival_time.slice(11, 16)
             : "";
 
+        const relativeTimeText = stop.relative_time_label || "";
+
         const li = document.createElement("li");
-        console.log(stop)
         li.className = "stop-item";
 
         li.innerHTML = `
@@ -190,23 +211,20 @@ function renderRouteResult(routeName, stationName, data) {
             </div>
 
             <div class="stop-card ${isSelected ? "selected" : ""}">
-                
                 <div class="stop-top">
                     <div>
-                        <div class="stop-name">${stop.station_name}</div>
-                        
+                        <div class="stop-name">${stop.station_name || stop.station_id}</div>
+
                         <div class="stop-meta">
                             ${stop.ars_id ? `${stop.ars_id}` : ""}
-                            ${predictedTimeText ? ` · 도착예정 ${predictedTimeText}` : ""}
-                            ${stop.relative_time_label ? ` (${stop.relative_time_label})` : ""}
+                            ${predictedTimeText ? ` · 도착 예정 약 ${predictedTimeText}` : ""}
+                            ${relativeTimeText ? ` (${relativeTimeText})` : ""}
                         </div>
                     </div>
 
                     <div class="stop-badges">
                         ${isSelected ? `<span class="selected-badge">기준 정류소</span>` : ""}
-
                         <span class="seat-badge">${stop.remaining_seat}석</span>
-
                         <span class="state-badge ${state.badgeClass}">
                             ${state.text}
                         </span>
@@ -214,15 +232,14 @@ function renderRouteResult(routeName, stationName, data) {
                 </div>
 
                 <div class="stop-bottom">
-                    <span>예상 만차확률 ${(Number(stop.full_prob) * 100).toFixed(1)}%</span>
+                    <span>예상 만차확률 ${(Number(stop.full_probability) * 100).toFixed(1)}%</span>
                 </div>
-                </dev>
+            </div>
         `;
 
         routeList.appendChild(li);
     }
 
-    // 기준 정류소로 스크롤
     const selectedCard = routeList.querySelector(".stop-card.selected");
     if (selectedCard) {
         selectedCard.scrollIntoView({
@@ -232,13 +249,12 @@ function renderRouteResult(routeName, stationName, data) {
     }
 }
 
-    let kakaoMap = null;
-    let mapMarkers = [];
-    let mapPolylines = [];
+let kakaoMap = null;
+let mapMarkers = [];
+let mapPolylines = [];
 
 function isVirtualStop(stop) {
     const name = stop.station_name || "";
-    // console.log("정류소명:", name);
     return name.includes("가상") || name.includes("미정차");
 }
 
@@ -255,6 +271,8 @@ function clearRouteMap() {
 }
 
 function makeMarkerImage(color = "#2563eb") {
+    if (!window.kakao || !window.kakao.maps) return null;
+
     const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48">
             <path d="M18 2C10.268 2 4 8.268 4 16c0 10.2 14 28 14 28s14-17.8 14-28C32 8.268 25.732 2 18 2z"
@@ -267,11 +285,11 @@ function makeMarkerImage(color = "#2563eb") {
         .replace(/'/g, "%27")
         .replace(/"/g, "%22");
 
-    return new kakao.maps.MarkerImage(
+    return new window.kakao.maps.MarkerImage(
         `data:image/svg+xml;charset=UTF-8,${encoded}`,
-        new kakao.maps.Size(36, 48),
+        new window.kakao.maps.Size(36, 48),
         {
-            offset: new kakao.maps.Point(18, 48),
+            offset: new window.kakao.maps.Point(18, 48),
         }
     );
 }
@@ -281,6 +299,9 @@ function drawRouteMap(stations, selectedStationId) {
     const mapSummary = document.getElementById("mapSummary");
 
     if (!mapContainer || !window.kakao || !window.kakao.maps) {
+        if (mapSummary) {
+            mapSummary.textContent = "카카오맵을 불러오지 못했습니다.";
+        }
         return;
     }
 
@@ -291,7 +312,7 @@ function drawRouteMap(stations, selectedStationId) {
             !Number.isNaN(Number(st.latitude)) &&
             !Number.isNaN(Number(st.longitude)) &&
             Number(st.latitude) !== 0 &&
-            Number(st.longitude) !== 0,
+            Number(st.longitude) !== 0
     );
 
     if (validStations.length === 0) {
@@ -303,13 +324,13 @@ function drawRouteMap(stations, selectedStationId) {
     mapSummary.textContent = `정류소 ${validStations.length}개를 지도에 표시했습니다.`;
 
     const first = validStations[0];
-    const center = new kakao.maps.LatLng(
+    const center = new window.kakao.maps.LatLng(
         Number(first.latitude),
-        Number(first.longitude),
+        Number(first.longitude)
     );
 
     if (!kakaoMap) {
-        kakaoMap = new kakao.maps.Map(mapContainer, {
+        kakaoMap = new window.kakao.maps.Map(mapContainer, {
             center: center,
             level: 7,
         });
@@ -317,20 +338,19 @@ function drawRouteMap(stations, selectedStationId) {
 
     clearRouteMap();
 
-    const bounds = new kakao.maps.LatLngBounds();
+    const bounds = new window.kakao.maps.LatLngBounds();
 
     let currentPath = [];
     let prevStaOrd = null;
 
     for (const st of validStations) {
-        const latlng = new kakao.maps.LatLng(
+        const latlng = new window.kakao.maps.LatLng(
             Number(st.latitude),
-            Number(st.longitude),
+            Number(st.longitude)
         );
 
         bounds.extend(latlng);
 
-        // ===== polyline은 전체 validStations 기준으로 처리 =====
         const currentStaOrd = Number(st.staOrd);
 
         if (
@@ -340,7 +360,7 @@ function drawRouteMap(stations, selectedStationId) {
             currentStaOrd - prevStaOrd > 1
         ) {
             if (currentPath.length >= 2) {
-                const polyline = new kakao.maps.Polyline({
+                const polyline = new window.kakao.maps.Polyline({
                     map: kakaoMap,
                     path: currentPath,
                     strokeWeight: 5,
@@ -357,7 +377,6 @@ function drawRouteMap(stations, selectedStationId) {
         currentPath.push(latlng);
         prevStaOrd = currentStaOrd;
 
-        // ===== 마커는 가상/미정차 제외 =====
         if (isVirtualStop(st)) {
             continue;
         }
@@ -365,10 +384,10 @@ function drawRouteMap(stations, selectedStationId) {
         const isSelected =
             String(st.station_id) === String(selectedStationId);
 
-        const marker = new kakao.maps.Marker({
+        const marker = new window.kakao.maps.Marker({
             map: kakaoMap,
             position: latlng,
-            title: st.station_name,
+            title: st.station_name || st.station_id,
             image: isSelected
                 ? makeMarkerImage("#facc15")
                 : makeMarkerImage("#2563eb"),
@@ -376,7 +395,7 @@ function drawRouteMap(stations, selectedStationId) {
 
         mapMarkers.push(marker);
 
-        const infoWindow = new kakao.maps.InfoWindow({
+        const infoWindow = new window.kakao.maps.InfoWindow({
             removable: true,
             content: `
                 <div style="
@@ -388,7 +407,7 @@ function drawRouteMap(stations, selectedStationId) {
                     border:1px solid #dbe4f0;
                     min-width:170px;
                 ">
-                    <strong>${st.station_name}</strong><br>
+                    <strong>${st.station_name || st.station_id}</strong><br>
                     ${st.ars_id ? `정류소 코드: ${st.ars_id}<br>` : ""}
                     ${st.is_virtual === 1 ? "가상 정류소" : "일반 정류소"}
                     ${
@@ -400,13 +419,13 @@ function drawRouteMap(stations, selectedStationId) {
             `,
         });
 
-        kakao.maps.event.addListener(marker, "click", function () {
+        window.kakao.maps.event.addListener(marker, "click", function () {
             infoWindow.open(kakaoMap, marker);
         });
     }
 
     if (currentPath.length >= 2) {
-        const polyline = new kakao.maps.Polyline({
+        const polyline = new window.kakao.maps.Polyline({
             map: kakaoMap,
             path: currentPath,
             strokeWeight: 5,
@@ -420,12 +439,17 @@ function drawRouteMap(stations, selectedStationId) {
     kakaoMap.setBounds(bounds, 80, 80, 80, 80);
 }
 
-kakao.maps.load(function () {
-    const mapContainer = document.getElementById("routeMap");
-    if (!mapContainer) return;
+// 카카오맵 초기화 -> 아래 변경 예정
+if (window.kakao && window.kakao.maps) {
+    window.kakao.maps.load(function () {
+        const mapContainer = document.getElementById("routeMap");
+        if (!mapContainer) return;
 
-    kakaoMap = new kakao.maps.Map(mapContainer, {
-        center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 8
+        kakaoMap = new window.kakao.maps.Map(mapContainer, {
+            center: new window.kakao.maps.LatLng(37.5665, 126.9780),
+            level: 8,
+        });
     });
-});
+} else {
+    console.warn("카카오맵 스크립트가 아직 로드되지 않았습니다.");
+}
