@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load static %}
 {% block title %}서비스1 | Tomorrow Bus{% endblock %}
 
 {% block extra_style %}
@@ -50,7 +50,87 @@
             padding: 1.25rem !important;
         }
     }
+
+    .favorite-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .favorite-actions .btn {
+        border-radius: 14px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 767px) {
+        .favorite-actions {
+            flex-direction: column;
+        }
+
+        .favorite-actions .btn {
+            width: 100%;
+        }
+    }
+
+    .toast-ui {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-size: 14px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.25s ease;
+        z-index: 9999;
+    }
+
+    .toast-ui.show {
+        opacity: 1;
+    }
+
+
+    .seat-chart-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .seat-chart-title {
+        margin-top: 18px;
+        margin-bottom: 18px;
+        text-align: center;
+    }
+
+    .chart-info {
+        text-align: center;
+        margin-bottom: 18px;
+        min-height: 72px;
+    }
+
+    .chart-box {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #seatChart {
+        width: 100%;
+        min-height: 520px;
+        height: 520px;
+    }
+
+    @media (max-width: 768px) {
+        #seatChart {
+            min-height: 360px;
+            height: 360px;
+        }
+    }
 </style>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -144,6 +224,29 @@
                                 <div class="fs-4 fw-bold" id="fullProb">-</div>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="favorite-actions mt-3">
+                                <button type="button" class="btn btn-outline-primary" id="favoriteRouteBtn" disabled>
+                                    이 노선 즐겨찾기
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="favoriteStationBtn"
+                                    disabled>
+                                    이 정류장 즐겨찾기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card mb-4 seat-chart-card">
+                <div class="card-body seat-chart-body">
+                    <h5 class="seat-chart-title">정류소 요일별 잔여좌석 차트</h5>
+
+                    <div id="chartInfo" class="chart-info"></div>
+
+                    <div class="chart-box">
+                        <div id="seatChart"></div>
                     </div>
                 </div>
             </div>
@@ -178,152 +281,5 @@
 {% endblock %}
 
 {% block extra_script %}
-<script>
-    // 쿠키 가져오기
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== "") {
-            const cookies = document.cookie.split(";");
-            for (let cookie of cookies) {
-                cookie = cookie.trim();
-                if (cookie.startsWith(name + "=")) {
-                    cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    // 필요한 변수 정의, html에서 가져옴
-    const routeSelect = document.getElementById("routeSelect");
-    const stationSelect = document.getElementById("stationSelect");
-    const predictForm = document.getElementById("predictForm");
-    const rideDateTime = document.getElementById("rideDateTime");
-
-    // 노선 선택 시 정류장 불러오기
-    routeSelect.addEventListener("change", async function () {
-        const routeId = this.value;
-
-        stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
-        stationSelect.disabled = true;
-
-        if (!routeId) {
-            stationSelect.innerHTML = `<option value="">먼저 노선을 선택하세요</option>`;
-            return;
-        }
-
-        try {
-            const response = await fetch(`/ajax/stations/?routeId=${encodeURIComponent(routeId)}`);
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-                return;
-            }
-
-            const stations = result.stations;
-
-            if (stations.length === 0) {
-                stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
-                return;
-            }
-
-            let options = `<option value="">정류장을 선택하세요</option>`;
-            for (const station of stations) {
-                const label = station.arsId
-                    ? `${station.stationName} (${station.arsId})`
-                    : station.stationName;
-
-                options += `<option value="${station.stationId}">${label}</option>`;
-            }
-
-            stationSelect.innerHTML = options;
-            stationSelect.disabled = false;
-        } catch (error) {
-            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
-        }
-    });
-
-    // 제출 버튼
-    predictForm.addEventListener("submit", async function (e) {
-        e.preventDefault();
-
-        const routeId = routeSelect.value;
-        const stationId = stationSelect.value;
-        const dateTime = rideDateTime.value;
-
-        if (!routeId || !stationId || !dateTime) {
-            alert("노선, 정류장, 승차 일시를 모두 선택하세요.");
-            return;
-        }
-
-        const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-        const stationName = stationSelect.options[stationSelect.selectedIndex].text;
-
-        document.getElementById("resultSummary").textContent = "예측 중...";
-        document.getElementById("seatPrediction").textContent = "-";
-        document.getElementById("fullProb").textContent = "-";
-
-        try {
-            const response = await fetch("/ajax/predict/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken"),
-                },
-                body: JSON.stringify({
-                    routeId: routeId,
-                    stationId: stationId,
-                    date_time: dateTime
-                })
-            });
-
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                alert(result.error || "예측 요청에 실패했습니다.");
-                return;
-            }
-
-            renderResult(routeName, stationName, result);
-
-        } catch (error) {
-            alert("서버 요청 중 오류가 발생했습니다.");
-        }
-    });
-
-
-    function renderResult(routeName, stationName, result) {
-
-        const data = result.data;
-
-
-        // 예측 결과 갱신
-        document.getElementById("resultSummary").textContent =
-            `${routeName} · ${stationName} · ${data.date_time}`;
-
-        document.getElementById("seatPrediction").textContent =
-            data.remaining_seat;
-
-        document.getElementById("fullProb").textContent =
-            `${(data.full_prob * 100).toFixed(1)}%`;
-
-
-        // 최근 예측 테이블 갱신
-        const historyTable = document.getElementById("historyTable");
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${routeName}</td>
-            <td>${stationName}</td>
-            <td>${data.date_time}</td>
-            <td>${data.remaining_seat}석</td>
-            <td>${(data.full_prob * 100).toFixed(1)}%</td>
-        `;
-        historyTable.prepend(row);
-
-        while (historyTable.children.length > 6) {
-            historyTable.removeChild(historyTable.lastElementChild);
-        }
-    }
-</script>
+<script type="module" src="{% static 'bus/js/service1.js' %}"></script>
 {% endblock %}
