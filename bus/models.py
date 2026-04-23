@@ -29,6 +29,40 @@ class Bus_route(models.Model):
         ordering = ["routeId"]
 
 
+class Weather_station(models.Model):
+    # 기존 Bus_station.stn 이 CharField 였으므로 타입 맞춤
+    stnId = models.CharField(
+        max_length=50,
+        primary_key=True,
+        null=False,
+        blank=False,
+        verbose_name="관측소 ID",
+    )
+
+    stnName = models.CharField(
+        max_length=100,
+        null=False,
+        blank=False,
+        verbose_name="관측소명",
+    )
+
+    locationX = models.FloatField(
+        null=False,
+        verbose_name="경도",
+    )
+
+    locationY = models.FloatField(
+        null=False,
+        verbose_name="위도",
+    )
+
+    class Meta:
+        db_table = "weather_station"
+        ordering = ["stnId"]
+
+    def __str__(self):
+        return f"{self.stnId} - {self.stnName}"
+
 class Bus_station(models.Model):
     # 정류소 ID를 직접 PK로 사용
     stationId = models.CharField(
@@ -48,10 +82,15 @@ class Bus_station(models.Model):
     )
 
     # 기상 관측소 번호
-    stn = models.CharField(
-        max_length=50,
-        null=False,
+    # 기존 필드명 stn 유지 + FK로 변경
+    stn = models.ForeignKey(
+        Weather_station,
+        on_delete=models.SET_NULL,
+        to_field="stnId",
+        db_column="stn",
+        null=True,
         blank=True,
+        related_name="bus_stations",
         verbose_name="기상지점번호",
     )
 
@@ -191,33 +230,3 @@ class Bus_arrival_info(models.Model):
     def __str__(self):
         return f"{self.mkTm} / {self.route_id} / {self.station_id} / {self.remaining_seat}"
     
-class Weather_station(models.Model):
-    stnId = models.IntegerField(
-        primary_key=True,
-        verbose_name="관측소 ID",
-    )
-
-    stnName = models.CharField(
-        max_length=100,
-        null=False,
-        verbose_name="관측소명",
-    )
-
-    # 경도
-    locationX = models.FloatField(
-        null=False,
-        verbose_name="경도",
-    )
-
-    # 위도
-    locationY = models.FloatField(
-        null=False,
-        verbose_name="위도",
-    )
-
-    class Meta:
-        db_table = "weather_station"
-        ordering = ["stnId"]
-
-    def __str__(self):
-        return f"{self.stnId} - {self.stnName}"
