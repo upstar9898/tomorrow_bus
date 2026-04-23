@@ -168,6 +168,9 @@ class BusStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
             is_virtual = (row.get("is_virtual") or "").strip()
             ars_id = (row.get("arsId") or "").strip()
 
+            if stn == "":
+                stn = None
+
             if not station_id or not station_name or not latitude or not longitude:
                 raise ValueError(f"{row_num}행: 필수값이 비어 있습니다.")
 
@@ -186,7 +189,7 @@ class BusStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
             station_list.append(
                 Bus_station(
                     stationId=station_id,
-                    stn=stn,
+                    stn_id=stn,
                     stationName=station_name,
                     locationX=longitude,
                     locationY=latitude,
@@ -292,11 +295,6 @@ class WeatherStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
 
             if not stn_id or not stn_name or not location_x or not location_y:
                 raise ValueError(f"{row_num}행: 필수값이 비어 있습니다.")
-
-            try:
-                stn_id = int(stn_id)
-            except ValueError:
-                raise ValueError(f"{row_num}행: STN_ID는 정수여야 합니다.")
 
             if stn_id in seen_stn_ids:
                 raise ValueError(f"{row_num}행: 중복 STN_ID({stn_id})가 있습니다.")
