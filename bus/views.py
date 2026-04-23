@@ -385,11 +385,29 @@ def predict_service2(request):
 
         stops = result["stops"]
 
+        def normalize_stn(stn):
+            if stn is None:
+                return None
+
+            if hasattr(stn, "pk"):
+                stn = stn.pk
+
+            stn = str(stn).strip()
+
+            if stn in ["", "None", "NULL", "nan"]:
+                return None
+
+            if stn.endswith(".0"):
+                stn = stn[:-2]
+
+            return stn
+
+        
         # 1. stn 수집
         unique_stn_ids = {
-            int(stop["stn"])
+            normalize_stn(stop.get("stn"))
             for stop in stops
-            if stop.get("stn") not in [None, ""]
+            if normalize_stn(stop.get("stn")) is not None
         }
 
         # 2. API 호출
@@ -402,14 +420,21 @@ def predict_service2(request):
 
         # 3. 매핑
         for stop in stops:
-            stn = stop.get("stn")
+            stn = normalize_stn(stop.get("stn"))
 
-            if stn in [None, ""]:
+            if stn is None:
                 stop["precipitation"] = 0
                 continue
 
-            stn = int(stn)
             forecast_data = forecast_map.get(stn)
+
+            if not forecast_data:
+                stop["precipitation"] = 0
+                continue
+
+            weather_main = forecast_data["forecast"]["weather"][0]["main"]
+
+            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
 
             if not forecast_data:
                 stop["precipitation"] = 0
