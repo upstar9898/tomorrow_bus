@@ -9,7 +9,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 # 파일명
-input_filename = "weather_raw_260408.csv"
+input_filename = "weather_raw_260421.csv"
 
 # 전체 경로
 input_filepath = os.path.join(DATA_DIR, input_filename)
