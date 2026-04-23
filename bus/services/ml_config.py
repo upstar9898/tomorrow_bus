@@ -63,3 +63,13 @@ with open(os.path.join(ARTIFACT_DIR, "pattern_meta.json"), "r", encoding="utf-8"
 
 global_mean = float(pattern_meta["global_mean"])
 global_low_ratio = float(pattern_meta["global_low_ratio"])
+
+route_station_order_df = pd.read_csv(
+    os.path.join(ARTIFACT_DIR, "route_station_order.csv"),
+    dtype={"busRouteId": str, "stId": str, "arsId": str}
+)
+
+route_travel_time_df = pd.read_csv(
+    os.path.join(ARTIFACT_DIR, "route_segment_travel_time.csv"),
+    dtype={"busRouteId": str}
+)
