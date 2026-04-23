@@ -184,7 +184,7 @@ def plot_seat_variability(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     plot_fullness_rate(df)
     plot_seat_variability(df)
