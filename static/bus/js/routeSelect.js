@@ -39,12 +39,19 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
 
         for (const station of stations) {
             const staOrd = Number(station.staOrd);
+            const stationName = station.station_name || "";
+            const isVirtual = Number(station.is_virtual) === 1;
 
-            // 첫 정류소, 마지막 정류소는 select option 에서 제외
+            // 첫 정류소, 마지막 정류소 제외
             if (
                 !Number.isNaN(staOrd) &&
                 (staOrd === minStaOrd || staOrd === maxStaOrd)
             ) {
+                continue;
+            }
+
+            // 가상정류소 / 미정차 제외
+            if (isVirtual || stationName.includes("가상") || stationName.includes("미정차")) {
                 continue;
             }
 
@@ -53,8 +60,8 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
                 : station.station_name;
 
             options += `
-                <option 
-                    value="${station.station_id}" 
+                <option
+                    value="${station.station_id}"
                     data-ars-id="${station.ars_id || ""}"
                 >
                     ${label}

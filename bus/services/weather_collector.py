@@ -137,10 +137,10 @@ def collect_forecast(station_id="", target_dt=None):
     if not station:
         raise ValueError("station_id 없음")
 
-    if station.stn is None or str(station.stn).strip() == "":
+    if station.stn_id is None or str(station.stn_id).strip() == "":
         raise ValueError("해당 정류소에 stn 없음")
 
-    stn_id = int(station.stn)
+    stn_id = station.stn_id
 
     result = collect_forecast_by_stn(stn_id, target_dt=target_dt)
 
