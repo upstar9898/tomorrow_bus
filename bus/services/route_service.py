@@ -17,24 +17,17 @@ from bus.models import Bus_station
 # 프로젝트 루트 = 상위 2단계
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-TRAINING_DIR = PROJECT_ROOT / "training"
-OUTPUT_ROOT = TRAINING_DIR / "outputs_peak_v2"
-ARTIFACT_DIR = OUTPUT_ROOT / "artifacts"
-MODEL_DIR = OUTPUT_ROOT / "models" / "lgbm_hybrid_peak_congestion4"
-
-# training/utils import를 위해 path 추가
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-
-if str(TRAINING_DIR) not in sys.path:
-    sys.path.append(str(TRAINING_DIR))
+MODEL_DIR = PROJECT_ROOT / "models"
+ARTIFACT_DIR = MODEL_DIR / "artifacts"
+ENCODER_DIR = MODEL_DIR / "encoder"
+ML_MODEL_DIR = MODEL_DIR / "ml_models"
 
 # encoder 직접 로드
 def _load_encoders_local():
     return {
-        "route_encoder": joblib.load(MODEL_DIR / "route_encoder.pkl"),
-        "stid_encoder": joblib.load(MODEL_DIR / "stid_encoder.pkl"),
-        "arsid_encoder": joblib.load(MODEL_DIR / "arsid_encoder.pkl"),
+        "route_encoder": joblib.load(ENCODER_DIR / "route_encoder.pkl"),
+        "stid_encoder": joblib.load(ENCODER_DIR / "stid_encoder.pkl"),
+        "arsid_encoder": joblib.load(ENCODER_DIR / "arsid_encoder.pkl"),
     }
 
 # unseen 허용 인코딩
@@ -328,7 +321,6 @@ def _predict_peak_congestion_with_thresholds(
 def _fallback_congestion_from_seat(remaining_seat: int) -> tuple[int, str]:
     """
     출퇴근 시간대가 아닐 때 사용할 좌석수 기반 혼잡도 추정 규칙
-    필요하면 누나 기준으로 나중에 수정하면 됨.
     """
     if remaining_seat <= 5:
         return 3, "매우 혼잡"
@@ -381,13 +373,13 @@ def _match_station_row(route_station_order: pd.DataFrame, route_id: str, station
 @lru_cache(maxsize=1)
 def _load_artifacts():
     # 모델
-    reg_model = joblib.load(MODEL_DIR / "reg.pkl")
-    peak_model = joblib.load(MODEL_DIR / "peak_congestion_cls.pkl")
-    full_model = joblib.load(MODEL_DIR / "full_cls.pkl")
+    reg_model = joblib.load(ML_MODEL_DIR / "reg.pkl")
+    peak_model = joblib.load(ML_MODEL_DIR / "peak_congestion_cls.pkl")
+    full_model = joblib.load(ML_MODEL_DIR / "full_cls.pkl")
 
     # feature / threshold
-    feature_cols = _safe_read_json(MODEL_DIR / "feature_cols.json", default=[])
-    thresholds = _safe_read_json(MODEL_DIR / "thresholds.json", default={})
+    feature_cols = _safe_read_json(ENCODER_DIR / "feature_cols.json", default=[])
+    thresholds = _safe_read_json(ENCODER_DIR / "thresholds.json", default={})
 
     peak_thresholds_raw = thresholds.get("peak_congestion_thresholds", [0.25, 0.25, 0.25])
 
