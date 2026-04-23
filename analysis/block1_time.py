@@ -192,7 +192,7 @@ def plot_weekday_hour_heatmap(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     plot_hourly_remaining_seat(df)
     plot_hourly_congestion(df)
