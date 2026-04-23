@@ -8,11 +8,17 @@
 
 import numpy as np
 import pandas as pd
-
-# import holidays
+import holidays
 import os
 
-from utils import to_int, to_float, normalize_arrmsg, load_csv  # 유틸 함수
+from utils import (
+    to_int,
+    to_float,
+    cyclical_encode,
+    normalize_arrmsg,
+    load_csv,
+)  # 유틸 함수
+from weather_features import add_weather_features
 from config.constants import (
     # 총 좌석수 clip, eta 제한
     TOTAL_SEATS,
@@ -25,7 +31,6 @@ from config.constants import (
 # 필요한 컬럼만 사용
 from config.columns import USE_COLS, FINAL_COLS, NUMERIC_COLS
 
-
 # =========================================================
 # 1. 설정
 # =========================================================
@@ -33,13 +38,12 @@ from config.columns import USE_COLS, FINAL_COLS, NUMERIC_COLS
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 BUS_API_DATA_DIR = os.path.join(DATA_DIR, "bus_api_data")
-PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_traveltime")
-OUTPUT_SUFFIX = "_preprocessed_traveltime.csv"
-
+PREPROCESSED_DIR = os.path.join(DATA_DIR, "preprocessed_withweather")
+OUTPUT_SUFFIX = "_preprocessed_withweather.csv"
 
 os.makedirs(PREPROCESSED_DIR, exist_ok=True)
 
-MODE = "traveltime"
+MODE = "training"
 
 SKIP_IF_EXIST = False  # 이미 output 파일이 존재할 경우 skip할지 여부
 
@@ -59,7 +63,7 @@ def preprocess(df):
     df["mkTm"] = pd.to_datetime(df["mkTm"], errors="coerce")
     df["arrmsg1"] = df["arrmsg1"].apply(normalize_arrmsg)
     mask1 = df["arrmsg1"].str.contains("곧", na=False)
-    mask2 = df["arrmsg1"].str.contains(r"\[(?:0|1)번째 전\]", na=False)
+    mask2 = df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False)
 
     df = df[mask1 | mask2].copy()
 
@@ -71,6 +75,7 @@ def preprocess(df):
     df = df[df["busRouteId"] > 0].copy()
     df = df[df["staOrd"] > 0].copy()
     df = df[df["vehId1"] != 0].copy()
+    df = df[df["rerdie_Div1"] != 0].copy()
 
     # ETA 범위 제한
     df["exps1"] = df["exps1"].where(
@@ -84,11 +89,39 @@ def preprocess(df):
     df["remaining_seat"] = to_int(df["reride_Num1"], fill_value=np.nan)
     df["remaining_seat"] = df["remaining_seat"].clip(lower=0, upper=TOTAL_SEATS)
 
+    # remaining_seat가 0이면 만차처리
+    df["full_flag"] = (df["remaining_seat"] == 0).astype(int)
+
     # 좌석값 없는 행 제거
     df = df[df["remaining_seat"].notna()].copy()
 
-    # 도착 시간 열 추가
-    df["arrival_time"] = df["mkTm"] + pd.to_timedelta(df["exps1"], unit="s")
+    # -----------------------------
+    # 현재 시점에 알 수 있는 파생 변수만 생성
+    # -----------------------------
+    df["year"] = df["mkTm"].dt.year
+    df["month"] = df["mkTm"].dt.month
+    df["day"] = df["mkTm"].dt.day
+    df["hour"] = df["mkTm"].dt.hour
+    df["minute"] = df["mkTm"].dt.minute
+    df["dayofweek"] = df["mkTm"].dt.dayofweek
+    df["date"] = df["mkTm"].dt.date
+
+    df["is_weekend"] = (df["dayofweek"] >= 5).astype(int)
+
+    years = sorted(df["year"].dropna().unique().tolist())
+    kr_holidays = holidays.KR(years=years)
+    df["is_holiday"] = df["date"].apply(lambda d: 1 if d in kr_holidays else 0)
+
+    df["is_peak"] = (
+        ((df["hour"] >= 7) & (df["hour"] <= 9))
+        | ((df["hour"] >= 17) & (df["hour"] <= 20))
+    ).astype(int)
+
+    df["month_sin"], df["month_cos"] = cyclical_encode(df["month"], 12)
+    df["day_sin"], df["day_cos"] = cyclical_encode(df["day"], 31)
+    df["hour_sin"], df["hour_cos"] = cyclical_encode(df["hour"], 24)
+    df["minute_sin"], df["minute_cos"] = cyclical_encode(df["minute"], 60)
+    df["dow_sin"], df["dow_cos"] = cyclical_encode(df["dayofweek"], 7)
 
     # -----------------------------
     # 중복 제거
@@ -115,9 +148,8 @@ def preprocess(df):
     df["trip_group"] = df.groupby(["busRouteId", "vehId1"])["new_trip_flag"].cumsum()
     df["arr_priority"] = 99
 
-    df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 1
-    df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 0
-    df.loc[df["arrmsg1"].str.contains(r"\[1번째 전\]", na=False), "arr_priority"] = 2
+    df.loc[df["arrmsg1"].str.contains(r"\[0번째 전\]", na=False), "arr_priority"] = 0
+    df.loc[df["arrmsg1"].str.contains(r"곧", na=False), "arr_priority"] = 1
 
     df = df.sort_values(
         ["busRouteId", "stId", "vehId1", "trip_group", "arr_priority", "mkTm"],
@@ -133,21 +165,8 @@ def preprocess(df):
         ascending=[True, True, True, True, True],
     ).copy()
 
-    # -----------------------------
-    # 이전 관측 정류장 기준 이동시간(travel_time) 추가
-    # -----------------------------
-    group_cols = ["busRouteId", "vehId1", "trip_group"]
-
-    df["prev_staOrd"] = df.groupby(group_cols)["staOrd"].shift(1)
-    df["prev_arrival_time"] = df.groupby(group_cols)["arrival_time"].shift(1)
-
-    sta_gap = df["staOrd"] - df["prev_staOrd"]
-    time_gap = (df["arrival_time"] - df["prev_arrival_time"]).dt.total_seconds()
-
-    df["travel_time"] = time_gap / sta_gap
-    df.loc[sta_gap <= 0, "travel_time"] = np.nan
-    # travel_time이 음수인 경우 결측치 처리
-    df.loc[df["travel_time"] < 0, "travel_time"] = np.nan
+    # 날씨 데이터 추가
+    df = add_weather_features(df)
 
     # -----------------------------
     # 최종 정리
@@ -156,7 +175,6 @@ def preprocess(df):
 
     df = df[final_cols].copy()
 
-    # feature 컬럼 숫자형 보정
     numeric_cols = NUMERIC_COLS[MODE]
 
     for c in numeric_cols:
@@ -173,20 +191,22 @@ def preprocess(df):
 if __name__ == "__main__":
     # data 폴더 안의 모든 csv 파일 가져오기
     file_list = [f for f in os.listdir(BUS_API_DATA_DIR) if f.endswith(".csv")]
-    # file_list = ["bus_data_2026_03_10.csv"]
+    # file_list = ["bus_data_2026_03_12.csv"]
+
+    use_cols = USE_COLS[MODE]
 
     for filename in file_list:
         input_path = os.path.join(BUS_API_DATA_DIR, filename)
         output_filename = filename.replace(".csv", OUTPUT_SUFFIX)
         output_path = os.path.join(PREPROCESSED_DIR, output_filename)
-        # 이미 존재하면 skip
+        # 이미 존재하면 skip, SKIP_IF_EXIST가 True일 때만
         if SKIP_IF_EXIST:
             if os.path.exists(output_path):
                 print(f"[SKIP] 해당 파일이 이미 존재합니다.: {output_filename}")
                 continue
         print(f"\n===== 처리 중: {filename} =====")
 
-        raw_df = load_csv(input_path, USE_COLS[MODE])
+        raw_df = load_csv(input_path, use_cols)
         processed_df = preprocess(raw_df)
 
         processed_df.to_csv(output_path, index=False, encoding="utf-8-sig")

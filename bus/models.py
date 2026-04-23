@@ -138,3 +138,55 @@ class Route_station(models.Model):
         verbose_name_plural = "노선-정류소 목록"
         ordering = ["route", "staOrd"]
         unique_together = ("route", "station")
+
+class Bus_arrival_info(models.Model):
+    """
+    차트 조회용 최소 스냅샷 테이블
+    """
+    # 
+    mkTm = models.DateTimeField(db_index=True)
+
+    # 노선 ID
+    route = models.ForeignKey(
+        Bus_route,
+        on_delete=models.CASCADE,
+        db_column="route_id",
+        related_name="arrival_infos",
+    )
+
+    # 정류소 ID
+    station = models.ForeignKey(
+        Bus_station,
+        on_delete=models.CASCADE,
+        db_column="station_id",
+        related_name="arrival_infos",
+    )
+
+    # 정류소 순서
+    staOrd = models.PositiveIntegerField(db_index=True)
+
+    # 잔여 좌석
+    remaining_seat = models.IntegerField()
+
+    # 만차여부
+    full_flag = models.BooleanField(default=False)
+
+    # 생성 날짜
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "bus_arrival_info"
+        ordering = ["mkTm", "route", "staOrd"]
+        indexes = [
+            models.Index(fields=["route", "mkTm"]),
+            models.Index(fields=["route", "staOrd"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mkTm", "route", "station"],
+                name="unique_arrival_snapshot"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.mkTm} / {self.route_id} / {self.station_id} / {self.remaining_seat}"
