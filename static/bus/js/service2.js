@@ -91,8 +91,15 @@ predictForm.addEventListener("submit", async function (e) {
 
 
 function getSeatState(stop) {
+    if (stop.is_virtual === 1) {
+        return {
+            text: "가상 정류소",
+            dotClass: "status-gray",
+            badgeClass: "state-gray",
+        };
+    }
     const seat = Number(stop.remaining_seat);
-
+    
     if (seat <= 2) {
         return {
             text: "만차임박",
