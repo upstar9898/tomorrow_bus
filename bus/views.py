@@ -3,15 +3,13 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
-from service_test.backend_test import dummy_service2
-
 
 import json
 from datetime import datetime
 
 from .models import Bus_route, Route_station, Bus_arrival_info
 from .services.ml_predictor import predict_service1_result
-from .services.ml_route_predictor import predict_service2_result
+from bus.services.route_service import predict_route_service
 
 from datetime import datetime
 from django.db.models import Max
@@ -351,7 +349,6 @@ def predict_service2(request):
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         date_time = data.get("date_time")
-        precipitation = data.get("precipitation", 0)
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
@@ -362,11 +359,10 @@ def predict_service2(request):
                 status=400,
             )
 
-        result = predict_service2_result(
+        result = predict_route_service(
             route_id=route_id,
             station_id=station_id,
-            date_time=date_time,
-            precipitation=precipitation,
+            target_datetime=date_time,
         )
 
         return JsonResponse(
@@ -377,17 +373,9 @@ def predict_service2(request):
             status=200,
         )
 
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {"success": False, "error": "잘못된 JSON 요청입니다."},
-            status=400,
-        )
-    except ValueError as e:
-        return JsonResponse(
-            {"success": False, "error": str(e)},
-            status=400,
-        )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse(
             {"success": False, "error": str(e)},
             status=500,
