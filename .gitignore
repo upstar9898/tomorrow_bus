@@ -109,3 +109,6 @@ outputs_peak_v2/
 *.csv
 *.log
 *.pkl
+
+# 모델
+models/
