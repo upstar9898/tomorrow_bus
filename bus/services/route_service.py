@@ -633,9 +633,13 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
             relative_time_label = None
             predicted_arrival_time = None
 
-        # stn을 추가시켜야 날씨 데이터를 넣을 수 있음
+        # 정류장 객체
+        station_id = row["stId"]
         station = Bus_station.objects.get(stationId=station_id)
+        # stn을 추가시켜야 날씨 데이터를 넣을 수 있음
         stn = station.stn_id
+        # 가상 정류장 여부
+        is_virtual = station.isVirtual
         
         response.append(
             {
@@ -656,6 +660,8 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
                 if row["pred_congestion_class"] is not None else None,
                 "congestion_label": row["pred_congestion_label"],
                 "congestion_source": row["congestion_source"],
+                "stn": stn,
+                "is_virtual": is_virtual,
             }
         )
 
