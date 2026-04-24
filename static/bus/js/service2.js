@@ -139,7 +139,7 @@ function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
 
     if (seat <= 2) {
         return {
-            text: "만차임박",
+            text: "매우 혼잡",
             dotClass: "status-red",
             badgeClass: "state-red",
         };
