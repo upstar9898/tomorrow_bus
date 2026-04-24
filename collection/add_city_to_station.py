@@ -2,9 +2,14 @@ import os
 import time
 import pandas as pd
 import requests
-
+import glob
+import re
+from dotenv import load_dotenv
 
 def main():
+
+    load_dotenv()
+
     # 현재 파일 위치: 프로젝트루트/collection/파일명.py
     current_file = os.path.abspath(__file__)
     collection_dir = os.path.dirname(current_file)
@@ -13,8 +18,29 @@ def main():
 
     os.makedirs(data_dir, exist_ok=True)
 
-    input_path = os.path.join(data_dir, "bus_station_coordinate.csv")
-    output_path = os.path.join(data_dir, "bus_station_with_city.csv")
+    pattern = os.path.join(data_dir, "bus_station_coordinate*.csv")
+    files = glob.glob(pattern)
+
+    if not files:
+        raise FileNotFoundError("bus_station_coordinate 파일이 없습니다.")
+
+    def extract_date(file_path):
+        filename = os.path.basename(file_path)
+
+        # 숫자 6자리 (YYMMDD) 찾기
+        match = re.search(r"(\d{6})", filename)
+        if match:
+            return match.group(1)
+        return "000000"  # 날짜 없는 파일은 가장 오래된 걸로 처리
+
+    # 날짜 기준 최신 파일 선택
+    input_path = max(files, key=extract_date)
+    file_date = extract_date(input_path)
+
+    output_path = os.path.join(
+        data_dir,
+        f"bus_station_with_city_{file_date}.csv"
+    )
 
     print("현재 파일 위치:", current_file)
     print("프로젝트 루트:", base_dir)
