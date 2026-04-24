@@ -178,19 +178,19 @@ def _load_route_station_order_from_db(route_id: str | None = None) -> pd.DataFra
     - arsId
     - staOrd
     """
-    qs = Route_station.objects.all().values("routeId", "stationId", "staOrd")
+    qs = Route_station.objects.all().values("route_id", "station_id", "staOrd")
 
     if route_id is not None:
-        qs = qs.filter(routeId=str(route_id))
+        qs = qs.filter(route_id=str(route_id))
 
     route_df = pd.DataFrame(list(qs))
     if route_df.empty:
         return pd.DataFrame(columns=["busRouteId", "stId", "arsId", "staOrd"])
 
     route_df = route_df.rename(
-        columns={
-            "routeId": "busRouteId",
-            "stationId": "stId",
+    columns={
+        "route_id": "busRouteId",
+        "station_id": "stId",
         }
     )
 
