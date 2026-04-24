@@ -589,6 +589,8 @@ if (window.kakao && window.kakao.maps) {
         });
     });
 
+}
+
     function createSeatOverlay(latlng, seatText, isSelected = false) {
         const content = document.createElement("div");
         content.style.position = "relative";
@@ -614,4 +616,3 @@ if (window.kakao && window.kakao.maps) {
             zIndex: isSelected ? 4 : 3,
         });
     }
-}
