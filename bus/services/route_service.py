@@ -660,8 +660,8 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
                 if row["pred_congestion_class"] is not None else None,
                 "congestion_label": row["pred_congestion_label"],
                 "congestion_source": row["congestion_source"],
-                "stn": stn,
-                "is_virtual": is_virtual,
+                "stn": str(stn),
+                "is_virtual": int(is_virtual),
             }
         )
 
