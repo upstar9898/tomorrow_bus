@@ -3,10 +3,11 @@ import glob
 import requests
 import pandas as pd
 from datetime import datetime
+from bus.models import Bus_station, Weather_station
 
 
 def download_file(file_url, save_path):
-    response = requests.get(file_url, timeout=60)
+    response = requests.get(file_url, timeout=180)
 
     if response.status_code == 200:
         # 🔥 핵심: 기상청은 EUC-KR
@@ -127,31 +128,60 @@ def get_station_info_by_id(station_id, csv_path):
         "arsId": row.get("arsId"),
     }
 
-
 def collect_forecast(station_id="", target_dt=None):
     """
-    stationId로 위경도 찾고 OpenWeather 호출 후 결과 반환
+    station_id → stn → weather_station → OpenWeather
     """
 
-    print("")
-    # 🔹 프로젝트 루트
-    base_dir = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    station = Bus_station.objects.filter(stationId=station_id).first()
+    if not station:
+        raise ValueError("station_id 없음")
+
+    if station.stn_id is None or str(station.stn_id).strip() == "":
+        raise ValueError("해당 정류소에 stn 없음")
+
+    stn_id = station.stn_id
+
+    result = collect_forecast_by_stn(stn_id, target_dt=target_dt)
+
+    return {
+        "stationId": station.stationId,
+        "stationName": station.stationName,
+        "arsId": station.arsId,
+        "regId": getattr(station, "regId", None),
+        "lat": result["lat"],
+        "lon": result["lon"],
+        "forecast": result["forecast"],
+    }
+
+
+def collect_forecast_by_stn(stn_id, target_dt=None):
+    """
+    stn → Weather_station → OpenWeather
+    """
+
+    ws = Weather_station.objects.filter(stnId=stn_id).first()
+    if not ws:
+        raise ValueError(f"stn_id {stn_id} 없음")
+
+    forecast = fetch_openweather_forecast(
+        ws.locationY,  # 위도(lat)
+        ws.locationX,  # 경도(lon)
+        target_dt,
     )
 
-    # 🔹 최신 CSV 찾기
-    csv_path = get_latest_station_file(base_dir)
+    return {
+        "stn_id": stn_id,
+        "lat": ws.locationY,
+        "lon": ws.locationX,
+        "forecast": forecast,
+    }
 
-    # 🔹 정류소 정보 가져오기
-    station_info = get_station_info_by_id(station_id, csv_path)
 
-    lat = station_info["lat"]
-    lon = station_info["lon"]
-
-    # 🔹 API 키
+def fetch_openweather_forecast(lat, lon, target_dt=None):
     api_key = os.environ.get("OPEN_WEATHER_API_KEY")
     if not api_key:
-        raise ValueError("환경변수 OPEN_WEATHER_API_KEY가 설정되지 않았습니다.")
+        raise ValueError("OPEN_WEATHER_API_KEY 없음")
 
     url = "https://api.openweathermap.org/data/2.5/forecast"
 
@@ -160,7 +190,7 @@ def collect_forecast(station_id="", target_dt=None):
         "lon": lon,
         "appid": api_key,
         "units": "metric",
-        "lang": "kr"
+        "lang": "kr",
     }
 
     response = requests.get(url, params=params, timeout=10)
@@ -168,36 +198,23 @@ def collect_forecast(station_id="", target_dt=None):
 
     data = response.json()
 
-    # 🔥 target_dt 있으면 가장 가까운 예보만 반환
     if target_dt:
         if isinstance(target_dt, str):
-            target_dt = datetime.strptime(target_dt, "%Y-%m-%d %H:%M:%S")
+            try:
+                target_dt = datetime.strptime(target_dt, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                try:
+                    target_dt = datetime.strptime(target_dt, "%Y-%m-%d %H:%M")
+                except ValueError:
+                    target_dt = datetime.strptime(target_dt, "%Y-%m-%dT%H:%M")
 
         closest_item = min(
             data["list"],
             key=lambda item: abs(
                 datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S") - target_dt
-            )
+            ),
         )
 
-        return {
-            "stationId": station_info["stationId"],
-            "stationName": station_info["stationName"],
-            "lat": lat,
-            "lon": lon,
-            "regId": station_info["regId"],
-            "arsId": station_info["arsId"],
-            "target_dt": target_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            "forecast": closest_item
-        }
+        return closest_item
 
-    # 전체 반환
-    return {
-        "stationId": station_info["stationId"],
-        "stationName": station_info["stationName"],
-        "lat": lat,
-        "lon": lon,
-        "regId": station_info["regId"],
-        "arsId": station_info["arsId"],
-        "forecast_list": data["list"]
-    }
+    return data["list"]

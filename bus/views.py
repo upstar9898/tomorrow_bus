@@ -7,16 +7,13 @@ from django.views.decorators.http import require_GET, require_POST
 import json
 from datetime import datetime
 
-from .models import Bus_route, Route_station, Bus_arrival_info
+from .models import Bus_route, Route_station, Bus_arrival_info, Weather_station
 from .services.ml_predictor import predict_service1_result
 from bus.services.route_service import predict_route_service
-
-from datetime import datetime
+from .services import weather_collector
 from django.db.models import Max
 from django.db.models.functions import Abs
 from django.conf import settings
-import re
-
 
 def index(request):
     return render(request, "index.html")
@@ -51,7 +48,8 @@ def get_stations_by_route(request):
         )
 
     route_stations = (
-        Route_station.objects.filter(route_id=route_id, station__isVirtual=0)
+        Route_station.objects
+        .filter(route_id=route_id)
         .select_related("station")
         .order_by("staOrd")
     )
@@ -61,7 +59,7 @@ def get_stations_by_route(request):
             "station_id": rs.station.stationId,
             "station_name": rs.station.stationName,
             "ars_id": rs.station.arsId,
-            "sta_ord": rs.staOrd,
+            "staOrd": rs.staOrd,   # 여기 중요
         }
         for rs in route_stations
     ]
@@ -84,7 +82,6 @@ def predict_service1(request):
         route_id = data.get("route_id")
         station_id = data.get("station_id")
         date_time = data.get("date_time")
-        precipitation = data.get("precipitation", 0)
 
         if not route_id or not station_id or not date_time:
             return JsonResponse(
@@ -95,14 +92,36 @@ def predict_service1(request):
                 status=400,
             )
 
+        try:
+            forecast_data = weather_collector.collect_forecast(
+                station_id=station_id,
+                target_dt=date_time,
+            )
+
+            forecast = forecast_data["forecast"]
+
+            weather_main = forecast["weather"][0]["main"]
+
+            precipitation = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0 # 이슬비는 빼도 되면 빼자
+        # 날씨 데이터를 못 가져올 경우
+        except Exception as e:
+            print("오류 메시지:", e)
+            precipitation = 0
+
         result = predict_service1_result(
             route_id=route_id,
             station_id=station_id,
             date_time=date_time,
             precipitation=precipitation,
         )
+        
 
-        return JsonResponse({"success": True, "data": result})
+        return JsonResponse(
+            {
+                "success": True,
+                "data": convert_numpy(result),
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse(
@@ -359,12 +378,77 @@ def predict_service2(request):
                 status=400,
             )
 
-        result = predict_route_service(
+        stops = predict_route_service(
             route_id=route_id,
             station_id=station_id,
             target_datetime=date_time,
         )
 
+        def normalize_stn(stn):
+            if stn is None:
+                return None
+
+            if hasattr(stn, "pk"):
+                stn = stn.pk
+
+            stn = str(stn).strip()
+
+            if stn in ["", "None", "NULL", "nan"]:
+                return None
+
+            if stn.endswith(".0"):
+                stn = stn[:-2]
+
+            return stn
+
+        
+        # 1. stn 수집
+        unique_stn_ids = {
+            normalize_stn(stop.get("stn"))
+            for stop in stops
+            if normalize_stn(stop.get("stn")) is not None
+        }
+
+        # 2. API 호출
+        forecast_map = {}
+        try:
+            for stn_id in unique_stn_ids:
+                forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
+                    stn_id=stn_id,
+                    target_dt=date_time,
+                )
+        except Exception as e:
+            print("오류 메시지 :", e)
+            
+        # 3. 매핑
+        for stop in stops:
+            stn = normalize_stn(stop.get("stn"))
+
+            if stn is None:
+                stop["precipitation"] = 0
+                continue
+
+            forecast_data = forecast_map.get(stn)
+
+            if not forecast_data:
+                stop["precipitation"] = 0
+                continue
+
+            weather_main = forecast_data["forecast"]["weather"][0]["main"]
+
+            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
+
+            if not forecast_data:
+                stop["precipitation"] = 0
+                continue
+
+            weather_main = forecast_data["forecast"]["weather"][0]["main"]
+
+            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
+
+        result = {}
+        result["stops"] = stops
+        
         return JsonResponse(
             {
                 "success": True,
@@ -448,3 +532,17 @@ def get_route_name(request):
             },
         }
     )
+
+def convert_numpy(obj):
+    import numpy as np
+
+    if isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy(v) for v in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    else:
+        return obj

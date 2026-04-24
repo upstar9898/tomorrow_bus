@@ -112,3 +112,5 @@ outputs_peak_v2/
 
 # 모델
 models/
+# initdb 폴더
+initdb/*

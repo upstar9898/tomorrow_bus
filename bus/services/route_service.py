@@ -803,6 +803,10 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
             relative_time_label = None
             predicted_arrival_time = None
 
+        # stn을 추가시켜야 날씨 데이터를 넣을 수 있음
+        station = Bus_station.objects.get(stationId=station_id)
+        stn = station.stn_id
+        
         response.append(
             {
                 "route_id": str(row["busRouteId"]),
