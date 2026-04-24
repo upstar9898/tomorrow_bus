@@ -8,7 +8,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from bus.models import Bus_station
+from bus.models import Bus_station, Route_station
 
 # =========================================================
 # 경로 설정
@@ -167,6 +167,54 @@ def _load_station_name_map() -> dict:
         str(row["stationId"]): row["stationName"]
         for row in station_rows
     }
+
+def _load_route_station_order_from_db(route_id: str | None = None) -> pd.DataFrame:
+    """
+    DB의 route_station + bus_station 정보를 사용해서
+    서비스2용 노선-정류소 순서표 DataFrame 생성
+    컬럼:
+    - busRouteId
+    - stId
+    - arsId
+    - staOrd
+    """
+    qs = Route_station.objects.all().values("route_id", "station_id", "staOrd")
+
+    if route_id is not None:
+        qs = qs.filter(route_id=str(route_id))
+
+    route_df = pd.DataFrame(list(qs))
+    if route_df.empty:
+        return pd.DataFrame(columns=["busRouteId", "stId", "arsId", "staOrd"])
+
+    route_df = route_df.rename(
+    columns={
+        "route_id": "busRouteId",
+        "station_id": "stId",
+        }
+    )
+
+    route_df["busRouteId"] = route_df["busRouteId"].astype(str)
+    route_df["stId"] = route_df["stId"].astype(str)
+    route_df["staOrd"] = pd.to_numeric(route_df["staOrd"], errors="coerce").astype("Int64")
+
+    # Bus_station에서 arsId 매핑
+    station_rows = Bus_station.objects.all().values("stationId", "arsId")
+    station_df = pd.DataFrame(list(station_rows))
+
+    if station_df.empty:
+        route_df["arsId"] = ""
+    else:
+        station_df = station_df.rename(columns={"stationId": "stId"})
+        station_df["stId"] = station_df["stId"].astype(str)
+        station_df["arsId"] = station_df["arsId"].astype(str)
+
+        route_df = route_df.merge(station_df, on="stId", how="left")
+
+    route_df["arsId"] = route_df["arsId"].fillna("").astype(str)
+    route_df = route_df.sort_values(["busRouteId", "staOrd"]).reset_index(drop=True)
+
+    return route_df
 
 # MAX_SEAT은 훈련 코드 기준 45로 사용
 MAX_SEAT = 45
@@ -399,19 +447,6 @@ def _load_artifacts():
     # pattern stats
     stats_dict, pattern_meta = _load_pattern_stats_local()
 
-    # route artifacts
-    route_station_order = pd.read_csv(
-        ARTIFACT_DIR / "route_station_order.csv",
-        dtype={
-            "busRouteId": str,
-            "stId": str,
-            "arsId": str,
-        }
-    )
-    route_station_order["staOrd"] = pd.to_numeric(
-        route_station_order["staOrd"], errors="coerce"
-    ).astype("Int64")
-
     route_station_travel_time = pd.read_csv(
         ARTIFACT_DIR / "route_station_travel_time.csv",
         dtype={"busRouteId": str}
@@ -439,7 +474,6 @@ def _load_artifacts():
         "encoders": encoders,
         "stats_dict": stats_dict,
         "pattern_meta": pattern_meta,
-        "route_station_order": route_station_order,
         "route_station_travel_time": route_station_travel_time,
     }
 
@@ -509,9 +543,6 @@ def _build_route_eta_table(
     target_peak = _is_peak(target_dt, target_holiday)
     target_time_band = "peak" if (target_holiday == 0 and target_peak == 1) else "normal"
 
-    base_station_row = _match_station_row(route_station_order, route_id, station_id)
-    base_staOrd = int(base_station_row["staOrd"])
-
     route_df = (
         route_station_order[route_station_order["busRouteId"] == str(route_id)]
         .copy()
@@ -520,18 +551,26 @@ def _build_route_eta_table(
     )
 
     if route_df.empty:
-        raise ValueError(f"route_station_order에서 노선 정보가 없습니다. route_id={route_id}")
+        raise ValueError(f"DB route_station에서 노선 정보가 없습니다. route_id={route_id}")
+
+    base_station_row = _match_station_row(route_df, route_id, station_id)
+    base_staOrd = int(base_station_row["staOrd"])
 
     eta_map = {base_staOrd: target_dt}
 
     sta_list = route_df["staOrd"].dropna().astype(int).tolist()
 
-    # 기준 정류소 이후 정류소
-    for sta in sta_list:
-        if sta <= base_staOrd:
-            continue
+    # 기준 정류소 index 찾기
+    base_idx_list = route_df.index[route_df["staOrd"].astype(int) == base_staOrd].tolist()
+    if not base_idx_list:
+        raise ValueError(f"기준 정류소의 staOrd를 route_df에서 찾지 못했습니다. route_id={route_id}, station_id={station_id}")
 
-        prev_sta = sta - 1
+    base_idx = base_idx_list[0]
+
+    # 기준 정류소 이후 정류소
+    for i in range(base_idx + 1, len(route_df)):
+        prev_sta = int(route_df.loc[i - 1, "staOrd"])
+        curr_sta = int(route_df.loc[i, "staOrd"])
         prev_dt = eta_map.get(prev_sta)
 
         if prev_dt is None:
@@ -541,17 +580,15 @@ def _build_route_eta_table(
             travel_df=route_station_travel_time,
             route_id=str(route_id),
             from_staOrd=prev_sta,
-            to_staOrd=sta,
+            to_staOrd=curr_sta,
             time_band=target_time_band,
         )
-        eta_map[sta] = prev_dt + pd.to_timedelta(seg_sec, unit="s")
+        eta_map[curr_sta] = prev_dt + pd.to_timedelta(seg_sec, unit="s")
 
     # 기준 정류소 이전 정류소
-    for sta in sorted(sta_list, reverse=True):
-        if sta >= base_staOrd:
-            continue
-
-        next_sta = sta + 1
+    for i in range(base_idx - 1, -1, -1):
+        curr_sta = int(route_df.loc[i, "staOrd"])
+        next_sta = int(route_df.loc[i + 1, "staOrd"])
         next_dt = eta_map.get(next_sta)
 
         if next_dt is None:
@@ -560,17 +597,14 @@ def _build_route_eta_table(
         seg_sec = _get_segment_seconds(
             travel_df=route_station_travel_time,
             route_id=str(route_id),
-            from_staOrd=sta,
+            from_staOrd=curr_sta,
             to_staOrd=next_sta,
             time_band=target_time_band,
         )
-        eta_map[sta] = next_dt - pd.to_timedelta(seg_sec, unit="s")
+        eta_map[curr_sta] = next_dt - pd.to_timedelta(seg_sec, unit="s")
 
     route_df["eta_dt"] = route_df["staOrd"].astype(int).map(eta_map)
-
-    # 혹시 비어있는 값이 있으면 앞/뒤 보간
     route_df["eta_dt"] = pd.to_datetime(route_df["eta_dt"], errors="coerce")
-    route_df["eta_dt"] = route_df["eta_dt"].interpolate(method="linear")
 
     return route_df
 
@@ -677,7 +711,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     encoders = artifacts["encoders"]
     stats_dict = artifacts["stats_dict"]
     pattern_meta = artifacts["pattern_meta"]
-    route_station_order = artifacts["route_station_order"]
+    route_station_order = _load_route_station_order_from_db(str(route_id))
     route_station_travel_time = artifacts["route_station_travel_time"]
 
     # -----------------------------------------------------
