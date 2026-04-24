@@ -8,7 +8,7 @@ def setup_django():
     base_dir = os.path.dirname(collection_dir)
 
     sys.path.append(base_dir)
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tomorrow_bus.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tommorow_bus.settings")
 
     import django
     django.setup()
