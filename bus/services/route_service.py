@@ -1,165 +1,41 @@
 import json
 import os
-import sys
-from functools import lru_cache
-from pathlib import Path
-
-import joblib
 import numpy as np
 import pandas as pd
 
 from bus.models import Bus_station, Route_station
+from .ml_feature_builder import build_feature_row
+from .ml_config import (
+    reg_model,
+    full_model,
+    peak_model,
+    feature_cols,
+    MAX_SEAT,
+    ARTIFACT_DIR,
+    peak_thresholds,
+    full_binary_threshold,
+    stid_encoder,
+)
 
+route_station_travel_time = pd.read_csv(
+    os.path.join(ARTIFACT_DIR, "route_station_travel_time.csv"),
+    dtype={"busRouteId": str}
+)
+
+route_station_travel_time["from_staOrd"] = pd.to_numeric(
+    route_station_travel_time["from_staOrd"], errors="coerce"
+).astype("Int64")
+
+route_station_travel_time["to_staOrd"] = pd.to_numeric(
+    route_station_travel_time["to_staOrd"], errors="coerce"
+).astype("Int64")
+
+route_station_travel_time["avg_travel_sec"] = pd.to_numeric(
+    route_station_travel_time["avg_travel_sec"], errors="coerce"
+)
 # =========================================================
 # 경로 설정
 # =========================================================
-# bus/services/route_service.py 기준
-# 프로젝트 루트 = 상위 2단계
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-MODEL_DIR = PROJECT_ROOT / "models"
-ARTIFACT_DIR = MODEL_DIR / "artifacts"
-ENCODER_DIR = MODEL_DIR / "encoder"
-ML_MODEL_DIR = MODEL_DIR / "ml_models"
-
-# encoder 직접 로드
-def _load_encoders_local():
-    return {
-        "route_encoder": joblib.load(ENCODER_DIR / "route_encoder.pkl"),
-        "stid_encoder": joblib.load(ENCODER_DIR / "stid_encoder.pkl"),
-        "arsid_encoder": joblib.load(ENCODER_DIR / "arsid_encoder.pkl"),
-    }
-
-# unseen 허용 인코딩
-def _transform_with_encoders_local(df: pd.DataFrame, encoders: dict) -> pd.DataFrame:
-    result = df.copy()
-
-    def safe_transform(value, encoder):
-        value = str(value).strip()
-        classes = set(encoder.classes_)
-        if value not in classes:
-            return -1
-        return int(encoder.transform([value])[0])
-
-    result["route_enc"] = result["busRouteId"].astype(str).apply(
-        lambda x: safe_transform(x, encoders["route_encoder"])
-    )
-    result["stid_enc"] = result["stId"].astype(str).apply(
-        lambda x: safe_transform(x, encoders["stid_encoder"])
-    )
-    result["arsid_enc"] = result["arsId"].astype(str).apply(
-        lambda x: safe_transform(x, encoders["arsid_encoder"])
-    )
-
-    return result
-
-# pattern csv 직접 로드
-def _load_pattern_stats_local():
-    stats_dict = {
-        "route_stat": pd.read_csv(
-            ARTIFACT_DIR / "pattern_route_stat.csv",
-            dtype={"busRouteId": str}
-        ),
-        "route_stop_stat": pd.read_csv(
-            ARTIFACT_DIR / "pattern_route_stop_stat.csv",
-            dtype={"busRouteId": str, "stId": str}
-        ),
-        "route_stop_time_stat": pd.read_csv(
-            ARTIFACT_DIR / "pattern_route_stop_time_stat.csv",
-            dtype={"busRouteId": str, "stId": str}
-        ),
-        "route_staord_stat": pd.read_csv(
-            ARTIFACT_DIR / "pattern_route_staord_stat.csv",
-            dtype={"busRouteId": str}
-        ),
-        "route_time_stat": pd.read_csv(
-            ARTIFACT_DIR / "pattern_route_time_stat.csv",
-            dtype={"busRouteId": str}
-        ),
-    }
-
-    with open(ARTIFACT_DIR / "pattern_meta.json", "r", encoding="utf-8") as f:
-        pattern_meta = json.load(f)
-
-    return stats_dict, pattern_meta
-
-# pattern feature 직접 merge
-def _merge_pattern_features_local(df: pd.DataFrame, stats_dict: dict, pattern_meta: dict) -> pd.DataFrame:
-    result = df.copy()
-
-    global_mean = float(pattern_meta["global_mean"])
-    global_low_ratio = float(pattern_meta["global_low_ratio"])
-
-    result["minute_group"] = (result["minute"] // 10) * 10
-
-    result = result.merge(
-        stats_dict["route_stat"],
-        on="busRouteId",
-        how="left"
-    )
-
-    result = result.merge(
-        stats_dict["route_stop_stat"],
-        on=["busRouteId", "stId"],
-        how="left"
-    )
-
-    result = result.merge(
-        stats_dict["route_stop_time_stat"],
-        on=["busRouteId", "stId", "dayofweek", "hour", "minute_group"],
-        how="left"
-    )
-
-    result = result.merge(
-        stats_dict["route_staord_stat"],
-        on=["busRouteId", "staOrd"],
-        how="left"
-    )
-
-    result = result.merge(
-        stats_dict["route_time_stat"],
-        on=["busRouteId", "dayofweek", "hour"],
-        how="left"
-    )
-
-    fill_mean_cols = [
-        "route_mean_seat",
-        "route_stop_mean_seat",
-        "route_stop_time_mean_seat",
-        "route_staord_mean_seat",
-        "route_time_mean_seat",
-    ]
-
-    fill_std_cols = [
-        "route_std_seat",
-        "route_stop_std_seat",
-        "route_stop_time_std_seat",
-        "route_staord_std_seat",
-        "route_time_std_seat",
-    ]
-
-    fill_ratio_cols = [
-        "route_low_ratio",
-        "route_stop_low_ratio",
-        "route_stop_time_low_ratio",
-        "route_staord_low_ratio",
-        "route_time_low_ratio",
-    ]
-
-    for col in fill_mean_cols:
-        if col in result.columns:
-            result[col] = result[col].fillna(global_mean)
-
-    for col in fill_std_cols:
-        if col in result.columns:
-            result[col] = result[col].fillna(0)
-
-    for col in fill_ratio_cols:
-        if col in result.columns:
-            result[col] = result[col].fillna(global_low_ratio)
-
-    return result
-
 # 정류소명 매핑 함수
 def _load_station_name_map() -> dict:
     station_rows = Bus_station.objects.all().values("stationId", "stationName")
@@ -216,9 +92,6 @@ def _load_route_station_order_from_db(route_id: str | None = None) -> pd.DataFra
 
     return route_df
 
-# MAX_SEAT은 훈련 코드 기준 45로 사용
-MAX_SEAT = 45
-
 
 # =========================================================
 # 한국 공휴일 계산 (holidays 라이브러리 있으면 사용)
@@ -233,11 +106,6 @@ except ImportError:
 # =========================================================
 # 기본 유틸
 # =========================================================
-def _safe_read_json(path: Path, default: dict | list | None = None):
-    if not path.exists():
-        return {} if default is None else default
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def _to_datetime(dt_value) -> pd.Timestamp:
@@ -416,69 +284,6 @@ def _match_station_row(route_station_order: pd.DataFrame, route_id: str, station
 
 
 # =========================================================
-# 아티팩트 로딩
-# =========================================================
-@lru_cache(maxsize=1)
-def _load_artifacts():
-    # 모델
-    reg_model = joblib.load(ML_MODEL_DIR / "reg.pkl")
-    peak_model = joblib.load(ML_MODEL_DIR / "peak_congestion_cls.pkl")
-    full_model = joblib.load(ML_MODEL_DIR / "full_cls.pkl")
-
-    # feature / threshold
-    feature_cols = _safe_read_json(ENCODER_DIR / "feature_cols.json", default=[])
-    thresholds = _safe_read_json(ENCODER_DIR / "thresholds.json", default={})
-
-    peak_thresholds_raw = thresholds.get("peak_congestion_thresholds", [0.25, 0.25, 0.25])
-
-    if isinstance(peak_thresholds_raw, dict):
-        peak_thresholds = [
-            float(peak_thresholds_raw.get(0, peak_thresholds_raw.get("0", 0.25))),
-            float(peak_thresholds_raw.get(1, peak_thresholds_raw.get("1", 0.25))),
-            float(peak_thresholds_raw.get(2, peak_thresholds_raw.get("2", 0.25))),
-        ]
-    else:
-        peak_thresholds = list(peak_thresholds_raw)
-    full_binary_threshold = thresholds.get("full_binary_threshold", 0.5)
-
-    # encoder
-    encoders = _load_encoders_local()
-
-    # pattern stats
-    stats_dict, pattern_meta = _load_pattern_stats_local()
-
-    route_station_travel_time = pd.read_csv(
-        ARTIFACT_DIR / "route_station_travel_time.csv",
-        dtype={"busRouteId": str}
-    )
-    route_station_travel_time["from_staOrd"] = pd.to_numeric(
-        route_station_travel_time["from_staOrd"], errors="coerce"
-    ).astype("Int64")
-    route_station_travel_time["to_staOrd"] = pd.to_numeric(
-        route_station_travel_time["to_staOrd"], errors="coerce"
-    ).astype("Int64")
-    route_station_travel_time["avg_travel_sec"] = pd.to_numeric(
-        route_station_travel_time["avg_travel_sec"], errors="coerce"
-    )
-
-    print("peak_thresholds raw =", peak_thresholds)
-    print("peak_thresholds normalized =", _normalize_peak_thresholds(peak_thresholds))
-
-    return {
-        "reg_model": reg_model,
-        "peak_model": peak_model,
-        "full_model": full_model,
-        "feature_cols": feature_cols,
-        "peak_thresholds": peak_thresholds,
-        "full_binary_threshold": full_binary_threshold,
-        "encoders": encoders,
-        "stats_dict": stats_dict,
-        "pattern_meta": pattern_meta,
-        "route_station_travel_time": route_station_travel_time,
-    }
-
-
-# =========================================================
 # 서비스2 ETA 계산
 # =========================================================
 def _get_segment_seconds(
@@ -614,57 +419,38 @@ def _build_route_eta_table(
 # =========================================================
 def _build_feature_dataframe(route_eta_df: pd.DataFrame) -> pd.DataFrame:
     """
-    서비스 입력을 모델 입력 형태로 변환
+    서비스2도 서비스1과 동일한 build_feature_row() 기준으로 feature 생성
     """
-    df = route_eta_df.copy()
+    feature_rows = []
 
-    df["mkTm"] = pd.to_datetime(df["eta_dt"], errors="coerce")
-    df["busRouteId"] = df["busRouteId"].astype(str)
-    df["stId"] = df["stId"].astype(str)
-    df["arsId"] = df["arsId"].astype(str)
-    df["staOrd"] = pd.to_numeric(df["staOrd"], errors="coerce")
+    for _, row in route_eta_df.iterrows():
+        feature_row = build_feature_row(
+            route_id=str(row["busRouteId"]),
+            station_id=str(row["stId"]),
+            date_time=row["eta_dt"],
+            precipitation=0,
+            sta_ord=row["staOrd"],
+            ars_id=row["arsId"],
+        )
 
-    # travel_time은 "직전 정류소 -> 현재 정류소" 이동시간 개념이라
-    # route_eta_df에 별도 값이 없으므로 기본값 0으로 두고,
-    # feature_cols에 필요 시 나중에 넣도록 처리
-    if "travel_time" not in df.columns:
-        df["travel_time"] = 0.0
+        feature_rows.append(feature_row)
 
-    # 서비스 시점에는 아래 컬럼은 보통 없으므로 placeholder
-    placeholder_defaults = {
-        "vehId1": "0",
-        "exps1": 0,
-        "arrmsg1": "",
-        "remaining_seat": 0,
-        "full_flag": 0,
-        "precipitation": 0.0,
-        "fog": 0.0,
-        "temperature": 0.0,
-        "rainfall": 0.0,
-        "rainfall_missing": 1,
-        "source_file": "service2_generated",
-    }
+    return pd.concat(feature_rows, ignore_index=True)
 
-    for col, default_value in placeholder_defaults.items():
-        if col not in df.columns:
-            df[col] = default_value
 
-    df = _make_time_features(df, dt_col="mkTm")
-
-    return df
 
 def _make_relative_time_label(relative_time_sec):
     if relative_time_sec is None:
         return "시간 정보 없음"
 
     if relative_time_sec == 0:
-        return "곧 도착"
+        return ""
 
     abs_sec = abs(int(relative_time_sec))
     total_minutes = round(abs_sec / 60)
 
     if total_minutes < 1:
-        return "곧 도착"
+        return ""
 
     hours = total_minutes // 60
     minutes = total_minutes % 60
@@ -700,19 +486,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     list[dict]
         전체 정류소 결과 리스트
     """
-    artifacts = _load_artifacts()
-
-    reg_model = artifacts["reg_model"]
-    peak_model = artifacts["peak_model"]
-    full_model = artifacts["full_model"]
-    feature_cols = artifacts["feature_cols"]
-    peak_thresholds = artifacts["peak_thresholds"]
-    full_binary_threshold = artifacts["full_binary_threshold"]
-    encoders = artifacts["encoders"]
-    stats_dict = artifacts["stats_dict"]
-    pattern_meta = artifacts["pattern_meta"]
     route_station_order = _load_route_station_order_from_db(str(route_id))
-    route_station_travel_time = artifacts["route_station_travel_time"]
 
     # -----------------------------------------------------
     # 1) 전체 정류소 ETA 계산
@@ -724,30 +498,26 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
         route_station_order=route_station_order,
         route_station_travel_time=route_station_travel_time,
     )
+    valid_stids = set(map(str, stid_encoder.classes_))
+
+    before_count = len(route_eta_df)
+
+    route_eta_df = route_eta_df[
+        route_eta_df["stId"].astype(str).isin(valid_stids)
+    ].copy()
+
+    after_count = len(route_eta_df)
+
+    print(f"[SERVICE2] 학습되지 않은 정류소 제외: {before_count - after_count}개")
+
+    if route_eta_df.empty:
+        raise ValueError("해당 노선에서 학습 데이터에 포함된 정류소가 없습니다.")
 
     # -----------------------------------------------------
     # 2) feature dataframe 생성
     # -----------------------------------------------------
     infer_df = _build_feature_dataframe(route_eta_df)
-
-    # -----------------------------------------------------
-    # 3) encoder 적용
-    # -----------------------------------------------------
-    infer_df = _transform_with_encoders_local(infer_df, encoders)
-
-    # -----------------------------------------------------
-    # 4) pattern feature merge
-    # -----------------------------------------------------
-    infer_df = _merge_pattern_features_local(infer_df, stats_dict, pattern_meta)
-
-    # -----------------------------------------------------
-    # 5) 누락된 컬럼 보정
-    # -----------------------------------------------------
-    for col in feature_cols:
-        if col not in infer_df.columns:
-            infer_df[col] = 0
-
-    X = infer_df[feature_cols].copy()
+    X = infer_df[feature_cols].copy()  
 
     # -----------------------------------------------------
     # 6) 회귀 / 만차 이진분류
@@ -792,6 +562,33 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
         infer_df.loc[non_peak_mask, "pred_congestion_class"] = fallback_values.apply(lambda x: x[0])
         infer_df.loc[non_peak_mask, "pred_congestion_label"] = fallback_values.apply(lambda x: x[1])
         infer_df.loc[non_peak_mask, "congestion_source"] = "seat_heuristic"
+    
+    route_eta_df["pred_remaining_seat_rounded"] = pred_remaining_seat_rounded
+    route_eta_df["pred_full_prob"] = pred_full_prob
+    route_eta_df["pred_is_full"] = pred_is_full
+    route_eta_df["is_holiday"] = infer_df["is_holiday"].values
+    route_eta_df["is_peak"] = infer_df["is_peak"].values
+    route_eta_df["pred_congestion_class"] = infer_df["pred_congestion_class"].values
+    route_eta_df["pred_congestion_label"] = infer_df["pred_congestion_label"].values
+    route_eta_df["congestion_source"] = infer_df["congestion_source"].values
+
+    # ==========================================================
+    # 삭제할 로그()
+    # ========================================================
+    print("입력 정류소:", station_id)
+    print("사용자 입력 시간:", target_datetime)
+
+    target_row = route_eta_df[route_eta_df["stId"].astype(str) == str(station_id)]
+    print(target_row[[
+        "stId",
+        "staOrd",
+        "eta_dt",
+        "pred_remaining_seat_rounded"
+]])
+    route_eta_df["pred_remaining_seat_rounded"] = pred_remaining_seat_rounded
+    route_eta_df["pred_full_prob"] = pred_full_prob
+    route_eta_df["pred_is_full"] = pred_is_full
+    # ==========================================================
 
     # -----------------------------------------------------
     # 8) 응답 정리
@@ -800,17 +597,16 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     target_dt = _to_datetime(target_datetime)
 
     station_name_map = _load_station_name_map()
-    infer_df["station_name"] = infer_df["stId"].astype(str).map(station_name_map)
-    infer_df["station_name"] = infer_df["station_name"].fillna(infer_df["stId"].astype(str))
-
-    result_df = infer_df[
+    route_eta_df["station_name"] = route_eta_df["stId"].astype(str).map(station_name_map)
+    route_eta_df["station_name"] = route_eta_df["station_name"].fillna(route_eta_df["stId"].astype(str))
+    result_df = route_eta_df[
         [
             "busRouteId",
             "stId",
             "arsId",
             "station_name",
             "staOrd",
-            "mkTm",
+            "eta_dt",
             "is_holiday",
             "is_peak",
             "pred_remaining_seat_rounded",
@@ -826,7 +622,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
 
     response = []
     for _, row in result_df.iterrows():
-        predicted_dt = pd.to_datetime(row["mkTm"]) if pd.notna(row["mkTm"]) else None
+        predicted_dt = pd.to_datetime(row["eta_dt"]) if pd.notna(row["eta_dt"]) else None
 
         if predicted_dt is not None:
             relative_time_sec = int((predicted_dt - target_dt).total_seconds())
