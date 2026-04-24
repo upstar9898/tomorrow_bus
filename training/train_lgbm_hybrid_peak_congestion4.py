@@ -109,7 +109,7 @@ print(
 # =========================================================
 # 5. 학습 데이터 파일 경로 설정
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260421.csv")
+file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260424_rebuilt_v2.csv")
 
 # 파일 존재 여부 확인
 if not os.path.exists(file_path):
