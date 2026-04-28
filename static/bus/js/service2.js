@@ -170,6 +170,24 @@ function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
+
+    const weatherBadge = document.getElementById("weatherUsedBadge2");
+
+    if (weatherBadge) {
+        weatherBadge.classList.remove("d-none");
+
+        // 기존 색상 제거
+        weatherBadge.classList.remove("bg-success", "bg-secondary");
+
+        if (data.weather_fetched) {
+            weatherBadge.textContent = "날씨데이터 사용";
+            weatherBadge.classList.add("bg-success");
+        } else {
+            weatherBadge.textContent = "날씨데이터 미사용";
+            weatherBadge.classList.add("bg-secondary");
+        }
+    }
+
     const formattedDate = formatDateTime(rideDateTime.value);
     // const predictions = Array.isArray(data) ? data : [];
 
