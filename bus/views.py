@@ -442,6 +442,14 @@ def predict_service2(request):
 
             return stn
 
+        weather_fetched = False   # 실제 날씨 API 성공 여부
+        weather_used = False      # 예측/정류소 데이터에 날씨 반영 여부
+        weather_info = {
+            "requested_stn_count": 0,
+            "success_stn_count": 0,
+            "failed_stn_count": 0,
+            "reason": None,
+        }
         
         # 1. stn 수집
         unique_stn_ids = {
@@ -450,18 +458,37 @@ def predict_service2(request):
             if normalize_stn(stop.get("stn")) is not None
         }
 
+        weather_info["requested_stn_count"] = len(unique_stn_ids)  # ⭐ 추가
+
         # 2. API 호출
         forecast_map = {}
-        try:
+
+        if is_within_5_days(date_time):
             for stn_id in unique_stn_ids:
-                forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
-                    stn_id=stn_id,
-                    target_dt=date_time,
-                )
-        except Exception as e:
-            print("오류 메시지 :", e)
-            
-        # 3. 매핑
+                try:
+                    forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
+                        stn_id=stn_id,
+                        target_dt=date_time,
+                    )
+                except Exception as e:
+                    print(f"[날씨 API 실패] stn={stn_id}, 오류={e}")
+
+            weather_info["success_stn_count"] = len(forecast_map)
+            weather_info["failed_stn_count"] = len(unique_stn_ids) - len(forecast_map)
+
+            if forecast_map:
+                weather_fetched = True
+                weather_used = True
+                weather_info["reason"] = "날씨 API 일부 또는 전체 성공"
+            else:
+                weather_info["reason"] = "날씨 API 호출 실패 또는 사용 가능한 날씨 데이터 없음"
+
+        else:
+            print("[날씨 API 안가져옴]")
+            weather_info["failed_stn_count"] = len(unique_stn_ids)
+            weather_info["reason"] = "5일 이후 예보 범위 초과"
+
+        # 3. 매핑 (정리된 버전)
         for stop in stops:
             stn = normalize_stn(stop.get("stn"))
 
@@ -479,16 +506,13 @@ def predict_service2(request):
 
             stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
 
-            if not forecast_data:
-                stop["precipitation"] = 0
-                continue
-
-            weather_main = forecast_data["forecast"]["weather"][0]["main"]
-
-            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
-
         result = {}
         result["stops"] = stops
+
+        # 전체 결과 기준 날씨 상태
+        result["weather_fetched"] = weather_fetched
+        result["weather_used"] = weather_used
+        result["weather_info"] = weather_info
         
         return JsonResponse(
             {
