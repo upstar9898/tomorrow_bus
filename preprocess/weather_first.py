@@ -7,9 +7,10 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # data 폴더
 DATA_DIR = os.path.join(BASE_DIR, "data")
+OUTPUT_DIR = os.path.join(DATA_DIR, "data_for_weather_process")
 
 # 파일명
-input_filename = "weather_raw_260421.csv"
+input_filename = "weather_raw_260428.csv"
 
 # 전체 경로
 input_filepath = os.path.join(DATA_DIR, input_filename)
@@ -157,5 +158,5 @@ df_selected = df[selected_cols]
 output_filename = input_filename.replace("_raw", "").replace(
     ".csv", "_first_processed.csv"
 )
-output_filepath = os.path.join(DATA_DIR, output_filename)
+output_filepath = os.path.join(OUTPUT_DIR, output_filename)
 df_selected.to_csv(output_filepath, index=False)
