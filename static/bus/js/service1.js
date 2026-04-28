@@ -222,6 +222,19 @@ function renderResult(routeName, stationName, arsId, result) {
             `${(data.full_prob * 100).toFixed(1)}%`;
     }
 
+    // ⭐ 여기 추가 (날씨 사용 여부 UI)
+    const weatherBadge = document.getElementById("weatherUsedBadge");
+
+    weatherBadge.classList.remove("d-none");
+
+    if (data.weather_fetched) {
+        weatherBadge.textContent = "날씨데이터 사용";
+        weatherBadge.className = "badge bg-success";
+    } else {
+        weatherBadge.textContent = "날씨데이터 미사용";
+        weatherBadge.className = "badge bg-secondary";
+    }
+
     currentPrediction.routeId = routeSelect.value;
     currentPrediction.routeName = routeName;
     currentPrediction.stationId = stationSelect.value;
