@@ -247,6 +247,16 @@ function renderRouteResult(routeName, stationName, data) {
 
         const li = document.createElement("li");
         li.className = "stop-item";
+        
+        let probText = "";
+
+        if (stop.full_probability < 0.001) {
+            probText = "0.1% 미만";
+        } else if (stop.full_probability >= 0.999) {
+            probText = "99.9% 이상";
+        } else {
+            probText = `${(stop.full_probability * 100).toFixed(1)}%`;
+        }
 
         li.innerHTML = `
             <div class="stop-marker">
@@ -286,7 +296,7 @@ function renderRouteResult(routeName, stationName, data) {
                             ? `<span>기점/종점 정류장은 예측값을 표시하지 않습니다.</span>`
                             : isVirtual
                               ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
-                              : `<span>예상 만차확률 ${(stop.full_probability * 100).toFixed(1)}%</span>`
+                              : `<span>예상 만차확률 ${probText}</span>`
                     }
                 </div>
             </div>
