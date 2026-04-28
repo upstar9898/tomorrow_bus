@@ -179,6 +179,15 @@
         .favorite-list li .btn {
             width: 100%;
         }
+
+        .favorite-action-wrap {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .favorite-action-wrap .btn {
+            flex: 1;
+        }
     }
 
     .favorite-item-wrap {
@@ -215,6 +224,13 @@
     .favorite-badge:focus {
         outline: none;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    .favorite-action-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
     }
 </style>
 {% endblock %}
