@@ -1,5 +1,6 @@
 import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
 import { routeSelectChangeEvent } from "./routeSelect.js";
+import { loadStationsByRoute } from "./routeSelect.js";
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
@@ -644,3 +645,27 @@ if (window.kakao && window.kakao.maps) {
             zIndex: isSelected ? 4 : 3,
         });
     }
+
+async function applyQueryStringToForm() {
+    const params = new URLSearchParams(window.location.search);
+
+    const routeId = params.get("route_id");
+    const stationId = params.get("station_id");
+    const arsId = params.get("ars_id");
+    const dateTime = params.get("date_time");
+
+    if (!routeId) return;
+
+    routeSelect.value = String(routeId);
+
+    // 정류장 목록 불러오고 선택까지
+    await loadStationsByRoute(routeSelect, stationSelect, stationId, arsId);
+
+    if (dateTime) {
+        rideDateTime.value = dateTime;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+    await applyQueryStringToForm();
+});
