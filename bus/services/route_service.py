@@ -19,7 +19,7 @@ from .ml_config import (
 
 route_station_travel_time = pd.read_csv(
     os.path.join(ARTIFACT_DIR, "route_station_travel_time.csv"),
-    dtype={"busRouteId": str}
+    dtype={"busRouteId": str},
 )
 
 route_station_travel_time["from_staOrd"] = pd.to_numeric(
@@ -33,16 +33,16 @@ route_station_travel_time["to_staOrd"] = pd.to_numeric(
 route_station_travel_time["avg_travel_sec"] = pd.to_numeric(
     route_station_travel_time["avg_travel_sec"], errors="coerce"
 )
+
+
 # =========================================================
 # 경로 설정
 # =========================================================
 # 정류소명 매핑 함수
 def _load_station_name_map() -> dict:
     station_rows = Bus_station.objects.all().values("stationId", "stationName")
-    return {
-        str(row["stationId"]): row["stationName"]
-        for row in station_rows
-    }
+    return {str(row["stationId"]): row["stationName"] for row in station_rows}
+
 
 def _load_route_station_order_from_db(route_id: str | None = None) -> pd.DataFrame:
     """
@@ -64,15 +64,17 @@ def _load_route_station_order_from_db(route_id: str | None = None) -> pd.DataFra
         return pd.DataFrame(columns=["busRouteId", "stId", "arsId", "staOrd"])
 
     route_df = route_df.rename(
-    columns={
-        "route_id": "busRouteId",
-        "station_id": "stId",
+        columns={
+            "route_id": "busRouteId",
+            "station_id": "stId",
         }
     )
 
     route_df["busRouteId"] = route_df["busRouteId"].astype(str)
     route_df["stId"] = route_df["stId"].astype(str)
-    route_df["staOrd"] = pd.to_numeric(route_df["staOrd"], errors="coerce").astype("Int64")
+    route_df["staOrd"] = pd.to_numeric(route_df["staOrd"], errors="coerce").astype(
+        "Int64"
+    )
 
     # Bus_station에서 arsId 매핑
     station_rows = Bus_station.objects.all().values("stationId", "arsId")
@@ -164,8 +166,7 @@ def _make_time_features(df: pd.DataFrame, dt_col: str = "mkTm") -> pd.DataFrame:
     # is_holiday / is_peak는 행별로 다시 계산
     result["is_holiday"] = result[dt_col].apply(_is_holiday_kr).astype(int)
     result["is_peak"] = result.apply(
-        lambda row: _is_peak(row[dt_col], int(row["is_holiday"])),
-        axis=1
+        lambda row: _is_peak(row[dt_col], int(row["is_holiday"])), axis=1
     ).astype(int)
 
     # 주기형 인코딩
@@ -186,6 +187,7 @@ def _make_time_features(df: pd.DataFrame, dt_col: str = "mkTm") -> pd.DataFrame:
     result["dow_cos"] = np.cos(2 * np.pi * result["dayofweek"] / 7)
 
     return result
+
 
 def _normalize_peak_thresholds(thresholds):
     """
@@ -209,9 +211,9 @@ def _normalize_peak_thresholds(thresholds):
 
     return [0.25, 0.25, 0.25]
 
+
 def _predict_peak_congestion_with_thresholds(
-    proba: np.ndarray,
-    thresholds
+    proba: np.ndarray, thresholds
 ) -> np.ndarray:
     """
     출퇴근 시간대 4클래스 threshold 적용
@@ -233,6 +235,7 @@ def _predict_peak_congestion_with_thresholds(
             preds.append(3)
 
     return np.array(preds)
+
 
 def _fallback_congestion_from_seat(remaining_seat: int) -> tuple[int, str]:
     """
@@ -258,14 +261,20 @@ def _peak_class_to_label(cls_value: int) -> str:
     return label_map.get(int(cls_value), "알 수 없음")
 
 
-def _match_station_row(route_station_order: pd.DataFrame, route_id: str, station_id: str) -> pd.Series:
+def _match_station_row(
+    route_station_order: pd.DataFrame, route_id: str, station_id: str
+) -> pd.Series:
     """
     station_id는 stId 또는 arsId 둘 다 받을 수 있게 처리
     """
-    route_df = route_station_order[route_station_order["busRouteId"] == str(route_id)].copy()
+    route_df = route_station_order[
+        route_station_order["busRouteId"] == str(route_id)
+    ].copy()
 
     if route_df.empty:
-        raise ValueError(f"해당 노선의 정류소 순서 정보가 없습니다. route_id={route_id}")
+        raise ValueError(
+            f"해당 노선의 정류소 순서 정보가 없습니다. route_id={route_id}"
+        )
 
     # stId 우선
     matched = route_df[route_df["stId"].astype(str) == str(station_id)]
@@ -346,7 +355,9 @@ def _build_route_eta_table(
     target_dt = _to_datetime(target_datetime)
     target_holiday = _is_holiday_kr(target_dt)
     target_peak = _is_peak(target_dt, target_holiday)
-    target_time_band = "peak" if (target_holiday == 0 and target_peak == 1) else "normal"
+    target_time_band = (
+        "peak" if (target_holiday == 0 and target_peak == 1) else "normal"
+    )
 
     route_df = (
         route_station_order[route_station_order["busRouteId"] == str(route_id)]
@@ -356,7 +367,9 @@ def _build_route_eta_table(
     )
 
     if route_df.empty:
-        raise ValueError(f"DB route_station에서 노선 정보가 없습니다. route_id={route_id}")
+        raise ValueError(
+            f"DB route_station에서 노선 정보가 없습니다. route_id={route_id}"
+        )
 
     base_station_row = _match_station_row(route_df, route_id, station_id)
     base_staOrd = int(base_station_row["staOrd"])
@@ -366,9 +379,13 @@ def _build_route_eta_table(
     sta_list = route_df["staOrd"].dropna().astype(int).tolist()
 
     # 기준 정류소 index 찾기
-    base_idx_list = route_df.index[route_df["staOrd"].astype(int) == base_staOrd].tolist()
+    base_idx_list = route_df.index[
+        route_df["staOrd"].astype(int) == base_staOrd
+    ].tolist()
     if not base_idx_list:
-        raise ValueError(f"기준 정류소의 staOrd를 route_df에서 찾지 못했습니다. route_id={route_id}, station_id={station_id}")
+        raise ValueError(
+            f"기준 정류소의 staOrd를 route_df에서 찾지 못했습니다. route_id={route_id}, station_id={station_id}"
+        )
 
     base_idx = base_idx_list[0]
 
@@ -438,7 +455,6 @@ def _build_feature_dataframe(route_eta_df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(feature_rows, ignore_index=True)
 
 
-
 def _make_relative_time_label(relative_time_sec):
     if relative_time_sec is None:
         return "시간 정보 없음"
@@ -464,10 +480,13 @@ def _make_relative_time_label(relative_time_sec):
 
     return f"{text} 후" if relative_time_sec > 0 else f"{text} 전"
 
+
 # =========================================================
 # 추론 실행
 # =========================================================
-def predict_route_service(route_id: str, station_id: str, target_datetime: str) -> list[dict]:
+def predict_route_service(
+    route_id: str, station_id: str, target_datetime: str
+) -> list[dict]:
     """
     서비스2 메인 함수
 
@@ -502,6 +521,11 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
 
     before_count = len(route_eta_df)
 
+    excluded_df = route_eta_df[
+        ~route_eta_df["stId"].astype(str).isin(valid_stids)
+    ].copy()
+    print(excluded_df)
+
     route_eta_df = route_eta_df[
         route_eta_df["stId"].astype(str).isin(valid_stids)
     ].copy()
@@ -517,7 +541,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     # 2) feature dataframe 생성
     # -----------------------------------------------------
     infer_df = _build_feature_dataframe(route_eta_df)
-    X = infer_df[feature_cols].copy()  
+    X = infer_df[feature_cols].copy()
 
     # -----------------------------------------------------
     # 6) 회귀 / 만차 이진분류
@@ -545,7 +569,9 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     if peak_mask.sum() > 0:
         peak_X = infer_df.loc[peak_mask, feature_cols]
         peak_proba = peak_model.predict_proba(peak_X)
-        peak_pred = _predict_peak_congestion_with_thresholds(peak_proba, peak_thresholds)
+        peak_pred = _predict_peak_congestion_with_thresholds(
+            peak_proba, peak_thresholds
+        )
 
         infer_df.loc[peak_mask, "pred_congestion_class"] = peak_pred
         infer_df.loc[peak_mask, "pred_congestion_label"] = [
@@ -556,13 +582,17 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     # 출퇴근 외 시간대는 좌석수 기반 fallback
     non_peak_mask = ~peak_mask
     if non_peak_mask.sum() > 0:
-        fallback_values = infer_df.loc[non_peak_mask, "pred_remaining_seat_rounded"].apply(
-            _fallback_congestion_from_seat
+        fallback_values = infer_df.loc[
+            non_peak_mask, "pred_remaining_seat_rounded"
+        ].apply(_fallback_congestion_from_seat)
+        infer_df.loc[non_peak_mask, "pred_congestion_class"] = fallback_values.apply(
+            lambda x: x[0]
         )
-        infer_df.loc[non_peak_mask, "pred_congestion_class"] = fallback_values.apply(lambda x: x[0])
-        infer_df.loc[non_peak_mask, "pred_congestion_label"] = fallback_values.apply(lambda x: x[1])
+        infer_df.loc[non_peak_mask, "pred_congestion_label"] = fallback_values.apply(
+            lambda x: x[1]
+        )
         infer_df.loc[non_peak_mask, "congestion_source"] = "seat_heuristic"
-    
+
     route_eta_df["pred_remaining_seat_rounded"] = pred_remaining_seat_rounded
     route_eta_df["pred_full_prob"] = pred_full_prob
     route_eta_df["pred_is_full"] = pred_is_full
@@ -579,12 +609,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     print("사용자 입력 시간:", target_datetime)
 
     target_row = route_eta_df[route_eta_df["stId"].astype(str) == str(station_id)]
-    print(target_row[[
-        "stId",
-        "staOrd",
-        "eta_dt",
-        "pred_remaining_seat_rounded"
-]])
+    print(target_row[["stId", "staOrd", "eta_dt", "pred_remaining_seat_rounded"]])
     route_eta_df["pred_remaining_seat_rounded"] = pred_remaining_seat_rounded
     route_eta_df["pred_full_prob"] = pred_full_prob
     route_eta_df["pred_is_full"] = pred_is_full
@@ -597,8 +622,12 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
     target_dt = _to_datetime(target_datetime)
 
     station_name_map = _load_station_name_map()
-    route_eta_df["station_name"] = route_eta_df["stId"].astype(str).map(station_name_map)
-    route_eta_df["station_name"] = route_eta_df["station_name"].fillna(route_eta_df["stId"].astype(str))
+    route_eta_df["station_name"] = (
+        route_eta_df["stId"].astype(str).map(station_name_map)
+    )
+    route_eta_df["station_name"] = route_eta_df["station_name"].fillna(
+        route_eta_df["stId"].astype(str)
+    )
     result_df = route_eta_df[
         [
             "busRouteId",
@@ -622,7 +651,9 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
 
     response = []
     for _, row in result_df.iterrows():
-        predicted_dt = pd.to_datetime(row["eta_dt"]) if pd.notna(row["eta_dt"]) else None
+        predicted_dt = (
+            pd.to_datetime(row["eta_dt"]) if pd.notna(row["eta_dt"]) else None
+        )
 
         if predicted_dt is not None:
             relative_time_sec = int((predicted_dt - target_dt).total_seconds())
@@ -640,7 +671,7 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
         stn = station.stn_id
         # 가상 정류장 여부
         is_virtual = station.isVirtual
-        
+
         response.append(
             {
                 "route_id": str(row["busRouteId"]),
@@ -657,12 +688,77 @@ def predict_route_service(route_id: str, station_id: str, target_datetime: str) 
                 "full_probability": round(float(row["pred_full_prob"]), 4),
                 "is_full": int(row["pred_is_full"]),
                 "congestion_class": int(row["pred_congestion_class"])
-                if row["pred_congestion_class"] is not None else None,
+                if row["pred_congestion_class"] is not None
+                else None,
                 "congestion_label": row["pred_congestion_label"],
                 "congestion_source": row["congestion_source"],
                 "stn": str(stn),
                 "is_virtual": int(is_virtual),
+                "is_valid": 1,  # 학습 데이터 내에 있어서 제대로 값을 주는 경우
             }
         )
+
+    excluded_df["station_name"] = excluded_df["stId"].astype(str).map(station_name_map)
+    excluded_df["station_name"] = excluded_df["station_name"].fillna(
+        excluded_df["stId"].astype(str)
+    )
+
+    for _, row in excluded_df.iterrows():
+        # 정류장 객체
+        station_id = row["stId"]
+        station = Bus_station.objects.get(stationId=station_id)
+        # stn을 추가시켜야 날씨 데이터를 넣을 수 있음
+        stn = station.stn_id
+        # 가상 정류장 여부
+        is_virtual = station.isVirtual
+
+        station_info = {
+            "route_id": str(row["busRouteId"]),
+            "station_id": str(row["stId"]),
+            "station_name": row.get("station_name", ""),
+            "ars_id": str(row["arsId"]),
+            "staOrd": int(row["staOrd"]),
+            "predicted_arrival_time": None,
+            "relative_time_sec": None,
+            "relative_time_label": None,
+            "is_holiday": None,
+            "is_peak": None,
+            "remaining_seat": None,
+            "full_probability": None,
+            "is_full": None,
+            "congestion_class": None,
+            "congestion_label": None,
+            "congestion_source": None,
+            "stn": str(stn),
+            "is_virtual": int(is_virtual),
+            "is_valid": 0,  # 학습 데이터 내에 없어서 제대로 값을 주지 않는 경우
+        }
+        print(station_info)
+
+        response.append(
+            {
+                "route_id": str(row["busRouteId"]),
+                "station_id": str(row["stId"]),
+                "station_name": row.get("station_name", ""),
+                "ars_id": str(row["arsId"]),
+                "staOrd": int(row["staOrd"]),
+                "predicted_arrival_time": None,
+                "relative_time_sec": None,
+                "relative_time_label": None,
+                "is_holiday": None,
+                "is_peak": None,
+                "remaining_seat": None,
+                "full_probability": None,
+                "is_full": None,
+                "congestion_class": None,
+                "congestion_label": None,
+                "congestion_source": None,
+                "stn": str(stn),
+                "is_virtual": int(is_virtual),
+                "is_valid": 0,  # 학습 데이터 내에 없어서 제대로 값을 주지 않는 경우
+            }
+        )
+
+    response.sort(key=lambda x: x["staOrd"])
 
     return response
