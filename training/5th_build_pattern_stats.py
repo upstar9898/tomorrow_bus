@@ -38,7 +38,7 @@ os.makedirs(ARTIFACT_DIR, exist_ok=True)
 # =========================================================
 # 2. 데이터 파일 경로
 # =========================================================
-file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260424_rebuilt_v2.csv")
+file_path = os.path.join(DATA_DIR, "bus_all_raw_weather_260428.csv")
 
 if not os.path.exists(file_path):
     raise FileNotFoundError(
