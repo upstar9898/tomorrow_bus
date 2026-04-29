@@ -16,8 +16,8 @@ PEAK_THRESHOLDS = {
 FULL_BINARY_THRESHOLD = 0.50
 
 RUNNER = "eunbyeol"
-DATASET_NAME = "bus_all_raw_weather"
-DATA_VERSION = "20260416"
+DATASET_NAME = "bus_all_raw_weather_260428"
+DATA_VERSION = "20260428"
 SPLIT_VERSION = "date_70_15_15"
 FEATURE_VERSION = "pattern_weather_peak_congestion4_cleanlog_v1"
 
