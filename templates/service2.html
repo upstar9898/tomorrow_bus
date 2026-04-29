@@ -3,6 +3,7 @@
 {% block title %}서비스2 | Tomorrow Bus{% endblock %}
 
 {% block extra_style %}
+<link rel="stylesheet" href="{% static 'bus/css/datepicker.css' %}">
 <style>
     /* ── 페이지 레이아웃 ── */
     .s2-page {
@@ -16,16 +17,16 @@
     /* ── 공통 카드 ── */
     .s2-card {
         background: #fff;
-        border: 1px solid #f0ecf8;
+        border: 1px solid #e2e8f4;
         border-radius: 18px;
         padding: 20px;
-        box-shadow: 0 4px 20px rgba(192,132,252,0.06);
+        box-shadow: 0 4px 20px rgba(59,130,246,0.06);
     }
 
     .s2-card-title {
         font-size: 11px;
         font-weight: 700;
-        color: #b0a0b8;
+        color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 14px;
@@ -37,12 +38,12 @@
     .s2-page-title {
         font-size: clamp(16px, 1.8vw, 22px);
         font-weight: 900;
-        color: #1a1218;
+        color: #1a2340;
         letter-spacing: -0.5px;
         margin-bottom: 2px;
     }
 
-    .s2-page-sub { font-size: 12px; color: #b0a0b8; }
+    .s2-page-sub { font-size: 12px; color: #94a3b8; }
 
     /* ── 폼 ── */
     .s2-form-group { margin-bottom: 10px; }
@@ -51,7 +52,7 @@
         display: block;
         font-size: 11px;
         font-weight: 700;
-        color: #8a7a90;
+        color: #64748b;
         margin-bottom: 4px;
     }
 
@@ -59,12 +60,12 @@
     .s2-input {
         width: 100%;
         height: 36px;
-        border: 1.5px solid #f0ecf8;
+        border: 1.5px solid #e2e8f4;
         border-radius: 10px;
-        background: #fdfcff;
+        background: #fafcff;
         padding: 0 11px;
         font-size: 12px;
-        color: #1a1218;
+        color: #1a2340;
         appearance: none;
         -webkit-appearance: none;
         outline: none;
@@ -73,14 +74,14 @@
 
     .s2-select:focus,
     .s2-input:focus {
-        border-color: var(--purple, #a855f7);
-        box-shadow: 0 0 0 3px rgba(168,85,247,0.08);
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
     }
 
     .s2-btn-predict {
         width: 100%;
         height: 40px;
-        background: linear-gradient(135deg, #f472b6, #fb7185);
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: #fff;
         border: none;
         border-radius: 11px;
@@ -88,7 +89,7 @@
         font-weight: 700;
         cursor: pointer;
         margin-top: 4px;
-        box-shadow: 0 4px 14px rgba(244,114,182,0.3);
+        box-shadow: 0 4px 14px rgba(37,99,235,0.28);
         transition: opacity 0.15s;
     }
 
@@ -100,13 +101,13 @@
         justify-content: space-between;
         align-items: center;
         padding: 7px 0;
-        border-bottom: 1px solid #faf5ff;
+        border-bottom: 1px solid #f0f4ff;
         font-size: 11px;
     }
 
     .s2-info-row:last-child { border-bottom: none; }
-    .s2-info-lbl { color: #b0a0b8; }
-    .s2-info-val { font-weight: 700; color: #1a1218; }
+    .s2-info-lbl { color: #94a3b8; }
+    .s2-info-val { font-weight: 700; color: #1a2340; }
 
     /* ── 메인 영역 ── */
     .s2-main { display: flex; flex-direction: column; gap: 14px; }
@@ -120,7 +121,7 @@
 
     .s2-stop-card {
         background: #fff;
-        border: 1px solid #f0ecf8;
+        border: 1px solid #e2e8f4;
         border-radius: 12px;
         padding: 10px;
         text-align: center;
@@ -132,16 +133,16 @@
         transition: box-shadow 0.15s;
     }
 
-    .s2-stop-card:hover { box-shadow: 0 4px 16px rgba(192,132,252,0.1); }
+    .s2-stop-card:hover { box-shadow: 0 4px 16px rgba(59,130,246,0.10); }
 
     .s2-stop-card.selected {
-        border-color: #f472b6;
-        box-shadow: 0 4px 16px rgba(244,114,182,0.15);
+        border-color: #3b82f6;
+        box-shadow: 0 4px 16px rgba(59,130,246,0.15);
     }
 
     .s2-stop-name {
         font-size: 9px;
-        color: #b0a0b8;
+        color: #94a3b8;
         margin-bottom: 5px;
         font-weight: 600;
         white-space: nowrap;
@@ -164,20 +165,20 @@
         border-radius: 999px;
     }
 
-    .s2-여유   { color: #059669; background: #ecfdf5; }
-    .s2-보통   { color: #ca8a04; background: #fefce8; }
-    .s2-혼잡   { color: #ec4899; background: #fff5f8; }
-    .s2-주의   { color: #ea580c; background: #fff7ed; }
-    .s2-만차   { color: #dc2626; background: #fef2f2; }
-    .s2-default { color: #a855f7; background: #f5f0ff; }
+    /* 혼잡도 4단계 색상 */
+    .s2-여유    { color: #059669; background: #ecfdf5; }
+    .s2-보통    { color: #ca8a04; background: #fefce8; }
+    .s2-혼잡    { color: #f472b6; background: #fff5f8; }
+    .s2-만차    { color: #dc2626; background: #fef2f2; }
+    .s2-default { color: #2563eb; background: #eff6ff; }
 
     /* 빈 상태 */
     .s2-empty {
         padding: 48px 20px;
         text-align: center;
-        color: #b0a0b8;
+        color: #94a3b8;
         font-size: 13px;
-        border: 1.5px dashed #f0ecf8;
+        border: 1.5px dashed #e2e8f4;
         border-radius: 14px;
     }
 
@@ -187,11 +188,11 @@
         height: 420px;
         border-radius: 14px;
         overflow: hidden;
-        border: 1px solid #f0ecf8;
-        background: linear-gradient(180deg, #fdf4ff 0%, #fff0f6 100%);
+        border: 1px solid #e2e8f4;
+        background: linear-gradient(180deg, #f0f4ff 0%, #e8eeff 100%);
     }
 
-    /* ── 기존 stop-card 호환 ── */
+    /* ── stop-card ── */
     .stop-dot {
         width: 20px; height: 20px;
         margin-top: 10px;
@@ -209,19 +210,19 @@
     .stop-dot.status-gray   { background: #94a3b8; }
 
     .stop-card {
-        border: 1px solid #f0ecf8;
+        border: 1px solid #e2e8f4;
         border-radius: 14px;
         background: #fff;
         padding: 14px 16px;
-        box-shadow: 0 4px 16px rgba(192,132,252,0.06);
+        box-shadow: 0 4px 16px rgba(59,130,246,0.06);
         min-height: 90px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .stop-card.selected {
-        background: #fff5f8;
-        border-color: #fdd6e8;
+        background: #f0f4ff;
+        border-color: #bfdbfe;
     }
     .stop-card.virtual { background: #fafaf9; border-color: #f0f0ee; }
 
@@ -234,9 +235,9 @@
     .stop-name {
         font-size: 13px; font-weight: 800;
         line-height: 1.3; margin-bottom: 4px;
-        color: #1a1218;
+        color: #1a2340;
     }
-    .stop-meta { color: #b0a0b8; font-size: 11px; }
+    .stop-meta { color: #94a3b8; font-size: 11px; }
     .stop-badges {
         display: flex; gap: 6px; flex-wrap: wrap;
         justify-content: flex-end; align-items: center;
@@ -247,19 +248,19 @@
         padding: 4px 10px; border-radius: 999px;
         font-size: 12px; font-weight: 800; white-space: nowrap;
     }
-    .seat-badge { background: var(--pink-soft, rgba(244,114,182,0.1)); color: var(--pink, #f472b6); }
+    .seat-badge      { background: rgba(59,130,246,0.10); color: #2563eb; }
     .state-badge.state-green  { background: rgba(34,197,94,0.12); color: #15803d; }
     .state-badge.state-yellow { background: rgba(245,158,11,0.14); color: #b45309; }
     .state-badge.state-red    { background: rgba(239,68,68,0.12); color: #b91c1c; }
     .state-badge.state-orange { background: rgba(249,115,22,0.12); color: #c2410c; }
     .state-badge.state-gray   { background: rgba(148,163,184,0.14); color: #64748b; }
-    .selected-badge           { background: var(--pink-soft, rgba(244,114,182,0.1)); color: var(--pink, #f472b6); }
+    .selected-badge  { background: rgba(59,130,246,0.10); color: #2563eb; }
 
     .stop-bottom {
         display: flex; justify-content: space-between; align-items: center;
         gap: 10px; margin-top: 10px; padding-top: 10px;
-        border-top: 1px solid #f5f0ff;
-        color: #b0a0b8; font-size: 11px;
+        border-top: 1px solid #f0f4ff;
+        color: #94a3b8; font-size: 11px;
     }
 
     .route-list {
@@ -269,7 +270,7 @@
         content: ""; position: absolute;
         left: 16px; top: 0; bottom: 0; width: 3px;
         border-radius: 999px;
-        background: linear-gradient(180deg, #fbb6ce 0%, #f472b6 100%);
+        background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
         opacity: 0.5;
     }
     .stop-item {
@@ -294,9 +295,9 @@
     .route-empty-message {
         padding: 48px 20px;
         text-align: center;
-        color: #b0a0b8;
+        color: #94a3b8;
         font-size: 13px;
-        border: 1.5px dashed #f0ecf8;
+        border: 1.5px dashed #e2e8f4;
         border-radius: 14px;
     }
 
@@ -342,7 +343,7 @@
 
                 <div class="s2-form-group">
                     <label class="s2-form-label">승차 일시</label>
-                    <input id="rideDateTime" type="datetime-local" class="s2-input">
+                    <input id="rideDateTime" type="datetime-local" class="s2-input" data-tb-dtp>
                 </div>
 
                 <button type="submit" class="s2-btn-predict">예측하기</button>
@@ -369,7 +370,7 @@
         <div class="s2-card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                 <div class="s2-card-title" style="margin-bottom:0;">정류소별 예측 좌석수</div>
-                <span id="resultSummary" style="font-size:11px;color:#b0a0b8;">
+                <span id="resultSummary" style="font-size:11px;color:#94a3b8;">
                     노선, 기준 정류소, 승차 일시를 선택한 뒤 예측을 실행하세요.
                 </span>
             </div>
@@ -386,7 +387,7 @@
         <div class="s2-card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <div class="s2-card-title" style="margin-bottom:0;">노선 지도</div>
-                <span id="mapSummary" style="font-size:11px;color:#b0a0b8;">
+                <span id="mapSummary" style="font-size:11px;color:#94a3b8;">
                     예측 실행 후 정류소 위치와 연결선을 표시합니다.
                 </span>
             </div>
@@ -399,5 +400,6 @@
 
 {% block extra_script %}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={{ KAKAO_JS_KEY }}&autoload=false"></script>
+<script src="{% static 'bus/js/datepicker.js' %}"></script>
 <script type="module" src="{% static 'bus/js/service2.js' %}"></script>
 {% endblock %}
