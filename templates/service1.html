@@ -4,282 +4,411 @@
 
 {% block extra_style %}
 <style>
-    .service-hero {
-        overflow: hidden;
+    .s1-page {
+        padding: 28px 5% 28px 5.8%;
     }
 
-    .service-hero .hero-side-card {
-        border: 0;
-        border-radius: 24px;
-        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+    .s1-header {
+        margin-bottom: 20px;
+    }
+
+    .s1-title {
+        font-size: clamp(18px, 2vw, 26px);
+        font-weight: 900;
+        color: #1a1218;
+        letter-spacing: -0.5px;
+        margin-bottom: 4px;
+    }
+
+    .s1-sub {
+        font-size: 13px;
+        color: #b0a0b8;
+    }
+
+    .s1-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .s1-card {
+        background: #fff;
+        border: 1px solid #f0ecf8;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 4px 20px rgba(192,132,252,0.06);
+    }
+
+    .s1-card-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #b0a0b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
+    }
+
+    .s1-form-group {
+        margin-bottom: 12px;
+    }
+
+    .s1-form-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: #8a7a90;
+        margin-bottom: 5px;
+    }
+
+    .s1-select,
+    .s1-input {
+        width: 100%;
+        height: 38px;
+        border: 1.5px solid #f0ecf8;
+        border-radius: 10px;
+        background: #fdfcff;
+        padding: 0 12px;
+        font-size: 12px;
+        color: #1a1218;
+        appearance: none;
+        -webkit-appearance: none;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+
+    .s1-select:focus,
+    .s1-input:focus {
+        border-color: #a855f7;
+        box-shadow: 0 0 0 3px rgba(168,85,247,0.08);
+    }
+
+    .s1-btn-predict {
+        width: 100%;
+        height: 42px;
+        background: linear-gradient(135deg, #f472b6, #fb7185);
         color: #fff;
-        box-shadow: 0 18px 36px rgba(37, 99, 235, 0.20);
-    }
-
-    .service-title {
-        font-size: clamp(1.9rem, 4.2vw, 3rem);
-        font-weight: 800;
-        line-height: 1.2;
-        letter-spacing: -0.02em;
-    }
-
-    .result-badge {
-        font-size: 0.95rem;
+        border: none;
+        border-radius: 11px;
+        font-size: 13px;
         font-weight: 700;
+        cursor: pointer;
+        margin-top: 4px;
+        box-shadow: 0 4px 14px rgba(244,114,182,0.3);
+        transition: opacity 0.15s;
     }
 
-    .history-head th {
-        background: #0f172a !important;
-        color: #fff !important;
-        border-color: #0f172a !important;
-    }
+    .s1-btn-predict:hover { opacity: 0.88; }
 
-    .info-list {
-        padding-left: 1.1rem;
-        margin-bottom: 0;
-    }
-
-    .info-list li+li {
-        margin-top: 0.45rem;
-    }
-
-    @media (max-width: 991px) {
-
-        .service-hero .card-body,
-        .section-card .card-body {
-            padding: 1.25rem !important;
-        }
-    }
-
-    .favorite-actions {
+    .s1-fav-row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        gap: 8px;
+        margin-top: 12px;
     }
 
-    .favorite-actions .btn {
-        border-radius: 14px;
+    .s1-btn-fav {
+        flex: 1;
+        height: 34px;
+        border: 1.5px solid #fde8ef;
+        border-radius: 9px;
+        background: #fff5f8;
+        color: #f472b6;
+        font-size: 11px;
         font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s;
     }
 
-    @media (max-width: 767px) {
-        .favorite-actions {
-            flex-direction: column;
-        }
+    .s1-btn-fav:hover { background: #ffd6e8; }
+    .s1-btn-fav:disabled { opacity: 0.4; cursor: default; }
 
-        .favorite-actions .btn {
-            width: 100%;
-        }
+    .s1-result-card {
+        background: linear-gradient(135deg, #fff5f8 0%, #fff 60%);
     }
 
-    .toast-ui {
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        background: #0f172a;
-        color: #ffffff;
-        padding: 12px 16px;
-        border-radius: 14px;
-        font-size: 14px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
-        opacity: 0;
-        pointer-events: none;
-        transition: 0.25s ease;
-        z-index: 9999;
-    }
-
-    .toast-ui.show {
-        opacity: 1;
-    }
-
-
-    .seat-chart-body {
+    .s1-result-top {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 14px;
     }
 
-    .seat-chart-title {
-        margin-top: 18px;
-        margin-bottom: 18px;
+    .s1-congestion-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 999px;
+    }
+
+    .badge-여유    { background: #ecfdf5; color: #059669; }
+    .badge-보통    { background: #fefce8; color: #ca8a04; }
+    .badge-혼잡    { background: #fff5f8; color: #ec4899; }
+    .badge-만차    { background: #fef2f2; color: #dc2626; }
+    .badge-default { background: #f5f0ff; color: #a855f7; }
+
+    .s1-donut-wrap {
+        width: clamp(80px, 9vw, 120px);
+        height: clamp(80px, 9vw, 120px);
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+    }
+
+    .s1-donut-wrap svg {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+    }
+
+    .s1-donut-inner {
+        position: relative;
+        z-index: 1;
         text-align: center;
     }
 
-    .chart-info {
-        text-align: center;
-        margin-bottom: 18px;
-        min-height: 72px;
+    .s1-donut-lbl  { font-size: 9px; color: #f472b6; font-weight: 700; }
+    .s1-donut-val  { font-size: clamp(20px, 2.2vw, 32px); font-weight: 900; color: #f472b6; line-height: 1; }
+    .s1-donut-unit { font-size: 10px; color: #f472b6; }
+
+    .s1-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
     }
 
-    .chart-box {
-        width: 100%;
-        max-width: 100%;
+    .s1-metric {
+        background: #fff;
+        border: 1px solid #f0ecf8;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .s1-metric-lbl { font-size: 9px; color: #b0a0b8; font-weight: 600; margin-bottom: 4px; }
+    .s1-metric-val { font-size: 16px; font-weight: 800; color: #1a1218; }
+
+    .s1-result-msg {
+        background: #fdf4ff;
+        border-radius: 10px;
+        padding: 10px 13px;
+        font-size: 11px;
+        color: #a855f7;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .s1-bottom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 16px;
+    }
+
+    .s1-chart-wrap {
+        padding: 18px 22px;
+    }
+
+    .s1-chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    #chartInfo {
+        font-size: 11px;
+        color: #b0a0b8;
+        margin-bottom: 8px;
+        min-height: 32px;
     }
 
     #seatChart {
         width: 100%;
-        min-height: 520px;
-        height: 520px;
+        min-height: 280px;
+        height: 280px;
     }
 
-    @media (max-width: 768px) {
-        #seatChart {
-            min-height: 360px;
-            height: 360px;
-        }
+    .s1-table-wrap {
+        overflow-x: auto;
+    }
+
+    .s1-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .s1-table th {
+        font-size: 9px;
+        color: #b0a0b8;
+        font-weight: 700;
+        padding: 0 8px 8px;
+        text-align: left;
+        border-bottom: 1px solid #f0ecf8;
+        white-space: nowrap;
+    }
+
+    .s1-table td {
+        padding: 9px 8px;
+        border-bottom: 1px solid #faf8fd;
+        color: #1a1218;
+        vertical-align: middle;
+    }
+
+    .s1-table tr:last-child td { border-bottom: none; }
+
+    .s1-toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #1a1218;
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-size: 13px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+        z-index: 9999;
+    }
+
+    .s1-toast.show { opacity: 1; }
+
+    @media (max-width: 991px) {
+        .s1-grid { grid-template-columns: 1fr; }
+        .s1-bottom-grid { grid-template-columns: 1fr; }
     }
 </style>
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-0">
-    <section class="glass-card hero-gradient service-hero mb-4 mb-lg-5">
-        <div class="card-body p-4 p-lg-5">
-            <div class="row align-items-center g-4 g-xl-5">
-                <div class="col-lg-12">
-                    <h1 class="service-title mb-3">
-                        원하는 노선, 정류장, 승차 시간을 선택하면<br>
-                        예측 잔여좌석을 보여주는 페이지
-                    </h1>
-                    <p class="soft-note mb-0 fs-6">
-                        현재 페이지는 더미 데이터를 사용한 시연용 화면입니다.
-                        실제 프로젝트에서는 선택값을 백엔드 API로 전달하고, 예측 모델 결과를 받아 동일한 위치에 출력하면 됩니다.
-                    </p>
+<div class="s1-page">
+
+    <div class="s1-header">
+        <div class="s1-title">정류장 단위 예측</div>
+        <div class="s1-sub">노선, 정류장, 승차 시간을 선택해 잔여좌석을 예측합니다</div>
+    </div>
+
+    <div class="s1-grid">
+
+        <div class="s1-card">
+            <div class="s1-card-title">입력 조건</div>
+
+            <form id="predictForm">
+                {% csrf_token %}
+
+                <div class="s1-form-group">
+                    <label class="s1-form-label" for="routeSelect">노선 선택</label>
+                    <select id="routeSelect" class="s1-select">
+                        <option value="">노선을 선택하세요</option>
+                        {% for route in routes %}
+                        <option value="{{ route.routeId }}">{{ route.routeName }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
-        </div>
-    </section>
 
-    <section class="row g-4 align-items-stretch">
-        <div class="col-12 col-xl-5">
-            <div class="section-card h-100">
-                <div class="card-body p-4 p-lg-4">
-                    <h2 class="h4 fw-bold mb-4">입력 조건</h2>
-
-                    <form id="predictForm" class="row g-3">
-                        {% csrf_token %}
-
-                        <div class="col-12">
-                            <label for="routeSelect" class="form-label fw-semibold">노선 선택</label>
-                            <select id="routeSelect" class="form-select">
-                                <option value="">노선을 선택하세요</option>
-                                {% for route in routes %}
-                                <option value="{{ route.routeId }}">{{ route.routeName }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-12">
-                            <label for="stationSelect" class="form-label fw-semibold">정류장 선택</label>
-                            <select id="stationSelect" class="form-select" disabled>
-                                <option value="">먼저 노선을 선택하세요</option>
-                            </select>
-                        </div>
-
-                        <div class="col-12">
-                            <label for="rideDateTime" class="form-label fw-semibold">승차 일시</label>
-                            <input id="rideDateTime" type="datetime-local" class="form-control">
-                        </div>
-
-                        <div class="col-12 d-grid d-sm-flex gap-2 pt-2">
-                            <button type="submit" class="btn btn-primary flex-fill">예측하기</button>
-                        </div>
-                    </form>
-
-                    <hr class="my-4">
-
-                    <div>
-                        <div class="fw-bold mb-2">실서비스 연결 시</div>
-                        <ul class="info-list soft-note">
-                            <li>노선 및 정류장 목록은 API 또는 DB에서 로딩</li>
-                            <li>버튼 클릭 시 예측 API 호출</li>
-                            <li>응답값으로 잔여좌석, 만차확률 표시</li>
-                        </ul>
-                    </div>
+                <div class="s1-form-group">
+                    <label class="s1-form-label" for="stationSelect">정류장 선택</label>
+                    <select id="stationSelect" class="s1-select" disabled>
+                        <option value="">먼저 노선을 선택하세요</option>
+                    </select>
                 </div>
+
+                <div class="s1-form-group">
+                    <label class="s1-form-label" for="rideDateTime">승차 일시</label>
+                    <input id="rideDateTime" type="datetime-local" class="s1-input">
+                </div>
+
+                <button type="submit" class="s1-btn-predict">예측하기</button>
+            </form>
+
+            <div class="s1-fav-row">
+                <button type="button" class="s1-btn-fav" id="favoriteRouteBtn" disabled>♡ 이 노선 즐겨찾기</button>
+                <button type="button" class="s1-btn-fav" id="favoriteStationBtn" disabled>♡ 이 정류장 즐겨찾기</button>
             </div>
         </div>
 
-        <div class="col-12 col-xl-7">
-            <div class="section-card mb-4">
-                <div class="card-body p-4 p-lg-4">
-                    <div class="mb-3">
-                        <h2 class="h4 fw-bold mb-1">예측 결과</h2>
-                        <div id="resultSummary">-</div>
-                    </div>
+        <div class="s1-card s1-result-card">
+            <div class="s1-result-top">
+                <div class="s1-card-title" style="margin-bottom:0;">예측 결과</div>
+                <span class="s1-congestion-badge badge-default" id="congestionBadge">대기 중</span>
+            </div>
 
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="metric-box text-center">
-                                <div class="soft-note mb-2">잔여좌석</div>
-                                <div class="seat-number" id="seatPrediction">-</div>
-                            </div>
-                        </div>
-
-                        <div class="col-6">
-                            <div class="metric-box text-center">
-                                <div class="soft-note mb-2">만차 확률</div>
-                                <div class="fs-4 fw-bold" id="fullProb">-</div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="favorite-actions mt-3">
-                                <button type="button" class="btn btn-outline-primary" id="favoriteRouteBtn" disabled>
-                                    이 노선 즐겨찾기
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" id="favoriteStationBtn"
-                                    disabled>
-                                    이 정류장 즐겨찾기
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div class="s1-donut-wrap">
+                <svg viewBox="0 0 90 90" fill="none">
+                    <defs>
+                        <linearGradient id="dg1" x1="0" y1="0" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#f9a8d4"/>
+                            <stop offset="100%" stop-color="#f472b6"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="45" cy="45" r="37" stroke="#fde8ef" stroke-width="10"/>
+                    <circle id="donutArc" cx="45" cy="45" r="37" stroke="url(#dg1)" stroke-width="10"
+                        stroke-dasharray="0 232" stroke-dashoffset="58" stroke-linecap="round"/>
+                </svg>
+                <div class="s1-donut-inner">
+                    <div class="s1-donut-lbl">잔여좌석</div>
+                    <div class="s1-donut-val" id="seatPrediction">-</div>
+                    <div class="s1-donut-unit" id="seatUnit"></div>
                 </div>
             </div>
 
-            <div class="section-card mb-4 seat-chart-card">
-                <div class="card-body seat-chart-body">
-                    <h5 class="seat-chart-title">정류소 요일별 잔여좌석 차트</h5>
-
-                    <div id="chartInfo" class="chart-info"></div>
-
-                    <div class="chart-box">
-                        <div id="seatChart"></div>
-                    </div>
+            <div class="s1-metrics">
+                <div class="s1-metric">
+                    <div class="s1-metric-lbl">만차 확률</div>
+                    <div class="s1-metric-val" id="fullProb" style="color:#34d399;">-</div>
+                </div>
+                <div class="s1-metric">
+                    <div class="s1-metric-lbl">예측 기준</div>
+                    <div class="s1-metric-val" id="predTime">-</div>
                 </div>
             </div>
 
-            <div class="section-card">
-                <div class="card-body p-4 p-lg-4">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                        <h2 class="h4 fw-bold mb-0">최근 예측</h2>
-                        <span class="soft-note small">더미 기록</span>
-                    </div>
-
-                    <div class="table-responsive table-wrap">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="history-head">
-                                <tr>
-                                    <th>노선</th>
-                                    <th>정류장</th>
-                                    <th>일시</th>
-                                    <th>예측 잔여좌석</th>
-                                    <th>만차확률</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTable">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="s1-result-msg" id="resultSummary">
+                입력 조건을 선택하고 예측하기를 눌러주세요
             </div>
         </div>
-    </section>
-</main>
+    </div>
+
+    <div class="s1-bottom-grid">
+
+        <div class="s1-card s1-chart-wrap">
+            <div class="s1-chart-header">
+                <div class="s1-card-title" style="margin-bottom:0;">요일별 잔여좌석 차트</div>
+                <span style="font-size:10px;color:#b0a0b8;">평일(월~금)</span>
+            </div>
+            <div id="chartInfo"></div>
+            <div id="seatChart"></div>
+        </div>
+
+        <div class="s1-card">
+            <div class="s1-card-title">최근 예측 기록</div>
+            <div class="s1-table-wrap">
+                <table class="s1-table">
+                    <thead>
+                        <tr>
+                            <th>노선</th>
+                            <th>정류장</th>
+                            <th>일시</th>
+                            <th>잔여좌석</th>
+                            <th>만차확률</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="toast" class="s1-toast"></div>
 {% endblock %}
 
 {% block extra_script %}
-<script type="module" src="{% static 'bus/js/service1.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="{% static 'bus/js/service1.js' %}?v=4"></script>
 {% endblock %}
