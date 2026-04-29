@@ -524,7 +524,6 @@ def predict_route_service(
     excluded_df = route_eta_df[
         ~route_eta_df["stId"].astype(str).isin(valid_stids)
     ].copy()
-    print(excluded_df)
 
     route_eta_df = route_eta_df[
         route_eta_df["stId"].astype(str).isin(valid_stids)
