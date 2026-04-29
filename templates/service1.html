@@ -3,6 +3,7 @@
 {% block title %}서비스1 | Tomorrow Bus{% endblock %}
 
 {% block extra_style %}
+<link rel="stylesheet" href="{% static 'bus/css/datepicker.css' %}">
 <style>
     .s1-page {
         padding: 28px 5% 28px 5.8%;
@@ -15,14 +16,14 @@
     .s1-title {
         font-size: clamp(18px, 2vw, 26px);
         font-weight: 900;
-        color: #1a1218;
+        color: #1a2340;
         letter-spacing: -0.5px;
         margin-bottom: 4px;
     }
 
     .s1-sub {
         font-size: 13px;
-        color: #b0a0b8;
+        color: #94a3b8;
     }
 
     .s1-grid {
@@ -34,16 +35,16 @@
 
     .s1-card {
         background: #fff;
-        border: 1px solid #f0ecf8;
+        border: 1px solid #e2e8f4;
         border-radius: 18px;
         padding: 22px;
-        box-shadow: 0 4px 20px rgba(192,132,252,0.06);
+        box-shadow: 0 4px 20px rgba(59,130,246,0.06);
     }
 
     .s1-card-title {
         font-size: 11px;
         font-weight: 700;
-        color: #b0a0b8;
+        color: #94a3b8;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 14px;
@@ -57,7 +58,7 @@
         display: block;
         font-size: 11px;
         font-weight: 700;
-        color: #8a7a90;
+        color: #64748b;
         margin-bottom: 5px;
     }
 
@@ -65,12 +66,12 @@
     .s1-input {
         width: 100%;
         height: 38px;
-        border: 1.5px solid #f0ecf8;
+        border: 1.5px solid #e2e8f4;
         border-radius: 10px;
-        background: #fdfcff;
+        background: #fafcff;
         padding: 0 12px;
         font-size: 12px;
-        color: #1a1218;
+        color: #1a2340;
         appearance: none;
         -webkit-appearance: none;
         outline: none;
@@ -79,14 +80,14 @@
 
     .s1-select:focus,
     .s1-input:focus {
-        border-color: #a855f7;
-        box-shadow: 0 0 0 3px rgba(168,85,247,0.08);
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
     }
 
     .s1-btn-predict {
         width: 100%;
         height: 42px;
-        background: linear-gradient(135deg, #f472b6, #fb7185);
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: #fff;
         border: none;
         border-radius: 11px;
@@ -94,7 +95,7 @@
         font-weight: 700;
         cursor: pointer;
         margin-top: 4px;
-        box-shadow: 0 4px 14px rgba(244,114,182,0.3);
+        box-shadow: 0 4px 14px rgba(37,99,235,0.28);
         transition: opacity 0.15s;
     }
 
@@ -109,21 +110,21 @@
     .s1-btn-fav {
         flex: 1;
         height: 34px;
-        border: 1.5px solid #fde8ef;
+        border: 1.5px solid #bfdbfe;
         border-radius: 9px;
-        background: #fff5f8;
-        color: #f472b6;
+        background: #eff6ff;
+        color: #2563eb;
         font-size: 11px;
         font-weight: 700;
         cursor: pointer;
         transition: background 0.15s;
     }
 
-    .s1-btn-fav:hover { background: #ffd6e8; }
+    .s1-btn-fav:hover { background: #dbeafe; }
     .s1-btn-fav:disabled { opacity: 0.4; cursor: default; }
 
     .s1-result-card {
-        background: linear-gradient(135deg, #fff5f8 0%, #fff 60%);
+        background: linear-gradient(135deg, #f0f4ff 0%, #fff 60%);
     }
 
     .s1-result-top {
@@ -142,9 +143,9 @@
 
     .badge-여유    { background: #ecfdf5; color: #059669; }
     .badge-보통    { background: #fefce8; color: #ca8a04; }
-    .badge-혼잡    { background: #fff5f8; color: #ec4899; }
+    .badge-혼잡    { background: #fff5f8; color: #f472b6; }
     .badge-만차    { background: #fef2f2; color: #dc2626; }
-    .badge-default { background: #f5f0ff; color: #a855f7; }
+    .badge-default { background: #eff6ff; color: #2563eb; }
 
     .s1-donut-wrap {
         width: clamp(80px, 9vw, 120px);
@@ -168,9 +169,9 @@
         text-align: center;
     }
 
-    .s1-donut-lbl  { font-size: 9px; color: #f472b6; font-weight: 700; }
-    .s1-donut-val  { font-size: clamp(20px, 2.2vw, 32px); font-weight: 900; color: #f472b6; line-height: 1; }
-    .s1-donut-unit { font-size: 10px; color: #f472b6; }
+    .s1-donut-lbl  { font-size: 9px; color: #2563eb; font-weight: 700; }
+    .s1-donut-val  { font-size: clamp(20px, 2.2vw, 32px); font-weight: 900; color: #2563eb; line-height: 1; }
+    .s1-donut-unit { font-size: 10px; color: #2563eb; }
 
     .s1-metrics {
         display: grid;
@@ -181,21 +182,21 @@
 
     .s1-metric {
         background: #fff;
-        border: 1px solid #f0ecf8;
+        border: 1px solid #e2e8f4;
         border-radius: 12px;
         padding: 12px;
         text-align: center;
     }
 
-    .s1-metric-lbl { font-size: 9px; color: #b0a0b8; font-weight: 600; margin-bottom: 4px; }
-    .s1-metric-val { font-size: 16px; font-weight: 800; color: #1a1218; }
+    .s1-metric-lbl { font-size: 9px; color: #94a3b8; font-weight: 600; margin-bottom: 4px; }
+    .s1-metric-val { font-size: 16px; font-weight: 800; color: #1a2340; }
 
     .s1-result-msg {
-        background: #fdf4ff;
+        background: #f0f4ff;
         border-radius: 10px;
         padding: 10px 13px;
         font-size: 11px;
-        color: #a855f7;
+        color: #2563eb;
         font-weight: 600;
         text-align: center;
     }
@@ -219,7 +220,7 @@
 
     #chartInfo {
         font-size: 11px;
-        color: #b0a0b8;
+        color: #94a3b8;
         margin-bottom: 8px;
         min-height: 32px;
     }
@@ -242,18 +243,18 @@
 
     .s1-table th {
         font-size: 9px;
-        color: #b0a0b8;
+        color: #94a3b8;
         font-weight: 700;
         padding: 0 8px 8px;
         text-align: left;
-        border-bottom: 1px solid #f0ecf8;
+        border-bottom: 1px solid #e2e8f4;
         white-space: nowrap;
     }
 
     .s1-table td {
         padding: 9px 8px;
-        border-bottom: 1px solid #faf8fd;
-        color: #1a1218;
+        border-bottom: 1px solid #f0f4ff;
+        color: #1a2340;
         vertical-align: middle;
     }
 
@@ -263,7 +264,7 @@
         position: fixed;
         right: 20px;
         bottom: 20px;
-        background: #1a1218;
+        background: #1a2340;
         color: #fff;
         padding: 12px 18px;
         border-radius: 12px;
@@ -319,7 +320,7 @@
 
                 <div class="s1-form-group">
                     <label class="s1-form-label" for="rideDateTime">승차 일시</label>
-                    <input id="rideDateTime" type="datetime-local" class="s1-input">
+                    <input id="rideDateTime" type="datetime-local" class="s1-input" data-tb-dtp>
                 </div>
 
                 <button type="submit" class="s1-btn-predict">예측하기</button>
@@ -341,11 +342,11 @@
                 <svg viewBox="0 0 90 90" fill="none">
                     <defs>
                         <linearGradient id="dg1" x1="0" y1="0" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%" stop-color="#f9a8d4"/>
-                            <stop offset="100%" stop-color="#f472b6"/>
+                            <stop offset="0%" stop-color="#60a5fa"/>
+                            <stop offset="100%" stop-color="#2563eb"/>
                         </linearGradient>
                     </defs>
-                    <circle cx="45" cy="45" r="37" stroke="#fde8ef" stroke-width="10"/>
+                    <circle cx="45" cy="45" r="37" stroke="#bfdbfe" stroke-width="10"/>
                     <circle id="donutArc" cx="45" cy="45" r="37" stroke="url(#dg1)" stroke-width="10"
                         stroke-dasharray="0 232" stroke-dashoffset="58" stroke-linecap="round"/>
                 </svg>
@@ -378,7 +379,7 @@
         <div class="s1-card s1-chart-wrap">
             <div class="s1-chart-header">
                 <div class="s1-card-title" style="margin-bottom:0;">요일별 잔여좌석 차트</div>
-                <span style="font-size:10px;color:#b0a0b8;">평일(월~금)</span>
+                <span style="font-size:10px;color:#94a3b8;">평일(월~금)</span>
             </div>
             <div id="chartInfo"></div>
             <div id="seatChart"></div>
@@ -410,5 +411,6 @@
 
 {% block extra_script %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{% static 'bus/js/datepicker.js' %}"></script>
 <script type="module" src="{% static 'bus/js/service1.js' %}?v=4"></script>
 {% endblock %}

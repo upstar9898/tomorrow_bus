@@ -21,20 +21,20 @@
 
         /* ── CSS 변수 ── */
         :root {
-            --pink:        #f472b6;
-            --pink-deep:   #ec4899;
-            --pink-soft:   rgba(244,114,182,0.10);
-            --purple:      #a855f7;
-            --purple-soft: rgba(168,85,247,0.10);
-            --text-main:   #1a1218;
-            --text-sub:    #8a7a90;
-            --text-muted:  #b0a0b8;
-            --border:      #f0ecf8;
+            --blue:        #3b82f6;
+            --blue-deep:   #2563eb;
+            --blue-soft:   rgba(59,130,246,0.10);
+            --indigo:      #4f46e5;
+            --indigo-soft: rgba(79,70,229,0.10);
+            --text-main:   #1a2340;
+            --text-sub:    #64748b;
+            --text-muted:  #94a3b8;
+            --border:      #e2e8f4;
             --radius-xl:   20px;
             --radius-lg:   16px;
             --radius-md:   12px;
-            --shadow-card: 0 4px 24px rgba(192,132,252,0.08);
-            --shadow-btn:  0 6px 22px rgba(244,114,182,0.38);
+            --shadow-card: 0 4px 24px rgba(59,130,246,0.08);
+            --shadow-btn:  0 6px 22px rgba(37,99,235,0.32);
         }
 
         /* ── NAV ── */
@@ -42,7 +42,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 5%;
+            padding: 14px 48px;
             background: #fff;
             border-bottom: 1px solid var(--border);
             position: sticky;
@@ -53,61 +53,63 @@
         .tb-brand {
             display: flex;
             align-items: center;
-            gap: 2px;
+            gap: 0;
             text-decoration: none;
         }
 
         .tb-logo-img {
-            width: 50px;
-            height: 50px;
+            width: 54px;
+            height: 54px;
             object-fit: contain;
-            display: block;
+            flex-shrink: 0;
+        }
+
+        .tb-brand-text {
+            margin-left: -4px;
         }
 
         .tb-brand-name {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 800;
             color: var(--text-main);
             letter-spacing: -0.3px;
             display: block;
-            line-height: 1;
-            margin-bottom: 0;
-            padding: 0;
+            line-height: 1.2;
         }
 
         .tb-brand-sub {
             font-size: 9px;
             color: var(--text-muted);
-            margin-top: 0;
-            line-height: 1;
             display: block;
         }
 
         .tb-nav-menu {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
         }
 
         .tb-nav-menu a {
-            font-size: 11px;
-            color: #6b5f7a;
-            padding: 8px 14px;
-            border-radius: 9px;
+            font-size: 13px;
+            color: #64748b;
+            padding: 9px 16px;
+            border-radius: 10px;
             text-decoration: none;
             font-weight: 600;
-            transition: color 0.15s;
+            transition: background 0.15s, color 0.15s;
             white-space: nowrap;
         }
 
         .tb-nav-menu a:hover {
-            color: var(--pink);
+            color: var(--blue-deep);
+            background: #f0f4ff;
         }
 
         .tb-nav-menu a.active {
-            color: var(--pink);
-            border-bottom: 2px solid var(--pink);
-            border-radius: 0;
+            color: var(--blue-deep);
+            background: #eff6ff;
+            border-bottom: 2px solid var(--blue-deep);
+            border-radius: 10px 10px 0 0;
         }
 
         /* ── 페이지 래퍼 ── */
@@ -125,7 +127,7 @@
 
         /* ── 공통 버튼 ── */
         .btn-tb-main {
-            background: linear-gradient(135deg, var(--pink), #fb7185);
+            background: linear-gradient(135deg, var(--blue), var(--blue-deep));
             color: #fff;
             font-size: 13px;
             font-weight: 700;
@@ -145,7 +147,7 @@
 
         .btn-tb-sec {
             background: #fff;
-            color: #6b5f7a;
+            color: #64748b;
             font-size: 13px;
             font-weight: 600;
             padding: 12px 20px;
@@ -158,14 +160,14 @@
             gap: 6px;
         }
 
-        .btn-tb-sec:hover { border-color: var(--pink); color: var(--pink); }
+        .btn-tb-sec:hover { border-color: var(--blue); color: var(--blue); }
 
         /* ── form select ── */
         .tb-select {
             height: 44px;
             border-radius: 11px;
             border: 1.5px solid var(--border);
-            background: #fdfcff;
+            background: #fafcff;
             padding: 0 14px;
             font-size: 12px;
             color: var(--text-main);
@@ -175,15 +177,15 @@
 
         .tb-select:focus {
             outline: none;
-            border-color: var(--purple);
-            box-shadow: 0 0 0 3px rgba(168,85,247,0.1);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
         }
 
         /* ── 혼잡도 배지 ── */
         .badge-여유 { background: #ecfdf5; color: #059669; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
         .badge-보통 { background: #fefce8; color: #ca8a04; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .badge-혼잡 { background: #fff5f8; color: var(--pink-deep); padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .badge-만차 { background: #fef2f2; color: #dc2626; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .badge-혼잡 { background: #fef2f2; color: #dc2626; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+        .badge-만차 { background: #1e1b4b; color: #fff; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 
         /* ── 미디어 쿼리 ── */
         @media (max-width: 991px) {
@@ -203,8 +205,8 @@
 
 <nav class="tb-nav">
     <a href="{% url 'home' %}" class="tb-brand">
-        <img src="{% static 'bus/images/logo.png' %}" alt="Tomorrow Bus 로고" class="tb-logo-img">
-        <div>
+        <img src="{% static 'bus/images/TB_logo.png' %}" alt="Tomorrow Bus 로고" class="tb-logo-img">
+        <div class="tb-brand-text">
             <span class="tb-brand-name">Tomorrow Bus</span>
             <span class="tb-brand-sub">서울 광역버스 잔여좌석 예측 서비스</span>
         </div>
@@ -239,4 +241,3 @@
 {% block extra_script %}{% endblock %}
 </body>
 </html>
- 
