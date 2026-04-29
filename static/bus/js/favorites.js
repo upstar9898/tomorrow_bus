@@ -114,10 +114,6 @@ async function renderFavorites() {
                 routeId: bus,
             });
 
-            itemWrap.addEventListener("click", () => {
-                moveToPredictPageByBus(itemWrap.dataset.routeId);
-            });
-
             const nameSpan = document.createElement("span");
             nameSpan.className = "favorite-item-name";
             nameSpan.textContent = routeName;
@@ -132,8 +128,41 @@ async function renderFavorites() {
                 removeFavorite("bus", bus);
             });
 
+            
+            const btnWrap = document.createElement("div");
+            btnWrap.style.display = "flex";
+            btnWrap.style.gap = "8px";
+
+            // 서비스1 버튼
+            const service1Btn = document.createElement("button");
+            service1Btn.className = "btn btn-secondary";
+            service1Btn.textContent = "서비스1";
+            service1Btn.addEventListener("click", (event) => {
+                event.stopPropagation();
+                moveToPredictPageByBus(bus);
+            });
+
+            // 서비스2 버튼
+            const service2Btn = document.createElement("button");
+            service2Btn.className = "btn btn-secondary";
+            service2Btn.textContent = "서비스2";
+            service2Btn.addEventListener("click", (event) => {
+                event.stopPropagation();
+                moveToPredictPageByBus2(bus);
+            });
+
+            btnWrap.appendChild(service1Btn);
+            btnWrap.appendChild(service2Btn);
+
+            const actionWrap = document.createElement("div");
+            actionWrap.className = "favorite-action-wrap";
+
+            actionWrap.appendChild(service1Btn);
+            actionWrap.appendChild(service2Btn);
+            actionWrap.appendChild(deleteBtn);
+
             li.appendChild(itemWrap);
-            li.appendChild(deleteBtn);
+            li.appendChild(actionWrap);
             busList.appendChild(li);
         }
     }
@@ -196,8 +225,50 @@ async function renderFavorites() {
                 });
             });
 
+            const btnWrap = document.createElement("div");
+            btnWrap.style.display = "flex";
+            btnWrap.style.gap = "8px";
+
+            // 서비스1 버튼
+            const service1Btn = document.createElement("button");
+            service1Btn.className = "btn btn-secondary";
+            service1Btn.textContent = "서비스1";
+            service1Btn.addEventListener("click", (event) => {
+                event.stopPropagation();
+                // 정류소 서비스1
+                moveToPredictPageByStation({
+                    routeId: station.routeId,
+                    stationId: station.stationId,
+                    arsId: station.arsId,
+                });
+            });
+
+            // 서비스2 버튼
+            const service2Btn = document.createElement("button");
+            service2Btn.className = "btn btn-secondary";
+            service2Btn.textContent = "서비스2";
+            service2Btn.addEventListener("click", (event) => {
+                event.stopPropagation();
+                // 정류소 서비스2
+                moveToPredictPageByStation2({
+                    routeId: station.routeId,
+                    stationId: station.stationId,
+                    arsId: station.arsId,
+                });
+            });
+
+            btnWrap.appendChild(service1Btn);
+            btnWrap.appendChild(service2Btn);
+
+            const actionWrap = document.createElement("div");
+            actionWrap.className = "favorite-action-wrap";
+
+            actionWrap.appendChild(service1Btn);
+            actionWrap.appendChild(service2Btn);
+            actionWrap.appendChild(deleteBtn);
+
             li.appendChild(itemWrap);
-            li.appendChild(deleteBtn);
+            li.appendChild(actionWrap);
             stationList.appendChild(li);
         }
     }
@@ -205,3 +276,19 @@ async function renderFavorites() {
 
 document.addEventListener("DOMContentLoaded", renderFavorites);
 window.clearAllFavorites = clearAllFavorites;
+
+function moveToPredictPageByBus2(routeId) {
+    const url = new URL("/service2/", window.location.origin);
+    url.searchParams.set("route_id", routeId);
+    window.location.href = url.toString();
+}
+
+function moveToPredictPageByStation2({ stationId, routeId, arsId }) {
+    const url = new URL("/service2/", window.location.origin);
+
+    if (routeId) url.searchParams.set("route_id", routeId);
+    if (stationId) url.searchParams.set("station_id", stationId);
+    if (arsId) url.searchParams.set("ars_id", arsId);
+
+    window.location.href = url.toString();
+}

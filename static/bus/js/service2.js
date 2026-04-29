@@ -1,5 +1,6 @@
 import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
 import { routeSelectChangeEvent } from "./routeSelect.js";
+import { loadStationsByRoute } from "./routeSelect.js";
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
@@ -170,6 +171,24 @@ function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
 
 // result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
 function renderRouteResult(routeName, stationName, data) {
+
+    const weatherBadge = document.getElementById("weatherUsedBadge2");
+
+    if (weatherBadge) {
+        weatherBadge.classList.remove("d-none");
+
+        // 기존 색상 제거
+        weatherBadge.classList.remove("bg-success", "bg-secondary");
+
+        if (data.weather_fetched) {
+            weatherBadge.textContent = "날씨데이터 사용";
+            weatherBadge.classList.add("bg-success");
+        } else {
+            weatherBadge.textContent = "날씨데이터 미사용";
+            weatherBadge.classList.add("bg-secondary");
+        }
+    }
+
     const formattedDate = formatDateTime(rideDateTime.value);
     // const predictions = Array.isArray(data) ? data : [];
 
@@ -247,6 +266,16 @@ function renderRouteResult(routeName, stationName, data) {
 
         const li = document.createElement("li");
         li.className = "stop-item";
+        
+        let probText = "";
+
+        if (stop.full_probability < 0.001) {
+            probText = "0.1% 미만";
+        } else if (stop.full_probability >= 0.999) {
+            probText = "99.9% 이상";
+        } else {
+            probText = `${(stop.full_probability * 100).toFixed(1)}%`;
+        }
 
         li.innerHTML = `
             <div class="stop-marker">
@@ -286,7 +315,7 @@ function renderRouteResult(routeName, stationName, data) {
                             ? `<span>기점/종점 정류장은 예측값을 표시하지 않습니다.</span>`
                             : isVirtual
                               ? `<span>예측 대상이 아닌 가상 정류소입니다.</span>`
-                              : `<span>예상 만차확률 ${(stop.full_probability * 100).toFixed(1)}%</span>`
+                              : `<span>예상 만차확률 ${probText}</span>`
                     }
                 </div>
             </div>
@@ -616,3 +645,27 @@ if (window.kakao && window.kakao.maps) {
             zIndex: isSelected ? 4 : 3,
         });
     }
+
+async function applyQueryStringToForm() {
+    const params = new URLSearchParams(window.location.search);
+
+    const routeId = params.get("route_id");
+    const stationId = params.get("station_id");
+    const arsId = params.get("ars_id");
+    const dateTime = params.get("date_time");
+
+    if (!routeId) return;
+
+    routeSelect.value = String(routeId);
+
+    // 정류장 목록 불러오고 선택까지
+    await loadStationsByRoute(routeSelect, stationSelect, stationId, arsId);
+
+    if (dateTime) {
+        rideDateTime.value = dateTime;
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async function () {
+    await applyQueryStringToForm();
+});

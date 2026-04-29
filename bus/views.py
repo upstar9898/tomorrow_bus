@@ -5,7 +5,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .models import Bus_route, Route_station, Bus_arrival_info, Weather_station
 from .services.ml_predictor import predict_service1_result
@@ -14,6 +14,7 @@ from .services import weather_collector
 from django.db.models import Max
 from django.db.models.functions import Abs
 from django.conf import settings
+from django.utils import timezone
 
 def index(request):
     return render(request, "index.html")
@@ -92,21 +93,55 @@ def predict_service1(request):
                 status=400,
             )
 
-        try:
-            forecast_data = weather_collector.collect_forecast(
-                station_id=station_id,
-                target_dt=date_time,
-            )
+        precipitation = 0
 
-            forecast = forecast_data["forecast"]
+        weather_used = False      # 모델에 반영 여부
+        weather_fetched = False   # ⭐ 실제 API 성공 여부
+        weather_info = None
 
-            weather_main = forecast["weather"][0]["main"]
+        # 5일 이내일 때만 날씨 API 호출
+        if is_within_5_days(date_time):
+            try:
+                forecast_data = weather_collector.collect_forecast(
+                    station_id=station_id,
+                    target_dt=date_time,
+                )
 
-            precipitation = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0 # 이슬비는 빼도 되면 빼자
-        # 날씨 데이터를 못 가져올 경우
-        except Exception as e:
-            print("오류 메시지:", e)
-            precipitation = 0
+                forecast = forecast_data["forecast"]
+                weather_main = forecast["weather"][0]["main"]
+
+                precipitation = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
+
+                weather_used = True
+                weather_fetched = True   # ⭐ 여기 핵심
+
+                # print("[날씨 API 성공]", weather_fetched)
+
+                weather_info = {
+                    "main": weather_main,
+                    "description": forecast["weather"][0].get("description"),
+                    "dt_txt": forecast.get("dt_txt"),
+                }
+
+            except Exception as e:
+                # print("[날씨 API 실패]", e)
+
+                precipitation = 0
+                weather_used = False
+                weather_fetched = False  # ⭐ 실패
+
+                weather_info = {
+                    "reason": "API 호출 실패"
+                }
+
+        else:
+            weather_fetched = False  # ⭐ 호출 자체 안함
+
+            # print("[날씨 API 안가져옴]", weather_fetched)
+
+            weather_info = {
+                "reason": "5일 이후 예보 범위 초과"
+            }
 
         result = predict_service1_result(
             route_id=route_id,
@@ -114,12 +149,18 @@ def predict_service1(request):
             date_time=date_time,
             precipitation=precipitation,
         )
-        
+
+        result = convert_numpy(result)
+
+        result["weather_used"] = weather_used
+        result["weather_fetched"] = weather_fetched  # ⭐ 추가
+        result["weather_info"] = weather_info
+        result["precipitation"] = precipitation
 
         return JsonResponse(
             {
                 "success": True,
-                "data": convert_numpy(result),
+                "data": result,
             }
         )
 
@@ -401,6 +442,14 @@ def predict_service2(request):
 
             return stn
 
+        weather_fetched = False   # 실제 날씨 API 성공 여부
+        weather_used = False      # 예측/정류소 데이터에 날씨 반영 여부
+        weather_info = {
+            "requested_stn_count": 0,
+            "success_stn_count": 0,
+            "failed_stn_count": 0,
+            "reason": None,
+        }
         
         # 1. stn 수집
         unique_stn_ids = {
@@ -409,18 +458,37 @@ def predict_service2(request):
             if normalize_stn(stop.get("stn")) is not None
         }
 
+        weather_info["requested_stn_count"] = len(unique_stn_ids)  # ⭐ 추가
+
         # 2. API 호출
         forecast_map = {}
-        try:
+
+        if is_within_5_days(date_time):
             for stn_id in unique_stn_ids:
-                forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
-                    stn_id=stn_id,
-                    target_dt=date_time,
-                )
-        except Exception as e:
-            print("오류 메시지 :", e)
-            
-        # 3. 매핑
+                try:
+                    forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
+                        stn_id=stn_id,
+                        target_dt=date_time,
+                    )
+                except Exception as e:
+                    print(f"[날씨 API 실패] stn={stn_id}, 오류={e}")
+
+            weather_info["success_stn_count"] = len(forecast_map)
+            weather_info["failed_stn_count"] = len(unique_stn_ids) - len(forecast_map)
+
+            if forecast_map:
+                weather_fetched = True
+                weather_used = True
+                weather_info["reason"] = "날씨 API 일부 또는 전체 성공"
+            else:
+                weather_info["reason"] = "날씨 API 호출 실패 또는 사용 가능한 날씨 데이터 없음"
+
+        else:
+            print("[날씨 API 안가져옴]")
+            weather_info["failed_stn_count"] = len(unique_stn_ids)
+            weather_info["reason"] = "5일 이후 예보 범위 초과"
+
+        # 3. 매핑 (정리된 버전)
         for stop in stops:
             stn = normalize_stn(stop.get("stn"))
 
@@ -438,16 +506,13 @@ def predict_service2(request):
 
             stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
 
-            if not forecast_data:
-                stop["precipitation"] = 0
-                continue
-
-            weather_main = forecast_data["forecast"]["weather"][0]["main"]
-
-            stop["precipitation"] = 1 if weather_main in ["Rain", "Snow", "Drizzle"] else 0
-
         result = {}
         result["stops"] = stops
+
+        # 전체 결과 기준 날씨 상태
+        result["weather_fetched"] = weather_fetched
+        result["weather_used"] = weather_used
+        result["weather_info"] = weather_info
         
         return JsonResponse(
             {
@@ -546,3 +611,16 @@ def convert_numpy(obj):
         return float(obj)
     else:
         return obj
+    
+def is_within_5_days(date_time_str):
+    """
+    OpenWeather 5 day / 3 hour forecast 사용 가능 범위 체크
+    """
+    target_dt = datetime.fromisoformat(date_time_str)
+
+    if timezone.is_naive(target_dt):
+        target_dt = timezone.make_aware(target_dt)
+
+    now = timezone.now()
+
+    return now <= target_dt <= now + timedelta(days=5)
