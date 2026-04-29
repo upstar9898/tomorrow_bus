@@ -1,10 +1,12 @@
 # ==============================================
-# 예측 전 운행 가능 시간 검증 코드 
+# 예측 전 운행 가능 시간 검증 코드
 # ==============================================
 
 import os
 from datetime import datetime, timedelta
 from functools import lru_cache
+
+from .ml_config import ARTIFACT_DIR
 
 import pandas as pd
 from django.conf import settings
@@ -15,13 +17,7 @@ MAX_GRACE_MINUTES = 30
 MIN_GRACE_MINUTES = 15
 
 
-ARTIFACT_PATH = os.path.join(
-    settings.BASE_DIR,
-    "training",
-    "outputs_peak_v2",
-    "artifacts",
-    "route_station_travel_time.csv",
-)
+ARTIFACT_PATH = os.path.join(ARTIFACT_DIR, "route_station_travel_time.csv")
 
 
 @lru_cache(maxsize=1)
@@ -107,10 +103,9 @@ def get_cumulative_travel_sec(route_id, target_staord):
         route_df = normal_df
 
     # 같은 구간이 중복될 가능성 방지
-    route_df = (
-        route_df.sort_values(["from_staOrd", "to_staOrd", "median_travel_sec"])
-        .drop_duplicates(subset=["from_staOrd", "to_staOrd"], keep="first")
-    )
+    route_df = route_df.sort_values(
+        ["from_staOrd", "to_staOrd", "median_travel_sec"]
+    ).drop_duplicates(subset=["from_staOrd", "to_staOrd"], keep="first")
 
     return float(route_df["median_travel_sec"].sum())
 
@@ -123,6 +118,7 @@ def format_datetime_label(dt, base_date):
     if dt.date() > base_date:
         return f"익일 {dt.strftime('%H:%M')}"
     return dt.strftime("%H:%M")
+
 
 def build_available_window(route_id, station_id, service_date, target_staord):
     bus_info = Bus_info.objects.select_related("route").get(route_id=route_id)
@@ -148,9 +144,7 @@ def build_available_window(route_id, station_id, service_date, target_staord):
     )
 
     available_end = (
-        last_dt
-        + timedelta(seconds=cumulative_sec)
-        + timedelta(minutes=grace_minutes)
+        last_dt + timedelta(seconds=cumulative_sec) + timedelta(minutes=grace_minutes)
     )
 
     return available_start, available_end, time_gap, first_time, last_time
@@ -179,11 +173,13 @@ def validate_operation_time(route_id, station_id, target_datetime):
         matched_window = None
 
         for service_date in service_dates:
-            available_start, available_end, time_gap, first_time, last_time = build_available_window(
-                route_id=route_id,
-                station_id=station_id,
-                service_date=service_date,
-                target_staord=target_staord,
+            available_start, available_end, time_gap, first_time, last_time = (
+                build_available_window(
+                    route_id=route_id,
+                    station_id=station_id,
+                    service_date=service_date,
+                    target_staord=target_staord,
+                )
             )
 
             if available_start <= target_datetime <= available_end:
@@ -214,7 +210,6 @@ def validate_operation_time(route_id, station_id, target_datetime):
                 ),
                 "time_gap": matched_window["time_gap"],
                 "target_staord": target_staord,
-
                 # 추가
                 "first_time": matched_window["first_time"],
                 "last_time": matched_window["last_time"],
@@ -258,7 +253,6 @@ def validate_operation_time(route_id, station_id, target_datetime):
             "available_end_label": format_datetime_label(available_end, base_date),
             "time_gap": time_gap,
             "target_staord": target_staord,
-
             "first_time": first_time,
             "last_time": last_time,
             "interval_min": time_gap,
@@ -283,4 +277,4 @@ def validate_operation_time(route_id, station_id, target_datetime):
         "first_time": first_time,
         "last_time": last_time,
         "interval_min": time_gap,
-}
+    }
