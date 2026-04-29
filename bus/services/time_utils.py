@@ -3,23 +3,26 @@
 # ===============================================
 
 from datetime import datetime, timedelta
-from pathlib import Path
 
+from .ml_config import ARTIFACT_DIR
+
+import os
 import pandas as pd
 
-
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-TRAVEL_TIME_CSV = BASE_DIR / "training" / "outputs_peak_v2" / "artifacts" / "route_station_travel_time.csv"
+TRAVEL_TIME_CSV = os.path.join(
+    ARTIFACT_DIR,
+    "route_station_travel_time.csv",
+)
 
 
 def get_cumulative_travel_sec(route_id, target_sta_ord, time_band="normal"):
     df = pd.read_csv(TRAVEL_TIME_CSV)
 
     route_df = df[
-        (df["busRouteId"].astype(str) == str(route_id)) &
-        (df["time_band"] == time_band) &
-        (df["from_staOrd"] < int(target_sta_ord)) &
-        (df["to_staOrd"] <= int(target_sta_ord))
+        (df["busRouteId"].astype(str) == str(route_id))
+        & (df["time_band"] == time_band)
+        & (df["from_staOrd"] < int(target_sta_ord))
+        & (df["to_staOrd"] <= int(target_sta_ord))
     ].copy()
 
     if route_df.empty:
@@ -29,11 +32,7 @@ def get_cumulative_travel_sec(route_id, target_sta_ord, time_band="normal"):
 
 
 def get_next_arrival_time(
-    user_datetime,
-    first_time,
-    last_time,
-    interval_min,
-    cumulative_travel_sec
+    user_datetime, first_time, last_time, interval_min, cumulative_travel_sec
 ):
     service_date = user_datetime.date()
 
