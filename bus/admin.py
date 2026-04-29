@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.urls import path
 
 from .forms import CsvImportForm
-from .models import Bus_route, Bus_station, Route_station,  Weather_station
+from .models import Bus_route, Bus_station, Route_station, Weather_station, Bus_info
 
 
 class CsvUploadAdminMixin:
@@ -270,7 +270,8 @@ class RouteStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
         Route_station.objects.all().delete()
         Route_station.objects.bulk_create(route_station_list)
         return len(route_station_list)
-    
+
+
 @admin.register(Weather_station)
 class WeatherStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
     list_display = ("stnId", "stnName", "locationX", "locationY")
@@ -290,8 +291,8 @@ class WeatherStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
         for row_num, row in enumerate(reader, start=2):
             stn_id = (row.get("STN_ID") or "").strip()
             stn_name = (row.get("STN_KO") or "").strip()
-            location_x = (row.get("LON") or "").strip()   # 경도
-            location_y = (row.get("LAT") or "").strip()   # 위도
+            location_x = (row.get("LON") or "").strip()  # 경도
+            location_y = (row.get("LAT") or "").strip()  # 위도
 
             if not stn_id or not stn_name or not location_x or not location_y:
                 raise ValueError(f"{row_num}행: 필수값이 비어 있습니다.")
@@ -318,3 +319,101 @@ class WeatherStationAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
         Weather_station.objects.all().delete()
         Weather_station.objects.bulk_create(weather_station_list)
         return len(weather_station_list)
+
+
+@admin.register(Bus_info)
+class BusInfoAdmin(CsvUploadAdminMixin, admin.ModelAdmin):
+    list_display = (
+        "route",
+        "firstTm",
+        "lastTm",
+        "timeGap",
+        "saturdayFirstTm",
+        "saturdayLastTm",
+        "saturdaytimeGap",
+        "holidayFirstTm",
+        "holidayLastTm",
+        "holidaytimeGap",
+    )
+    search_fields = ("route__routeId", "route__routeName")
+    ordering = ("route",)
+
+    @transaction.atomic
+    def process_csv(self, reader):
+        required_headers = [
+            "busRouteId",
+            "firstTm",
+            "lastTm",
+            "timeGap",
+            "saturdayFirstTm",
+            "saturdayLastTm",
+            "saturdaytimeGap",
+            "holidayFirstTm",
+            "holidayLastTm",
+            "holidaytimeGap",
+        ]
+
+        missing_headers = [h for h in required_headers if h not in reader.fieldnames]
+        if missing_headers:
+            raise ValueError(f"헤더가 맞지 않습니다. 필요한 헤더: {required_headers}")
+
+        bus_info_list = []
+        seen_route_ids = set()
+
+        for row_num, row in enumerate(reader, start=2):
+            route_id = (row.get("busRouteId") or "").strip()
+
+            first_tm = (row.get("firstTm") or "").strip()
+            last_tm = (row.get("lastTm") or "").strip()
+            time_gap = (row.get("timeGap") or "").strip()
+
+            saturday_first_tm = (row.get("saturdayFirstTm") or "").strip()
+            saturday_last_tm = (row.get("saturdayLastTm") or "").strip()
+            saturday_time_gap = (row.get("saturdaytimeGap") or "").strip()
+
+            holiday_first_tm = (row.get("holidayFirstTm") or "").strip()
+            holiday_last_tm = (row.get("holidayLastTm") or "").strip()
+            holiday_time_gap = (row.get("holidaytimeGap") or "").strip()
+
+            if not route_id:
+                raise ValueError(f"{row_num}행: busRouteId가 비어 있습니다.")
+
+            if route_id in seen_route_ids:
+                raise ValueError(
+                    f"{row_num}행: 중복 busRouteId({route_id})가 있습니다."
+                )
+            seen_route_ids.add(route_id)
+
+            try:
+                route = Bus_route.objects.get(routeId=route_id)
+            except Bus_route.DoesNotExist:
+                raise ValueError(
+                    f"{row_num}행: Bus_route에 없는 routeId({route_id})입니다."
+                )
+
+            try:
+                time_gap = int(time_gap)
+                saturday_time_gap = int(saturday_time_gap)
+                holiday_time_gap = int(holiday_time_gap)
+            except ValueError:
+                raise ValueError(f"{row_num}행: 배차간격 값이 숫자가 아닙니다.")
+
+            bus_info_list.append(
+                Bus_info(
+                    route=route,
+                    firstTm=first_tm,
+                    lastTm=last_tm,
+                    timeGap=time_gap,
+                    saturdayFirstTm=saturday_first_tm,
+                    saturdayLastTm=saturday_last_tm,
+                    saturdaytimeGap=saturday_time_gap,
+                    holidayFirstTm=holiday_first_tm,
+                    holidayLastTm=holiday_last_tm,
+                    holidaytimeGap=holiday_time_gap,
+                )
+            )
+
+        Bus_info.objects.all().delete()
+        Bus_info.objects.bulk_create(bus_info_list)
+
+        return len(bus_info_list)
