@@ -5,131 +5,114 @@
 
 {% block extra_style %}
 <style>
-    .favorite-shell {
-        display: grid;
-        gap: 20px;
+    .fav-page {
+        padding: 28px 5% 48px;
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
 
-    .favorite-hero,
-    .favorite-card {
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
+    /* ── 헤더 ── */
+    .fav-header {
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%);
+        border: 1px solid #e2e8f4;
+        border-radius: 20px;
+        padding: 28px 28px 24px;
     }
 
-    .favorite-hero {
-        background:
-            radial-gradient(circle at top right, rgba(96, 165, 250, 0.18), transparent 28%),
-            linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,248,255,0.98) 100%);
-        overflow: hidden;
-    }
-
-    .favorite-hero .card-body,
-    .favorite-card .card-body {
-        padding: 24px;
-    }
-
-    .favorite-eyebrow {
+    .fav-header-badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 14px;
-        border-radius: 999px;
-        background: var(--primary-soft);
-        color: var(--primary-deep);
-        border: 1px solid rgba(37, 99, 235, 0.10);
-        font-size: 0.9rem;
+        gap: 7px;
+        background: rgba(255,255,255,0.9);
+        border: 1px solid #bfdbfe;
+        color: #2563eb;
+        font-size: 11px;
         font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 999px;
         margin-bottom: 14px;
     }
 
-    .favorite-title {
-        margin: 0 0 10px;
-        font-size: clamp(1.9rem, 4vw, 2.8rem);
-        line-height: 1.18;
-        letter-spacing: -0.03em;
-        font-weight: 800;
+    .fav-header-badge-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #60a5fa, #4f46e5);
     }
 
-    .favorite-desc {
-        margin: 0;
-        color: var(--text-sub);
-        line-height: 1.8;
+    .fav-title {
+        font-size: clamp(20px, 2.5vw, 30px);
+        font-weight: 900;
+        color: #1a2340;
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
     }
 
-    .section-title {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 800;
-        color: var(--text-main);
-    }
-
-    .section-desc {
-        margin: 8px 0 0;
-        color: var(--text-sub);
+    .fav-desc {
+        font-size: 13px;
+        color: #64748b;
         line-height: 1.7;
     }
 
-    .favorite-list {
-        list-style: none;
-        padding: 0;
-        margin: 18px 0 0;
-        display: grid;
-        gap: 12px;
+    /* ── 섹션 카드 ── */
+    .fav-card {
+        background: #fff;
+        border: 1px solid #e2e8f4;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 4px 20px rgba(59,130,246,0.06);
     }
 
-    .favorite-list li {
+    .fav-section-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: #1a2340;
+        margin-bottom: 4px;
+    }
+
+    .fav-section-desc {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 16px;
+        line-height: 1.6;
+    }
+
+    /* ── 목록 ── */
+    .fav-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .fav-list li {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 16px;
-        padding: 16px 18px;
-        border-radius: 18px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        border: 1px solid #e8eef7;
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
-    }
-
-    .favorite-item-name {
-        font-weight: 700;
-        color: var(--text-main);
-        word-break: break-word;
-    }
-
-    .empty-text {
-        margin: 18px 0 0;
-        color: var(--text-sub);
-        line-height: 1.7;
-        padding: 16px 18px;
-        border-radius: 18px;
-        background: #f8fbff;
-        border: 1px dashed #d6e2f2;
-    }
-
-    .btn-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-    }
-
-    .btn {
+        gap: 14px;
+        padding: 14px 16px;
         border-radius: 14px;
-        padding: 10px 16px;
-        font-weight: 700;
+        background: #f8faff;
+        border: 1px solid #e2e8f4;
+        transition: box-shadow 0.15s;
     }
 
-    .btn-delete {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
+    .fav-list li:hover {
+        box-shadow: 0 4px 16px rgba(59,130,246,0.10);
     }
 
-    .btn-delete:hover {
-        background: #fee2e2;
-        color: #991b1b;
-        border-color: #fca5a5;
+    .fav-item-icon {
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        background: #eff6ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
 
     .btn-clear {
@@ -191,39 +174,135 @@
     }
 
     .favorite-item-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+    .fav-item-body {
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 3px;
     }
 
-    .favorite-sub-text {
-        display: inline-block;
-        font-size: 0.85rem;
+    .fav-item-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1a2340;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fav-item-sub {
+        font-size: 11px;
         color: #64748b;
     }
 
-    .favorite-badge {
+    .fav-link-badge {
         display: inline-flex;
         align-items: center;
-        padding: 6px 10px;
+        padding: 5px 10px;
         border-radius: 999px;
         background: #eff6ff;
-        color: #1d4ed8;
+        color: #2563eb;
         border: 1px solid #bfdbfe;
-        font-size: 0.82rem;
+        font-size: 11px;
         font-weight: 700;
-        width: fit-content;
-        margin-top: 6px;
+        white-space: nowrap;
         cursor: pointer;
+        text-decoration: none;
+        transition: background 0.15s;
     }
 
-    .favorite-badge:hover {
-        background: #dbeafe;
+    .fav-link-badge:hover { background: #dbeafe; color: #1d4ed8; }
+
+    .fav-btn-delete {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        border-radius: 9px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+        flex-shrink: 0;
     }
 
-    .favorite-badge:focus {
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    .fav-btn-delete:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+    }
+
+    /* ── 빈 상태 ── */
+    .fav-empty {
+        padding: 32px 20px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 13px;
+        border: 1.5px dashed #e2e8f4;
+        border-radius: 12px;
+        background: #fafcff;
+        display: none;
+    }
+
+    /* ── 관리 카드 ── */
+    .fav-manage-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .fav-btn-clear {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+        border: none;
+        border-radius: 11px;
+        padding: 11px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(37,99,235,0.24);
+        transition: opacity 0.15s;
+    }
+
+    .fav-btn-clear:hover { opacity: 0.88; }
+
+    .fav-btn-home {
+        background: #fff;
+        color: #64748b;
+        border: 1.5px solid #e2e8f4;
+        border-radius: 11px;
+        padding: 11px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: border-color 0.15s, color 0.15s;
+    }
+
+    .fav-btn-home:hover { border-color: #3b82f6; color: #2563eb; }
+
+    /* ── 반응형 ── */
+    @media (max-width: 640px) {
+        .fav-list li {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .fav-manage-row {
+            flex-direction: column;
+        }
+        .fav-btn-clear,
+        .fav-btn-home {
+            width: 100%;
+            justify-content: center;
+        }
     }
 
     .favorite-action-wrap {
@@ -236,54 +315,50 @@
 {% endblock %}
 
 {% block content %}
-<div class="favorite-shell">
-    <section class="favorite-hero">
-        <div class="card-body">
-            <h1 class="favorite-title">버스 및 정류장 즐겨찾기</h1>
-            <p class="favorite-desc">
-                브라우저의 localStorage에 저장된 즐겨찾기 목록입니다.
-                자주 확인하는 노선과 정류장을 저장해두고 홈과 서비스 화면에서 빠르게 다시 접근할 수 있습니다.
-            </p>
+<div class="fav-page">
+
+    <!-- 헤더 -->
+    <section class="fav-header">
+        <div class="fav-header-badge">
+            <div class="fav-header-badge-dot"></div>
+            즐겨찾기
+        </div>
+        <h1 class="fav-title">버스 및 정류장 즐겨찾기</h1>
+        <p class="fav-desc">
+            브라우저에 저장된 즐겨찾기 목록입니다.<br>
+            자주 확인하는 노선과 정류장을 저장해두고 빠르게 다시 접근할 수 있습니다.
+        </p>
+    </section>
+
+    <!-- 즐겨찾기한 버스 -->
+    <section class="fav-card">
+        <div class="fav-section-title">즐겨찾기한 버스</div>
+        <div class="fav-section-desc">자주 이용하는 버스 노선을 저장한 목록입니다.</div>
+
+        <ul id="busList" class="fav-list"></ul>
+        <p id="busEmpty" class="fav-empty">저장된 버스 즐겨찾기가 없습니다.</p>
+    </section>
+
+    <!-- 즐겨찾기한 정류장 -->
+    <section class="fav-card">
+        <div class="fav-section-title">즐겨찾기한 정류장</div>
+        <div class="fav-section-desc">자주 조회하는 정류장을 저장한 목록입니다.</div>
+
+        <ul id="stationList" class="fav-list"></ul>
+        <p id="stationEmpty" class="fav-empty">저장된 정류장 즐겨찾기가 없습니다.</p>
+    </section>
+
+    <!-- 관리 -->
+    <section class="fav-card">
+        <div class="fav-section-title">관리</div>
+        <div class="fav-section-desc">저장된 즐겨찾기를 한 번에 정리하거나 홈으로 돌아갈 수 있습니다.</div>
+
+        <div class="fav-manage-row">
+            <button class="fav-btn-clear" onclick="clearAllFavorites()">전체 삭제</button>
+            <a href="{% url 'home' %}" class="fav-btn-home">🏠 홈으로 돌아가기</a>
         </div>
     </section>
 
-    <section class="favorite-card">
-        <div class="card-body">
-            <h2 class="section-title">즐겨찾기한 버스</h2>
-            <p class="section-desc">
-                자주 이용하는 버스 노선을 저장한 목록입니다.
-            </p>
-
-            <ul id="busList" class="favorite-list"></ul>
-            <p id="busEmpty" class="empty-text" style="display:none;">저장된 버스 즐겨찾기가 없습니다.</p>
-        </div>
-    </section>
-
-    <section class="favorite-card">
-        <div class="card-body">
-            <h2 class="section-title">즐겨찾기한 정류장</h2>
-            <p class="section-desc">
-                자주 조회하는 정류장을 저장한 목록입니다.
-            </p>
-
-            <ul id="stationList" class="favorite-list"></ul>
-            <p id="stationEmpty" class="empty-text" style="display:none;">저장된 정류장 즐겨찾기가 없습니다.</p>
-        </div>
-    </section>
-
-    <section class="favorite-card manage-card">
-        <div class="card-body">
-            <h2 class="section-title">관리</h2>
-            <p class="section-desc">
-                저장된 즐겨찾기를 한 번에 정리하거나 홈으로 돌아갈 수 있습니다.
-            </p>
-
-            <div class="btn-row">
-                <button class="btn btn-clear" onclick="clearAllFavorites()">전체 삭제</button>
-                <a href="{% url 'home' %}" class="btn btn-secondary" style="text-decoration:none;">홈으로 돌아가기</a>
-            </div>
-        </div>
-    </section>
 </div>
 {% endblock %}
 

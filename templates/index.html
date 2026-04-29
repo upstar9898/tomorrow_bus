@@ -1,424 +1,642 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}홈 | Tomorrow Bus{% endblock %}
 
 {% block extra_style %}
 <style>
-    @font-face {
-        font-family: 'Paperlogy';
-        src: url('/static/fonts/Paperlogy-7Bold.ttf') format('opentype');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
-    }
 
-    .home-hero {
-        overflow: hidden;
-    }
+/* ── 히어로 ── */
+.tb-hero {
+    padding: 52px 5% 0;
+    background: linear-gradient(160deg, #f0f4ff 0%, #e8eeff 40%, #f0f7ff 100%);
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    overflow: hidden;
+    min-height: 520px;
+}
 
-    .eyebrow-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 14px;
-        border-radius: 999px;
-        background: var(--primary-soft);
-        color: var(--primary-deep);
-        border: 1px solid rgba(37, 99, 235, 0.10);
-        font-size: 0.9rem;
-        font-weight: 700;
-    }
+.tb-glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+.tb-glow-1 {
+    width: 50vw; height: 50vw;
+    top: -20vw; right: -10vw;
+    background: radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 65%);
+}
+.tb-glow-2 {
+    width: 30vw; height: 30vw;
+    bottom: -10vw; left: 30vw;
+    background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 65%);
+}
 
-    .home-title {
-        margin: 18px 0 16px;
-        font-size: clamp(2.2rem, 5vw, 4.2rem);
-        line-height: 1.08;
-        letter-spacing: -0.04em;
-        font-weight: 800;
-    }
+/* ── 왼쪽 텍스트 ── */
+.tb-hero-left {
+    position: relative;
+    z-index: 2;
+    flex: 0 0 42%;
+    min-width: 0;
+    padding-bottom: 52px;
+}
 
-    .home-lead {
-        max-width: 700px;
-        margin: 0 0 28px;
-        color: var(--text-sub);
-        font-size: 1.05rem;
-        line-height: 1.8;
-    }
+.tb-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #c7d7f8;
+    color: #2563eb;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+}
+.tb-badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #60a5fa, #4f46e5);
+    flex-shrink: 0;
+}
 
-    .hero-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 28px;
-    }
+.tb-hero-title {
+    font-size: clamp(28px, 3.2vw, 48px);
+    font-weight: 900;
+    color: #1a2340;
+    line-height: 1.12;
+    letter-spacing: -1.5px;
+    margin-bottom: 14px;
+}
+.tb-hero-title em {
+    background: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-style: normal;
+}
 
-    .hero-actions .btn {
-        min-width: 170px;
-        min-height: 50px;
-        border-radius: 15px;
-        font-weight: 700;
-    }
+.tb-hero-desc {
+    font-size: clamp(12px, 1.1vw, 15px);
+    color: #64748b;
+    line-height: 1.8;
+    margin-bottom: clamp(20px, 2.5vw, 32px);
+}
 
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-    }
+.tb-hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
 
-    .stat-card {
-        border: 1px solid #e8eef7;
-        border-radius: 20px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 255, 0.96) 100%);
-        padding: 20px;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
-    }
+/* ── 오른쪽 카드 영역 ── */
+.tb-hero-right {
+    position: relative;
+    z-index: 3;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 520px;
+    overflow: visible;
+    padding-bottom: 20px;
+}
 
-    .stat-card strong {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 1.55rem;
-        font-weight: 800;
-        color: var(--text-main);
-    }
+.tb-mockup-wrap {
+    position: relative;
+    width: clamp(340px, 50vw, 700px);
+    height: 450px;
+}
 
-    .stat-card span {
-        color: var(--text-sub);
-        font-size: 0.95rem;
-        line-height: 1.5;
-    }
+.tb-mock {
+    position: absolute;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 14px 44px rgba(59,130,246,0.13), 0 2px 10px rgba(0,0,0,0.05);
+    overflow: hidden;
+    border: 1px solid #e2e8f4;
+    display: flex;
+    flex-direction: column;
+}
 
-    .status-board {
-        display: grid;
-        gap: 16px;
-        align-content: start;
-    }
+/* 카드1: 서비스1 — 왼쪽 */
+.tb-mock-1 { width: 43%; top: 36px; bottom: 14px; left: 0; z-index: 1; transform: rotate(-2deg); }
 
-    .status-card {
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 24px;
-        background: #ffffff;
-        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.06);
-        padding: 24px;
-    }
+/* 카드2: 서비스2 — 중앙, 가장 앞 */
+.tb-mock-2 {
+    width: 45%; top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+    z-index: 3; box-shadow: 0 22px 60px rgba(59,130,246,0.20), 0 4px 16px rgba(0,0,0,0.08);
+}
 
-    .status-highlight {
-        background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
-        color: #ffffff;
-        box-shadow: 0 20px 38px rgba(37, 99, 235, 0.18);
-        border: none;
-    }
+/* 카드3: 즐겨찾기 — 오른쪽 */
+.tb-mock-3 { width: 43%; top: 26px; bottom: 6px; right: 0; z-index: 2; transform: rotate(2deg); }
 
-    .status-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 14px;
-    }
+/* ── 목업 공통 헤더 ── */
+.mock-header {
+    padding: 9px 11px 8px;
+    background: linear-gradient(135deg, #f8faff 0%, #fff 100%);
+    border-bottom: 1px solid #eef2fb;
+    display: flex; align-items: center; gap: 6px;
+    flex-shrink: 0;
+}
+.mock-tag {
+    font-size: 7.5px; font-weight: 800; padding: 3px 8px;
+    border-radius: 999px; background: #2563eb; color: #fff;
+    white-space: nowrap; flex-shrink: 0;
+}
+.mock-title { font-size: 9.5px; font-weight: 800; color: #1a2340; white-space: nowrap; }
+.mock-sub { font-size: 7px; color: #94a3b8; margin-top: 1px; white-space: nowrap; }
+.mock-body { padding: 9px 11px; overflow: hidden; flex: 1; display: flex; flex-direction: column; }
 
-    .status-badge {
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.18);
-        color: #ffffff;
-        font-size: 0.82rem;
-        font-weight: 700;
-    }
+/* ══ 서비스1 목업 ══ */
+.m1-lbl { font-size: 6.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+.m1-form-row { margin-bottom: 4px; }
+.m1-form-field-lbl { font-size: 6px; color: #94a3b8; font-weight: 600; margin-bottom: 1.5px; }
+.m1-form-val {
+    height: 18px; background: #fafcff; border: 1px solid #e2e8f4;
+    border-radius: 5px; font-size: 7.5px; color: #1a2340;
+    padding: 0 7px; display: flex; align-items: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.m1-btn {
+    width: 100%; height: 21px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 7.5px; font-weight: 700; color: #fff; margin: 5px 0 5px;
+}
+.m1-fav-row { display: flex; gap: 4px; margin-bottom: 7px; }
+.m1-fav-btn {
+    flex: 1; height: 15px; border: 1px solid #bfdbfe; border-radius: 4px;
+    background: #eff6ff; color: #2563eb; font-size: 5.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.m1-divider { border: none; border-top: 1px solid #eef2fb; margin: 5px 0; }
+.m1-result-box {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8faff 100%);
+    border-radius: 9px; padding: 7px 9px; border: 1px solid #e2e8f4; flex: 1;
+}
+.m1-result-label { font-size: 6px; color: #94a3b8; font-weight: 600; margin-bottom: 2px; }
+.m1-result-route { font-size: 8px; font-weight: 800; color: #1a2340; }
+.m1-result-sub { font-size: 6px; color: #94a3b8; margin-bottom: 6px; }
+.m1-donut-row { display: flex; align-items: center; gap: 8px; }
+.m1-donut-wrap { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
+.m1-donut-inner {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); text-align: center;
+}
+.m1-seat-lbl { font-size: 5.5px; font-weight: 700; color: #64748b; line-height: 1.2; }
+.m1-seat-val { font-size: 13px; font-weight: 900; color: #2563eb; line-height: 1; }
+.m1-metrics { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.m1-metric-row { display: flex; align-items: center; justify-content: space-between; }
+.m1-metric-lbl { font-size: 6px; color: #94a3b8; }
+.m1-metric-val { font-size: 8px; font-weight: 800; }
+.m1-badge { padding: 2px 6px; border-radius: 999px; font-size: 6.5px; font-weight: 700; }
+.m1-summary { background: #eff6ff; border-radius: 5px; padding: 4px 7px; margin-top: 6px; font-size: 6px; color: #2563eb; font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .arrival-text {
-        font-size: clamp(2rem, 4vw, 2.8rem);
-        font-weight: 800;
-        letter-spacing: -0.04em;
-        line-height: 1.1;
-        margin-bottom: 12px;
-    }
+/* ══ 서비스2 목업 ══ */
+.m2-route-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.m2-route-name { font-size: 10px; font-weight: 900; color: #1a2340; }
+.m2-route-badge { font-size: 6px; padding: 1.5px 5px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-weight: 700; }
+.m2-route-dir { font-size: 6.5px; color: #94a3b8; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m2-tabs { display: flex; gap: 8px; margin-bottom: 7px; border-bottom: 1px solid #eef2fb; padding-bottom: 4px; }
+.m2-tab-on { font-size: 7.5px; font-weight: 700; color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 2px; margin-bottom: -5px; }
+.m2-tab-off { font-size: 7.5px; color: #94a3b8; }
+.m2-summary-txt { font-size: 6px; color: #64748b; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .status-desc {
-        line-height: 1.75;
-        opacity: 0.96;
-        margin-bottom: 0;
-    }
+.m2-stop-item {
+    display: flex; align-items: flex-start; gap: 7px;
+    padding: 5px 7px; border-radius: 8px;
+    background: #fff; border: 1px solid #eef2fb; margin-bottom: 4px;
+}
+.m2-stop-item.sel { background: #f0f4ff; border-color: #bfdbfe; }
+.m2-line-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-top: 2px; }
+.m2-dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #fff; flex-shrink: 0; }
+.m2-dot.g { background: #22c55e; box-shadow: 0 0 0 1.5px #22c55e; }
+.m2-dot.b { background: #2563eb; box-shadow: 0 0 0 1.5px #2563eb; }
+.m2-dot.i { background: #4f46e5; box-shadow: 0 0 0 2px #4f46e5; width: 11px; height: 11px; }
+.m2-vline { width: 2px; background: linear-gradient(180deg,#60a5fa,#4f46e5); flex: 1; min-height: 8px; margin-top: 2px; border-radius: 1px; }
+.m2-stop-info { flex: 1; min-width: 0; }
+.m2-stop-name { font-size: 7.5px; font-weight: 700; color: #1a2340; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m2-stop-name.sel { color: #2563eb; }
+.m2-stop-meta { font-size: 5.5px; color: #94a3b8; margin-top: 1px; }
+.m2-stop-eta { font-size: 6px; color: #64748b; margin-top: 1.5px; }
+.m2-stop-prob { font-size: 5.5px; color: #94a3b8; margin-top: 1px; }
+.m2-stop-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.m2-seat-num { font-size: 9.5px; font-weight: 900; }
+.m2-seat-badge { font-size: 6px; padding: 1.5px 5px; border-radius: 999px; font-weight: 700; }
+.m2-sel-badge { font-size: 6px; padding: 1.5px 5px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-weight: 700; margin-bottom: 1px; }
+.m2-legend { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.m2-legend span { font-size: 6px; padding: 1.5px 5px; border-radius: 999px; font-weight: 700; }
 
-    .info-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 14px 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.18);
-    }
+/* ══ 즐겨찾기 목업 ══ */
+.mf-sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.mf-sec-title { font-size: 7.5px; font-weight: 800; color: #1a2340; }
+.mf-sec-clear { font-size: 6px; color: #94a3b8; }
+.mf-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 8px; background: #f8faff;
+    border-radius: 9px; margin-bottom: 4px; border: 1px solid #eef2fb;
+}
+.mf-icon { width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mf-info { flex: 1; min-width: 0; }
+.mf-name { font-size: 8px; font-weight: 700; color: #1a2340; white-space: nowrap; }
+.mf-sub { font-size: 6px; color: #94a3b8; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mf-star { color: #f59e0b; font-size: 10px; flex-shrink: 0; }
+.mf-divider { border: none; border-top: 1px solid #eef2fb; margin: 6px 0; }
+.mf-home-btn {
+    width: 100%; height: 22px; border: 1.5px solid #e2e8f4; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 700; color: #64748b; margin-top: 4px; gap: 3px;
+}
 
-    .info-row strong {
-        font-weight: 800;
-    }
+/* ── 서비스 카드 영역 ── */
+.tb-svcs-section {
+    background: #f0f4ff;
+    padding: 0 5% 48px;
+}
 
-    .favorite-actions {
-        margin-top: 18px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
+.tb-svcs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-top: 28px;
+}
 
-    .favorite-actions .btn {
-        border-radius: 14px;
-        font-weight: 700;
-    }
+.tb-svc {
+    background: #fff;
+    border: 1px solid #e2e8f4;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+    text-decoration: none;
+    display: block;
+    color: inherit;
+}
+.tb-svc:hover {
+    box-shadow: 0 8px 32px rgba(59,130,246,0.12);
+    transform: translateY(-2px);
+}
+.tb-svc-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+}
+.tb-svc-title { font-size: 13px; font-weight: 700; color: #1a2340; margin-bottom: 6px; }
+.tb-svc-desc  { font-size: 11px; color: #64748b; line-height: 1.6; margin-bottom: 14px; }
+.tb-svc-arrow {
+    font-size: 13px;
+    color: #3b82f6;
+    font-weight: 700;
+}
 
-    .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
-        margin-top: 24px;
-    }
+/* ── 공지사항 바 ── */
+.tb-notice {
+    background: #fff;
+    border-top: 1px solid #e2e8f4;
+    border-bottom: 1px solid #e2e8f4;
+    padding: 12px 5%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #64748b;
+}
+.tb-notice-icon { color: #3b82f6; font-size: 14px; }
+.tb-notice-text { flex: 1; }
+.tb-notice-date { color: #94a3b8; font-size: 11px; }
+.tb-notice-more { color: #2563eb; font-weight: 700; font-size: 11px; text-decoration: none; }
 
-    .feature-card {
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 22px;
-        background: rgba(255, 255, 255, 0.92);
-        padding: 24px;
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
-    }
+/* ── 반응형 ── */
+@media (max-width: 1024px) {
+    .tb-svcs { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+    .tb-hero { flex-direction: column !important; min-height: auto; padding-bottom: 40px; }
+    .tb-hero-right { width: 100%; height: 380px; }
+    .tb-mockup-wrap { width: 100%; }
+    .tb-svcs { grid-template-columns: 1fr; }
+}
 
-    .feature-card h2 {
-        margin: 0 0 10px;
-        font-size: 1.08rem;
-        font-weight: 800;
-    }
-
-    .feature-card p {
-        margin: 0;
-        color: var(--text-sub);
-        line-height: 1.75;
-    }
-
-    .toast-ui {
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        background: #0f172a;
-        color: #ffffff;
-        padding: 12px 16px;
-        border-radius: 14px;
-        font-size: 14px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
-        opacity: 0;
-        pointer-events: none;
-        transition: 0.25s ease;
-        z-index: 9999;
-    }
-
-    .toast-ui.show {
-        opacity: 1;
-    }
-
-    @media (max-width: 991px) {
-
-        .stats-grid,
-        .feature-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .hero-actions .btn {
-            flex: 1 1 100%;
-            min-width: 0;
-        }
-    }
-
-    @media (max-width: 767px) {
-
-        .status-card,
-        .feature-card,
-        .stat-card {
-            padding: 18px;
-        }
-
-        .home-lead {
-            font-size: 1rem;
-        }
-
-        .favorite-actions {
-            flex-direction: column;
-        }
-
-        .favorite-actions .btn {
-            width: 100%;
-        }
-    }
-
-    .btn-text {
-        display: inline-block;
-        margin-top: 4px;
-    }
-
-    .paperlogy-font {
-        font-family: 'Paperlogy', sans-serif;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-0">
-    <section class="glass-card hero-gradient home-hero">
-        <div class="card-body p-4 p-lg-5">
-            <div class="row g-4 g-xl-5 align-items-center">
-                <div class="col-12 col-xl-7">
-                    <span class="eyebrow-chip">AI Prediction · Smart Transit</span>
 
-                    <h1 class="home-title paperlogy-font">
-                        타기 전에 미리 보는<br>
-                        광역버스 잔여좌석 예측
-                    </h1>
+<!-- ── 히어로 ── -->
+<section class="tb-hero">
+    <div class="tb-glow tb-glow-1"></div>
+    <div class="tb-glow tb-glow-2"></div>
 
-                    <p class="home-lead">
-                        Tomorrow Bus는 서울 광역버스의 미래 시점 좌석 상태를 예측해
-                        사용자가 정류장에 도착하기 전에 좌석 가능성을 미리 확인할 수 있도록 돕는 서비스입니다.
-                        특정 정류장 기준 예측과 노선 전체 정류장 예측을 반응형 웹에서 직관적으로 제공합니다.
-                    </p>
-
-                    <div class="hero-actions">
-                        <a class="btn btn-primary" href="{% url 'service1' %}"><span class="btn-text">서비스 1
-                                보기</span></a>
-                        <a class="btn btn-outline-secondary" href="{% url 'service2' %}"><span class="btn-text">서비스 2
-                                보기</span></a>
-                        <a class="btn btn-outline-secondary" href="{% url 'favorites' %}"><span class="btn-text">즐겨찾기
-                                보기</span></a>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <strong class="paperlogy-font">정류장 단위</strong>
-                            <span>노선, 정류장, 승차 시간을 입력해 예상 잔여좌석을 확인할 수 있습니다.</span>
-                        </div>
-                        <div class="stat-card">
-                            <strong class="paperlogy-font">노선 전체</strong>
-                            <span>특정 시각 기준으로 각 정류장별 좌석 예측 결과를 한 번에 볼 수 있습니다.</span>
-                        </div>
-                        <div class="stat-card">
-                            <strong class="paperlogy-font">즐겨찾기</strong>
-                            <span>자주 쓰는 노선과 정류장을 저장해 빠르게 다시 접근할 수 있습니다.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-12 col-xl-5">
-                    <div class="status-board">
-                        <div class="status-card status-highlight">
-                            <div class="status-head">
-                                <strong class="paperlogy-font">예시 예측 결과</strong>
-                                <span class="status-badge">Demo</span>
-                            </div>
-
-                            <div class="arrival-text paperlogy-font">08:30 기준 11석</div>
-
-                            <p class="status-desc">
-                                9408번 강남역 정류장 기준 예측 결과입니다.
-                                현재 더미 데이터로 동작하지만, 실제 서비스에서는 백엔드 예측 API 결과를 연결해 같은 위치에 출력할 수 있습니다.
-                            </p>
-
-                            <div class="info-row">
-                                <span>노선</span>
-                                <strong>9408</strong>
-                            </div>
-                            <div class="info-row">
-                                <span>정류장</span>
-                                <strong>강남역</strong>
-                            </div>
-                            <div class="info-row">
-                                <span>상태</span>
-                                <strong>여유</strong>
-                            </div>
-
-                            <div class="favorite-actions">
-                                <button class="btn btn-light" onclick="addFavorite('bus', '9408')">이 노선 즐겨찾기</button>
-                                <button class="btn btn-outline-light" onclick="addFavorite('station', '강남역')">이 정류장
-                                    즐겨찾기</button>
-                            </div>
-                        </div>
-
-                        <div class="status-card">
-                            <strong class="d-block mb-2 paperlogy-font">서비스 소개</strong>
-                            <p class="mb-0 soft-note" style="line-height: 1.8;">
-                                서울시 버스 도착정보 API 기반 데이터를 수집하고,
-                                광역버스의 잔여좌석 수와 만차 가능성을 예측하는 프로젝트입니다.
-                                홈 화면에서는 서비스 핵심 기능과 바로가기 동선을 간결하게 보여줍니다.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="feature-grid">
-                <article class="feature-card">
-                    <h2 class="paperlogy-font">특정 정류장 예측</h2>
-                    <p>
-                        사용자가 노선, 정류장, 승차 시간을 선택하면 해당 조건에서의 예상 잔여좌석과 혼잡 상태를 제공합니다.
-                    </p>
-                </article>
-
-                <article class="feature-card">
-                    <h2 class="paperlogy-font">노선 전체 시각화</h2>
-                    <p>
-                        하나의 시각을 기준으로 노선 전체 정류장에 대한 좌석 예측을 지도와 목록 형태로 함께 보여줄 수 있습니다.
-                    </p>
-                </article>
-
-                <article class="feature-card">
-                    <h2 class="paperlogy-font">Django 확장 구조</h2>
-                    <p>
-                        공통 레이아웃은 base 템플릿으로 관리하고, 각 서비스는 extend 구조로 분리해 유지보수와 기능 확장이 쉽습니다.
-                    </p>
-                </article>
-            </div>
+    <!-- 왼쪽 텍스트 -->
+    <div class="tb-hero-left">
+        <div class="tb-badge">
+            <div class="tb-badge-dot"></div>
+            AI 기반 예측 플랫폼
         </div>
-    </section>
-</main>
+        <h1 class="tb-hero-title">
+            내일의 버스를<br>더 <em>정확하게</em>
+        </h1>
+        <p class="tb-hero-desc">
+            실시간 데이터와 AI 예측으로 광역버스 혼잡도를 예측하고<br>
+            더 여유롭고 스마트한 출퇴근을 경험하세요.
+        </p>
+        <div class="tb-hero-actions">
+            <a href="{% url 'service1' %}" class="btn-tb-main">예측 시작하기 →</a>
+            <a href="{% url 'service2' %}" class="btn-tb-sec">서비스2 둘러보기</a>
+        </div>
+    </div>
 
-<div id="toast" class="toast-ui"></div>
-{% endblock %}
+    <!-- 오른쪽 목업 카드 3개 -->
+    <div class="tb-hero-right">
+        <div class="tb-mockup-wrap">
 
-{% block extra_script %}
-<script>
-    function getFavorites() {
-        const data = localStorage.getItem("favorites");
-        return data ? JSON.parse(data) : { buses: [], stations: [] };
-    }
+            <!-- ══ 카드1: 서비스1 ══ -->
+            <div class="tb-mock tb-mock-1">
+                <div class="mock-header">
+                    <span class="mock-tag">서비스1</span>
+                    <div>
+                        <div class="mock-title">정류장 단위 예측</div>
+                        <div class="mock-sub">노선·정류장·시간 선택 후 예측</div>
+                    </div>
+                </div>
+                <div class="mock-body">
+                    <div class="m1-lbl">입력 조건</div>
+                    <div class="m1-form-row">
+                        <div class="m1-form-field-lbl">노선 선택</div>
+                        <div class="m1-form-val">9401-1</div>
+                    </div>
+                    <div class="m1-form-row">
+                        <div class="m1-form-field-lbl">정류장 선택</div>
+                        <div class="m1-form-val">백현마을1단지 (47632)</div>
+                    </div>
+                    <div class="m1-form-row">
+                        <div class="m1-form-field-lbl">승차 일시</div>
+                        <div class="m1-form-val">2026.04.30 (목) 14:14</div>
+                    </div>
+                    <div class="m1-btn">예측하기</div>
+                    <div class="m1-fav-row">
+                        <div class="m1-fav-btn">♡ 이 노선 즐겨찾기</div>
+                        <div class="m1-fav-btn">♡ 이 정류장 즐겨찾기</div>
+                    </div>
+                    <div class="m1-divider"></div>
+                    <div class="m1-result-box">
+                        <div class="m1-result-label">예측 결과</div>
+                        <div class="m1-result-route">9401-1 · 백현마을1단지</div>
+                        <div class="m1-result-sub">2026-04-30 14:14 기준</div>
+                        <div class="m1-donut-row">
+                            <div class="m1-donut-wrap">
+                                <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+                                    <circle cx="21" cy="21" r="16" stroke="#bfdbfe" stroke-width="5.5"/>
+                                    <circle cx="21" cy="21" r="16" stroke="#2563eb" stroke-width="5.5"
+                                        stroke-dasharray="82 100" stroke-dashoffset="25" stroke-linecap="round"/>
+                                </svg>
+                                <div class="m1-donut-inner">
+                                    <div class="m1-seat-lbl">잔여좌석</div>
+                                    <div class="m1-seat-val">34</div>
+                                </div>
+                            </div>
+                            <div class="m1-metrics">
+                                <div class="m1-metric-row">
+                                    <span class="m1-metric-lbl">만차 확률</span>
+                                    <span class="m1-metric-val" style="color:#34d399;">0.1%미만</span>
+                                </div>
+                                <div class="m1-metric-row">
+                                    <span class="m1-metric-lbl">혼잡도</span>
+                                    <span class="m1-badge" style="background:#ecfdf5;color:#059669;">여유</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="m1-summary">9401-1 · 백현마을1단지 · 2026-04-30 14:14</div>
+                    </div>
+                </div>
+            </div>
 
-    function saveFavorites(favorites) {
-        localStorage.setItem("favorites", JSON.stringify(favorites));
-    }
+            <!-- ══ 카드2: 서비스2 (중앙 메인) ══ -->
+            <div class="tb-mock tb-mock-2">
+                <div class="mock-header">
+                    <span class="mock-tag">서비스2</span>
+                    <div>
+                        <div class="mock-title">노선 전체 예측</div>
+                        <div class="mock-sub">정류소별 잔여좌석을 한눈에 확인</div>
+                    </div>
+                </div>
+                <div class="mock-body">
+                    <div class="m2-route-row">
+                        <span class="m2-route-name">9404</span>
+                        <span class="m2-route-badge">광역버스</span>
+                    </div>
+                    <div class="m2-route-dir">오리초등학교 (47155) 기준 · 2026-04-29 14:33</div>
+                    <div class="m2-tabs">
+                        <span class="m2-tab-on">정류소별 예측</span>
+                        <span class="m2-tab-off">지도 보기</span>
+                    </div>
+                    <div class="m2-summary-txt">9404 · 오리초등학교 (47155) · 2026-04-29 14:33</div>
 
-    function showToast(message) {
-        const toast = document.getElementById("toast");
-        toast.innerText = message;
-        toast.classList.add("show");
+                    <div class="m2-stop-item">
+                        <div class="m2-line-col">
+                            <div class="m2-dot g"></div>
+                            <div class="m2-vline"></div>
+                        </div>
+                        <div class="m2-stop-info">
+                            <div class="m2-stop-name">주공4단지</div>
+                            <div class="m2-stop-meta">47170</div>
+                            <div class="m2-stop-eta">도착 예정 약 14:11 (3분 전)</div>
+                            <div class="m2-stop-prob">예상 만차확률 0.1% 미만</div>
+                        </div>
+                        <div class="m2-stop-right">
+                            <span class="m2-seat-num" style="color:#059669;">34석</span>
+                            <span class="m2-seat-badge" style="background:#ecfdf5;color:#059669;">여유</span>
+                        </div>
+                    </div>
 
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 2000);
-    }
+                    <div class="m2-stop-item sel">
+                        <div class="m2-line-col">
+                            <div class="m2-dot i"></div>
+                            <div class="m2-vline"></div>
+                        </div>
+                        <div class="m2-stop-info">
+                            <div class="m2-stop-name sel">오리초등학교</div>
+                            <div class="m2-stop-meta">47155</div>
+                            <div class="m2-stop-eta">도착 예정 약 14:33</div>
+                            <div class="m2-stop-prob">예상 만차확률 0.1% 미만</div>
+                        </div>
+                        <div class="m2-stop-right">
+                            <span class="m2-sel-badge">기준 정류소</span>
+                            <span class="m2-seat-num" style="color:#059669;">41석</span>
+                            <span class="m2-seat-badge" style="background:#ecfdf5;color:#059669;">여유</span>
+                        </div>
+                    </div>
 
-    function addFavorite(type, name) {
-        const favorites = getFavorites();
+                    <div class="m2-stop-item">
+                        <div class="m2-line-col">
+                            <div class="m2-dot g"></div>
+                        </div>
+                        <div class="m2-stop-info">
+                            <div class="m2-stop-name">미금초등학교</div>
+                            <div class="m2-stop-meta">47150</div>
+                            <div class="m2-stop-eta">도착 예정 약 14:33 (1분 후)</div>
+                            <div class="m2-stop-prob">예상 만차확률 0.1% 미만</div>
+                        </div>
+                        <div class="m2-stop-right">
+                            <span class="m2-seat-num" style="color:#059669;">34석</span>
+                            <span class="m2-seat-badge" style="background:#ecfdf5;color:#059669;">여유</span>
+                        </div>
+                    </div>
 
-        if (type === "bus") {
-            if (!favorites.buses.includes(name)) {
-                favorites.buses.push(name);
-                saveFavorites(favorites);
-                showToast("버스 즐겨찾기에 추가됐어요.");
-            } else {
-                showToast("이미 즐겨찾기에 있는 버스예요.");
-            }
-        }
+                    <div class="m2-legend">
+                        <span style="background:#ecfdf5;color:#059669;">여유</span>
+                        <span style="background:#fefce8;color:#ca8a04;">보통</span>
+                        <span style="background:#fff5f8;color:#f472b6;">혼잡</span>
+                        <span style="background:#fef2f2;color:#dc2626;">만차</span>
+                    </div>
+                </div>
+            </div>
 
-        if (type === "station") {
-            if (!favorites.stations.includes(name)) {
-                favorites.stations.push(name);
-                saveFavorites(favorites);
-                showToast("정류장 즐겨찾기에 추가됐어요.");
-            } else {
-                showToast("이미 즐겨찾기에 있는 정류장이에요.");
-            }
-        }
-    }
-</script>
+            <!-- ══ 카드3: 즐겨찾기 ══ -->
+            <div class="tb-mock tb-mock-3">
+                <div class="mock-header">
+                    <span class="mock-tag" style="background:#4f46e5;">즐겨찾기</span>
+                    <div>
+                        <div class="mock-title">내 즐겨찾기</div>
+                        <div class="mock-sub">자주 이용하는 노선·정류장 모음</div>
+                    </div>
+                </div>
+                <div class="mock-body">
+                    <div class="mf-sec-head">
+                        <span class="mf-sec-title">즐겨찾기한 버스</span>
+                        <span class="mf-sec-clear">전체 삭제</span>
+                    </div>
+                    <div class="mf-item">
+                        <div class="mf-icon" style="background:#eff6ff;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round">
+                                <rect x="1" y="3" width="15" height="13" rx="2"/>
+                                <path d="M16 8h4l3 5v3h-7V8z"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/>
+                                <circle cx="18.5" cy="18.5" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div class="mf-info">
+                            <div class="mf-name">9401-1</div>
+                            <div class="mf-sub">백현마을1단지 방면</div>
+                        </div>
+                        <span class="mf-star">★</span>
+                    </div>
+                    <div class="mf-item">
+                        <div class="mf-icon" style="background:#eff6ff;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round">
+                                <rect x="1" y="3" width="15" height="13" rx="2"/>
+                                <path d="M16 8h4l3 5v3h-7V8z"/>
+                                <circle cx="5.5" cy="18.5" r="2.5"/>
+                                <circle cx="18.5" cy="18.5" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div class="mf-info">
+                            <div class="mf-name">9404</div>
+                            <div class="mf-sub">오리초등학교 방면</div>
+                        </div>
+                        <span class="mf-star">★</span>
+                    </div>
+                    <div class="mf-divider"></div>
+                    <div class="mf-sec-head">
+                        <span class="mf-sec-title">즐겨찾기한 정류장</span>
+                        <span class="mf-sec-clear">전체 삭제</span>
+                    </div>
+                    <div class="mf-item">
+                        <div class="mf-icon" style="background:#f0f4ff;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="mf-info">
+                            <div class="mf-name">백현마을1단지</div>
+                            <div class="mf-sub">47632 · 9401-1</div>
+                        </div>
+                        <span class="mf-star">★</span>
+                    </div>
+                    <div class="mf-item">
+                        <div class="mf-icon" style="background:#f0f4ff;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" stroke-linecap="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="mf-info">
+                            <div class="mf-name">오리초등학교</div>
+                            <div class="mf-sub">47155 · 9404</div>
+                        </div>
+                        <span class="mf-star">★</span>
+                    </div>
+                    <div class="mf-home-btn">🏠 홈으로 돌아가기</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ── 서비스 카드 영역 ── -->
+<div class="tb-svcs-section">
+    <div class="tb-svcs">
+        <a href="{% url 'service1' %}" class="tb-svc">
+            <div class="tb-svc-icon" style="background:#eff6ff;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+            </div>
+            <div class="tb-svc-title">정류장 단위 예측</div>
+            <div class="tb-svc-desc">선택한 정류소의 잔여좌석과 만차 확률을 예측해요.</div>
+            <div class="tb-svc-arrow">→</div>
+        </a>
+        <a href="{% url 'service2' %}" class="tb-svc">
+            <div class="tb-svc-icon" style="background:#eff6ff;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>
+                </svg>
+            </div>
+            <div class="tb-svc-title">노선 전체 예측</div>
+            <div class="tb-svc-desc">모든 정류소별 잔여좌석과 혼잡도를 한눈에 확인해요.</div>
+            <div class="tb-svc-arrow">→</div>
+        </a>
+        <a href="{% url 'favorites' %}" class="tb-svc">
+            <div class="tb-svc-icon" style="background:#f0f4ff;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+            </div>
+            <div class="tb-svc-title">즐겨찾기</div>
+            <div class="tb-svc-desc">자주 이용하는 노선과 정류장을 저장해두고 빠르게 접근해요.</div>
+            <div class="tb-svc-arrow">→</div>
+        </a>
+        <a href="#" class="tb-svc">
+            <div class="tb-svc-icon" style="background:#f0f4ff;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+            </div>
+            <div class="tb-svc-title">예측 통계</div>
+            <div class="tb-svc-desc">요일별 시간대별 혼잡 현황을 다양한 차트로 확인해요.</div>
+            <div class="tb-svc-arrow">→</div>
+        </a>
+    </div>
+</div>
+
+<!-- ── 공지사항 바 ── -->
+<div class="tb-notice">
+    <span class="tb-notice-icon">📢</span>
+    <span class="tb-notice-text">M6410 노선의 예측 정확도가 개선되어 더 신뢰도 높은 정보를 제공하고 있어요.</span>
+    <span class="tb-notice-date">2026. 4. 28</span>
+    <a href="#" class="tb-notice-more">더보기 →</a>
+</div>
+
 {% endblock %}
