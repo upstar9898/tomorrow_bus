@@ -109,7 +109,7 @@ predictForm.addEventListener("submit", async function (e) {
     document.getElementById("chartInfo").innerHTML = "차트 불러오는 중...";
 
     try {
-        const predictPromise = await fetch("/ajax/predict/service1/", {
+        const predictPromise = fetch("/ajax/predict/service1/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -133,6 +133,24 @@ predictForm.addEventListener("submit", async function (e) {
 
         const predictResult = await predictResponse.json();
         const chartResult = await chartResponse.json();
+
+        if (!predictResult.success && predictResult.reason === "OUT_OF_OPERATION_TIME") {
+            document.getElementById("resultSummary").textContent =
+                "운행 시간 외 예측 불가";
+
+            document.getElementById("seatPrediction").textContent = "-";
+            document.getElementById("fullProb").textContent = "-";
+
+            document.getElementById("chartInfo").innerHTML = `
+                <div class="text-danger fw-bold mb-1">
+                    운행 시간 외 예측 불가
+                </div>
+                <div>
+                    ${predictResult.message}
+                </div>
+            `;
+            return;
+        }
 
         if (!predictResponse.ok || !predictResult.success) {
             alert(predictResult.error || "예측 요청에 실패했습니다.");
@@ -206,10 +224,16 @@ favoriteStationBtn.addEventListener("click", function () {
 function renderResult(routeName, stationName, arsId, result) {
     const data = result.data;
 
-    const formattedDate = formatDateTime(data.date_time);
+    const inputDateTime = data.input_datetime || data.date_time;
+    const scheduledDateTime = data.scheduled_arrival_time || data.date_time;
 
-    document.getElementById("resultSummary").textContent =
-        `${routeName} · ${stationName} · ${formattedDate}`;
+    const formattedInputDate = formatDateTime(inputDateTime);
+    const formattedScheduledDate = formatDateTime(scheduledDateTime);
+
+    document.getElementById("resultSummary").innerHTML =
+        `${routeName} · ${stationName}<br>
+        입력 시각: ${formattedInputDate}<br>
+        예측 기준 도착 예정 시각: ${formattedScheduledDate}`;
 
     document.getElementById("seatPrediction").textContent = data.remaining_seat;
 
@@ -249,7 +273,10 @@ function renderResult(routeName, stationName, arsId, result) {
     row.innerHTML = `
         <td>${routeName}</td>
         <td>${stationName}</td>
-        <td>${formattedDate}</td>
+        <td>
+            입력 시각: ${formattedInputDate}<br>
+            기준 시각: ${formattedScheduledDate}
+        </td>
         <td>${data.remaining_seat}석</td>
         <td>${(data.full_prob * 100).toFixed(1)}%</td>
     `;
