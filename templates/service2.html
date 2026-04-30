@@ -337,6 +337,24 @@
         .s2-page { grid-template-columns: 1fr; }
         .route-list-wrap { max-height: none; }
     }
+
+    .s1-toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #1a2340;
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-size: 10px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+        z-index: 9999;
+    }
+
+    .s1-toast.show { opacity: 1; }
 </style>
 {% endblock %}
 
@@ -434,6 +452,9 @@
     </section>
 </div>
 </div>
+
+<div id="toast" class="s1-toast"></div>
+
 {% endblock %}
 
 {% block extra_script %}
