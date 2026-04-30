@@ -215,17 +215,17 @@ function renderResult(routeName, stationName, arsId, result) {
             `${(data.full_prob * 100).toFixed(1)}%`;
     }
 
-    // ⭐ 여기 추가 (날씨 사용 여부 UI)
     const weatherBadge = document.getElementById("weatherUsedBadge");
-
-    weatherBadge.classList.remove("d-none");
-
-    if (data.weather_fetched) {
-        weatherBadge.textContent = "날씨데이터 사용";
-        weatherBadge.className = "badge bg-success";
-    } else {
-        weatherBadge.textContent = "날씨데이터 미사용";
-        weatherBadge.className = "badge bg-secondary";
+    if (weatherBadge) {
+        weatherBadge.classList.remove("d-none");
+        weatherBadge.classList.remove("bg-success", "bg-secondary");
+        if (data.weather_fetched) {
+            weatherBadge.textContent = "날씨데이터 사용";
+            weatherBadge.className = "badge bg-success";
+        } else {
+            weatherBadge.textContent = "날씨데이터 미사용";
+            weatherBadge.className = "badge bg-secondary";
+        }
     }
 
     currentPrediction.routeId = routeSelect.value;
@@ -240,7 +240,7 @@ function renderResult(routeName, stationName, arsId, result) {
     const historyTable = document.getElementById("historyTable");
     const row = document.createElement("tr");
     row.innerHTML = `
-        <td><span style="font-weight:800;color:#f472b6;">${routeName}</span></td>
+        <td><span style="font-weight:800;color:#2563eb;">${routeName}</span></td>
         <td>${stationName}</td>
         <td>${formattedDate}</td>
         <td><strong>${data.remaining_seat}석</strong></td>
@@ -281,13 +281,11 @@ function drawWeekChart(bars, dayType = "") {
     const seats = bars.map(b => b.remaining_seat);
     const labels = bars.map(b => b.day_label);
 
-    // 노선 총 좌석 수 기준으로 y축 고정
     const totalSeats = seats.some(s => s > 41) ? 45 : 41;
 
     const colors = seats.map(s => getColor(s));
     const alphaColors = colors.map(c => c + "cc");
 
-    // 기존 차트 인스턴스 제거
     if (chartEl._chartInstance) {
         chartEl._chartInstance.destroy();
     }
@@ -336,7 +334,7 @@ function drawWeekChart(bars, dayType = "") {
                 x: {
                     grid: { display: false },
                     ticks: {
-                        color: "#b0a0b8",
+                        color: "#94a3b8",
                         font: { size: isMobile ? 11 : 12 }
                     },
                     border: { display: false }
@@ -345,10 +343,10 @@ function drawWeekChart(bars, dayType = "") {
                     min: 0,
                     max: totalSeats,
                     grid: {
-                        color: "rgba(240,236,248,0.8)",
+                        color: "rgba(226,232,244,0.8)",
                     },
                     ticks: {
-                        color: "#b0a0b8",
+                        color: "#94a3b8",
                         font: { size: 11 },
                         stepSize: 10,
                     },

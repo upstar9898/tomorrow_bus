@@ -6,15 +6,16 @@
 <link rel="stylesheet" href="{% static 'bus/css/datepicker.css' %}">
 <style>
     .s1-page {
-        padding: 28px 5% 28px 5.8%;
+        padding: 28px 5% 28px 5%;
     }
 
     .s1-header {
+        margin-top: 0;
         margin-bottom: 20px;
     }
 
     .s1-title {
-        font-size: clamp(18px, 2vw, 26px);
+        font-size: clamp(20px, 2.2vw, 28px);
         font-weight: 900;
         color: #1a2340;
         letter-spacing: -0.5px;
@@ -22,15 +23,16 @@
     }
 
     .s1-sub {
-        font-size: 13px;
+        font-size: 14px;
         color: #94a3b8;
+        font-weight: 500;
     }
 
     .s1-grid {
         display: grid;
-        grid-template-columns: 1fr 1.4fr;
-        gap: 16px;
-        margin-bottom: 16px;
+        grid-template-columns: 260px 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
     }
 
     .s1-card {
@@ -38,7 +40,7 @@
         border: 1px solid #e2e8f4;
         border-radius: 18px;
         padding: 22px;
-        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.06);
+        box-shadow: 0 4px 20px rgba(59,130,246,0.06);
     }
 
     .s1-card-title {
@@ -56,8 +58,8 @@
 
     .s1-form-label {
         display: block;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 600;
         color: #64748b;
         margin-bottom: 5px;
     }
@@ -70,7 +72,7 @@
         border-radius: 10px;
         background: #fafcff;
         padding: 0 12px;
-        font-size: 12px;
+        font-size: 13px;
         color: #1a2340;
         appearance: none;
         -webkit-appearance: none;
@@ -81,7 +83,7 @@
     .s1-select:focus,
     .s1-input:focus {
         border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10);
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
     }
 
     .s1-btn-predict {
@@ -95,13 +97,11 @@
         font-weight: 700;
         cursor: pointer;
         margin-top: 4px;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+        box-shadow: 0 4px 14px rgba(37,99,235,0.28);
         transition: opacity 0.15s;
     }
 
-    .s1-btn-predict:hover {
-        opacity: 0.88;
-    }
+    .s1-btn-predict:hover { opacity: 0.88; }
 
     .s1-fav-row {
         display: flex;
@@ -116,20 +116,14 @@
         border-radius: 9px;
         background: #eff6ff;
         color: #2563eb;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
         cursor: pointer;
         transition: background 0.15s;
     }
 
-    .s1-btn-fav:hover {
-        background: #dbeafe;
-    }
-
-    .s1-btn-fav:disabled {
-        opacity: 0.4;
-        cursor: default;
-    }
+    .s1-btn-fav:hover { background: #dbeafe; }
+    .s1-btn-fav:disabled { opacity: 0.4; cursor: default; }
 
     .s1-result-card {
         background: linear-gradient(135deg, #f0f4ff 0%, #fff 60%);
@@ -149,30 +143,11 @@
         border-radius: 999px;
     }
 
-    .badge-여유 {
-        background: #ecfdf5;
-        color: #059669;
-    }
-
-    .badge-보통 {
-        background: #fefce8;
-        color: #ca8a04;
-    }
-
-    .badge-혼잡 {
-        background: #fff5f8;
-        color: #f472b6;
-    }
-
-    .badge-만차 {
-        background: #fef2f2;
-        color: #dc2626;
-    }
-
-    .badge-default {
-        background: #eff6ff;
-        color: #2563eb;
-    }
+    .badge-여유    { background: #ecfdf5; color: #059669; }
+    .badge-보통    { background: #fefce8; color: #ca8a04; }
+    .badge-혼잡    { background: #fff5f8; color: #f472b6; }
+    .badge-만차    { background: #fef2f2; color: #dc2626; }
+    .badge-default { background: #eff6ff; color: #2563eb; }
 
     .s1-donut-wrap {
         width: clamp(80px, 9vw, 120px);
@@ -186,10 +161,8 @@
 
     .s1-donut-wrap svg {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
     }
 
     .s1-donut-inner {
@@ -198,27 +171,13 @@
         text-align: center;
     }
 
-    .s1-donut-lbl {
-        font-size: 9px;
-        color: #2563eb;
-        font-weight: 700;
-    }
-
-    .s1-donut-val {
-        font-size: clamp(20px, 2.2vw, 32px);
-        font-weight: 900;
-        color: #2563eb;
-        line-height: 1;
-    }
-
-    .s1-donut-unit {
-        font-size: 10px;
-        color: #2563eb;
-    }
+    .s1-donut-lbl  { font-size: 9px; color: #2563eb; font-weight: 700; }
+    .s1-donut-val  { font-size: clamp(20px, 2.2vw, 32px); font-weight: 900; color: #2563eb; line-height: 1; }
+    .s1-donut-unit { font-size: 10px; color: #2563eb; }
 
     .s1-metrics {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 10px;
         margin-bottom: 12px;
     }
@@ -231,24 +190,14 @@
         text-align: center;
     }
 
-    .s1-metric-lbl {
-        font-size: 9px;
-        color: #94a3b8;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .s1-metric-val {
-        font-size: 16px;
-        font-weight: 800;
-        color: #1a2340;
-    }
+    .s1-metric-lbl { font-size: 9px; color: #94a3b8; font-weight: 600; margin-bottom: 4px; }
+    .s1-metric-val { font-size: 16px; font-weight: 800; color: #1a2340; }
 
     .s1-result-msg {
         background: #f0f4ff;
         border-radius: 10px;
         padding: 10px 13px;
-        font-size: 11px;
+        font-size: 13px;
         color: #2563eb;
         font-weight: 600;
         text-align: center;
@@ -311,9 +260,7 @@
         vertical-align: middle;
     }
 
-    .s1-table tr:last-child td {
-        border-bottom: none;
-    }
+    .s1-table tr:last-child td { border-bottom: none; }
 
     .s1-toast {
         position: fixed;
@@ -324,25 +271,18 @@
         padding: 12px 18px;
         border-radius: 12px;
         font-size: 13px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s;
         z-index: 9999;
     }
 
-    .s1-toast.show {
-        opacity: 1;
-    }
+    .s1-toast.show { opacity: 1; }
 
     @media (max-width: 991px) {
-        .s1-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .s1-bottom-grid {
-            grid-template-columns: 1fr;
-        }
+        .s1-grid { grid-template-columns: 1fr; }
+        .s1-bottom-grid { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
@@ -389,32 +329,28 @@
             </form>
 
             <div class="s1-fav-row">
-                <button type="button" class="s1-btn-fav" id="favoriteRouteBtn" disabled>♡ 이 노선 즐겨찾기</button>
-                <button type="button" class="s1-btn-fav" id="favoriteStationBtn" disabled>♡ 이 정류장 즐겨찾기</button>
+                <button type="button" class="s1-btn-fav" id="favoriteRouteBtn" disabled>♡ 노선 즐겨찾기</button>
+                <button type="button" class="s1-btn-fav" id="favoriteStationBtn" disabled>♡ 정류장 즐겨찾기</button>
             </div>
         </div>
 
         <div class="s1-card s1-result-card">
             <div class="s1-result-top">
                 <div class="s1-card-title" style="margin-bottom:0;">예측 결과</div>
-                <span class="s1-congestion-badge badge-default" id="congestionBadge">대기 중</span>
-                <!-- ⭐ 추가 -->
-                <div id="weatherUsedBadge" class="badge d-none">
-
-                </div>
+                <span class="s1-congestion-badge badge-default" id="congestionBadge" style="display:none;"></span>
             </div>
 
             <div class="s1-donut-wrap">
                 <svg viewBox="0 0 90 90" fill="none">
                     <defs>
                         <linearGradient id="dg1" x1="0" y1="0" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-                            <stop offset="0%" stop-color="#60a5fa" />
-                            <stop offset="100%" stop-color="#2563eb" />
+                            <stop offset="0%" stop-color="#60a5fa"/>
+                            <stop offset="100%" stop-color="#2563eb"/>
                         </linearGradient>
                     </defs>
-                    <circle cx="45" cy="45" r="37" stroke="#bfdbfe" stroke-width="10" />
+                    <circle cx="45" cy="45" r="37" stroke="#bfdbfe" stroke-width="10"/>
                     <circle id="donutArc" cx="45" cy="45" r="37" stroke="url(#dg1)" stroke-width="10"
-                        stroke-dasharray="0 232" stroke-dashoffset="58" stroke-linecap="round" />
+                        stroke-dasharray="0 232" stroke-dashoffset="58" stroke-linecap="round"/>
                 </svg>
                 <div class="s1-donut-inner">
                     <div class="s1-donut-lbl">잔여좌석</div>
@@ -428,10 +364,7 @@
                     <div class="s1-metric-lbl">만차 확률</div>
                     <div class="s1-metric-val" id="fullProb" style="color:#34d399;">-</div>
                 </div>
-                <div class="s1-metric">
-                    <div class="s1-metric-lbl">예측 기준</div>
-                    <div class="s1-metric-val" id="predTime">-</div>
-                </div>
+
             </div>
 
             <div class="s1-result-msg" id="resultSummary">
