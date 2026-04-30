@@ -261,9 +261,11 @@
 
 .tb-svcs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
     padding-top: 28px;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .tb-svc {
@@ -617,26 +619,10 @@
             <div class="tb-svc-desc">자주 이용하는 노선과 정류장을 저장해두고 빠르게 접근해요.</div>
             <div class="tb-svc-arrow">→</div>
         </a>
-        <a href="#" class="tb-svc">
-            <div class="tb-svc-icon" style="background:#f0f4ff;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round">
-                    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-                    <line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
-            </div>
-            <div class="tb-svc-title">예측 통계</div>
-            <div class="tb-svc-desc">요일별 시간대별 혼잡 현황을 다양한 차트로 확인해요.</div>
-            <div class="tb-svc-arrow">→</div>
-        </a>
+
     </div>
 </div>
 
-<!-- ── 공지사항 바 ── -->
-<div class="tb-notice">
-    <span class="tb-notice-icon">📢</span>
-    <span class="tb-notice-text">M6410 노선의 예측 정확도가 개선되어 더 신뢰도 높은 정보를 제공하고 있어요.</span>
-    <span class="tb-notice-date">2026. 4. 28</span>
-    <a href="#" class="tb-notice-more">더보기 →</a>
-</div>
+
 
 {% endblock %}
