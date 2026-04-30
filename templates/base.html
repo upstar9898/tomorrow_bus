@@ -219,9 +219,9 @@
         <a href="{% url 'home' %}"
            {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>홈</a>
         <a href="{% url 'service1' %}"
-           {% if request.resolver_match.url_name == 'service1' %}class="active"{% endif %}>서비스1 (정류장 단위 예측)</a>
+           {% if request.resolver_match.url_name == 'service1' %}class="active"{% endif %}>정류장 단위 예측</a>
         <a href="{% url 'service2' %}"
-           {% if request.resolver_match.url_name == 'service2' %}class="active"{% endif %}>서비스2 (노선 전체 예측)</a>
+           {% if request.resolver_match.url_name == 'service2' %}class="active"{% endif %}>노선 전체 예측</a>
         <a href="{% url 'favorites' %}"
            {% if request.resolver_match.url_name == 'favorites' %}class="active"{% endif %}>즐겨찾기</a>
     </nav>
