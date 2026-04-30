@@ -87,7 +87,8 @@ predictForm.addEventListener("submit", async function (e) {
     }
 
     const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-    const stationLabel = stationSelect.options[stationSelect.selectedIndex].text;
+    const stationLabel =
+        stationSelect.options[stationSelect.selectedIndex].text;
 
     // "정든마을.우성아파트 (47043)" -> stationName, arsId 분리
     const stationMatch = stationLabel.match(/^(.*?)(?:\s*\(([^)]+)\))?$/);
@@ -122,7 +123,7 @@ predictForm.addEventListener("submit", async function (e) {
         });
 
         const chartPromise = fetch(
-            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`
+            `/ajax/station-week-chart/?route_id=${encodeURIComponent(routeId)}&station_id=${encodeURIComponent(stationId)}&date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`,
         );
 
         const [predictResponse, chartResponse] = await Promise.all([
@@ -212,8 +213,27 @@ function renderResult(routeName, stationName, arsId, result) {
 
     document.getElementById("seatPrediction").textContent = data.remaining_seat;
 
-    document.getElementById("fullProb").textContent =
-        `${(data.full_prob * 100).toFixed(1)}%`;
+    if (data.full_prob < 0.001) {
+        document.getElementById("fullProb").textContent = "0.1% 미만";
+    } else if (data.full_prob >= 0.999) {
+        document.getElementById("fullProb").textContent = "99.9% 이상";
+    } else {
+        document.getElementById("fullProb").textContent =
+            `${(data.full_prob * 100).toFixed(1)}%`;
+    }
+
+    // ⭐ 여기 추가 (날씨 사용 여부 UI)
+    const weatherBadge = document.getElementById("weatherUsedBadge");
+
+    weatherBadge.classList.remove("d-none");
+
+    if (data.weather_fetched) {
+        weatherBadge.textContent = "날씨데이터 사용";
+        weatherBadge.className = "badge bg-success";
+    } else {
+        weatherBadge.textContent = "날씨데이터 미사용";
+        weatherBadge.className = "badge bg-secondary";
+    }
 
     currentPrediction.routeId = routeSelect.value;
     currentPrediction.routeName = routeName;

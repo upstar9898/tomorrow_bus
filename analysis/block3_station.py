@@ -227,7 +227,7 @@ def plot_congested_station(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     plot_boarding_top20(df)
     plot_station_hour_heatmap(df)

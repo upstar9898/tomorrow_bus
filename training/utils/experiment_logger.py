@@ -9,12 +9,7 @@
 # 3. 모델별 최고 성능만 best_results.csv에 별도 저장
 # 4. 분류 리포트(txt), confusion matrix(csv), 하이퍼파라미터(json) 저장
 # 5. 회귀 / 분류 모두 지원
-#
-# [권장 사용 방식]
-# - 모델 학습/평가가 끝난 뒤 이 logger를 호출
-# - 팀원마다 runner 이름을 넣어 누가 돌린 실험인지 기록
-# - model_name, model_version, data_version, feature_version 등을 함께 저장
-# - 나중에 실험 비교, 재현, 발표 자료 정리에 활용
+# 6. 학습 시간(train_time_sec) 기록 지원
 # =========================================================
 
 import os
@@ -292,6 +287,7 @@ class ExperimentLogger:
         label_definition_detail: Optional[Dict[str, Any]],
         hyperparams: Optional[Dict[str, Any]],
         notes: Optional[str],
+        train_time_sec: Optional[float] = None,
         report_txt_path: Optional[str] = None,
         confusion_csv_path: Optional[str] = None,
         params_json_path: Optional[str] = None,
@@ -314,6 +310,7 @@ class ExperimentLogger:
             "label_definition_detail": self._safe_json_dumps(label_definition_detail) if label_definition_detail else "",
             "hyperparams": self._safe_json_dumps(hyperparams) if hyperparams else "",
             "notes": notes if notes else "",
+            "train_time_sec": round(float(train_time_sec), 4) if train_time_sec is not None else "",
             "report_txt_path": report_txt_path if report_txt_path else "",
             "confusion_csv_path": confusion_csv_path if confusion_csv_path else "",
             "params_json_path": params_json_path if params_json_path else "",
@@ -339,6 +336,7 @@ class ExperimentLogger:
         hyperparams: Optional[Dict[str, Any]] = None,
         class_labels: Optional[List[str]] = None,
         notes: str = "",
+        train_time_sec: Optional[float] = None,
         run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -421,6 +419,7 @@ class ExperimentLogger:
             f.write(f"split_version        : {split_version}\n")
             f.write(f"feature_version      : {feature_version}\n")
             f.write(f"label_definition     : {label_definition_name}\n")
+            f.write(f"train_time_sec       : {round(float(train_time_sec), 4) if train_time_sec is not None else 'N/A'}\n")
             f.write(f"ACC                  : {acc:.4f}\n")
             f.write(f"Macro F1             : {macro_f1:.4f}\n")
             f.write(f"Weighted F1          : {weighted_f1:.4f}\n\n")
@@ -465,6 +464,7 @@ class ExperimentLogger:
             label_definition_detail=label_definition_detail,
             hyperparams=hyperparams,
             notes=notes,
+            train_time_sec=train_time_sec,
             report_txt_path=report_txt_path,
             confusion_csv_path=confusion_csv_path,
             params_json_path=params_json_path,
@@ -489,6 +489,7 @@ class ExperimentLogger:
 
         return {
             "run_id": run_id,
+            "train_time_sec": train_time_sec,
             "acc": acc,
             "macro_f1": macro_f1,
             "weighted_f1": weighted_f1,
@@ -513,6 +514,7 @@ class ExperimentLogger:
         feature_version: str = "",
         hyperparams: Optional[Dict[str, Any]] = None,
         notes: str = "",
+        train_time_sec: Optional[float] = None,
         run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -552,6 +554,7 @@ class ExperimentLogger:
             f.write(f"data_version         : {data_version}\n")
             f.write(f"split_version        : {split_version}\n")
             f.write(f"feature_version      : {feature_version}\n")
+            f.write(f"train_time_sec       : {round(float(train_time_sec), 4) if train_time_sec is not None else 'N/A'}\n")
             f.write(f"MAE                  : {mae:.4f}\n")
             f.write(f"RMSE                 : {rmse:.4f}\n")
             f.write(f"R2                   : {r2:.4f}\n\n")
@@ -581,6 +584,7 @@ class ExperimentLogger:
             label_definition_detail=None,
             hyperparams=hyperparams,
             notes=notes,
+            train_time_sec=train_time_sec,
             report_txt_path=report_txt_path,
             confusion_csv_path="",
             params_json_path=params_json_path,
@@ -598,6 +602,7 @@ class ExperimentLogger:
 
         return {
             "run_id": run_id,
+            "train_time_sec": train_time_sec,
             "mae": mae,
             "rmse": rmse,
             "r2": r2,
