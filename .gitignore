@@ -114,3 +114,4 @@ outputs_peak_v2/
 models/
 # initdb 폴더
 initdb/*
+catboost_info/
