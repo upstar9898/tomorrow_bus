@@ -16,6 +16,12 @@ from django.db.models.functions import Abs
 from django.conf import settings
 from django.utils import timezone
 
+from bus.services.operation_time_service import validate_operation_time
+from bus.services.time_utils import (
+    get_cumulative_travel_sec,
+    get_next_arrival_time,
+)
+
 def index(request):
     return render(request, "index.html")
 
@@ -93,6 +99,53 @@ def predict_service1(request):
                 status=400,
             )
 
+        target_datetime = datetime.fromisoformat(date_time)
+
+        validation = validate_operation_time(
+            route_id=route_id,
+            station_id=station_id,
+            target_datetime=target_datetime,
+        )
+
+        if not validation["is_available"]:
+            return JsonResponse({
+                "success": False,
+                "reason": validation["reason"],
+                "message": validation["message"],
+                "available_start": validation.get("available_start"),
+                "available_end": validation.get("available_end"),
+                "available_start_label": validation.get("available_start_label"),
+                "available_end_label": validation.get("available_end_label"),
+            })
+        
+        route_station = Route_station.objects.get(
+            route_id=route_id,
+            station_id=station_id,
+        )
+
+        cumulative_travel_sec = get_cumulative_travel_sec(
+            route_id=route_id,
+            target_sta_ord=route_station.staOrd,
+            time_band="normal",
+        )
+
+        scheduled_arrival_time = get_next_arrival_time(
+            user_datetime=target_datetime,
+            first_time=validation["first_time"],
+            last_time=validation["last_time"],
+            interval_min=validation["interval_min"],
+            cumulative_travel_sec=cumulative_travel_sec,
+        )
+
+        if scheduled_arrival_time is None:
+            return JsonResponse({
+                "success": False,
+                "reason": "OUT_OF_OPERATION_TIME",
+                "message": "입력하신 시각 이후 도착 가능한 운행 차량이 없습니다.",
+            })
+
+        scheduled_date_time = scheduled_arrival_time.isoformat()
+
         precipitation = 0
 
         weather_used = False      # 모델에 반영 여부
@@ -100,11 +153,11 @@ def predict_service1(request):
         weather_info = None
 
         # 5일 이내일 때만 날씨 API 호출
-        if is_within_5_days(date_time):
+        if is_within_5_days(scheduled_date_time):
             try:
                 forecast_data = weather_collector.collect_forecast(
                     station_id=station_id,
-                    target_dt=date_time,
+                    target_dt=scheduled_date_time,
                 )
 
                 forecast = forecast_data["forecast"]
@@ -146,16 +199,19 @@ def predict_service1(request):
         result = predict_service1_result(
             route_id=route_id,
             station_id=station_id,
-            date_time=date_time,
+            date_time=scheduled_date_time,
             precipitation=precipitation,
         )
 
         result = convert_numpy(result)
 
         result["weather_used"] = weather_used
-        result["weather_fetched"] = weather_fetched  # ⭐ 추가
+        result["weather_fetched"] = weather_fetched 
         result["weather_info"] = weather_info
         result["precipitation"] = precipitation
+        result["input_datetime"] = target_datetime.strftime("%Y-%m-%d %H:%M")
+        result["scheduled_arrival_time"] = scheduled_arrival_time.strftime("%Y-%m-%d %H:%M")
+        result["cumulative_travel_min"] = round(cumulative_travel_sec / 60)
 
         return JsonResponse(
             {
@@ -418,11 +474,62 @@ def predict_service2(request):
                 },
                 status=400,
             )
+        
+        target_datetime = datetime.fromisoformat(date_time)
+
+        validation = validate_operation_time(
+        route_id=route_id,
+        station_id=station_id,
+        target_datetime=target_datetime,
+    )
+
+        if not validation["is_available"]:
+            return JsonResponse({
+                "success": False,
+                "reason": validation["reason"],
+                "message": validation["message"],
+                "available_start": validation.get("available_start"),
+                "available_end": validation.get("available_end"),
+                "available_start_label": validation.get("available_start_label"),
+                "available_end_label": validation.get("available_end_label"),
+            })
+        
+        target_sta_ord = validation.get("target_staord")
+
+        if target_sta_ord is None:
+            route_station = Route_station.objects.get(
+                route_id=route_id,
+                station_id=station_id,
+            )
+            target_sta_ord = route_station.staOrd
+
+        cumulative_travel_sec = get_cumulative_travel_sec(
+            route_id=route_id,
+            target_sta_ord=target_sta_ord,
+            time_band="normal",
+        )
+
+        scheduled_arrival_time = get_next_arrival_time(
+            user_datetime=target_datetime,
+            first_time=validation["first_time"],
+            last_time=validation["last_time"],
+            interval_min=validation["interval_min"],
+            cumulative_travel_sec=cumulative_travel_sec,
+        )
+
+        if scheduled_arrival_time is None:
+            return JsonResponse({
+                "success": False,
+                "reason": "OUT_OF_OPERATION_TIME",
+                "message": "입력하신 시각 이후 도착 가능한 운행 차량이 없습니다.",
+            })
+
+        scheduled_date_time = scheduled_arrival_time.isoformat()
 
         stops = predict_route_service(
             route_id=route_id,
             station_id=station_id,
-            target_datetime=date_time,
+            target_datetime=scheduled_date_time,
         )
 
         def normalize_stn(stn):
@@ -463,12 +570,12 @@ def predict_service2(request):
         # 2. API 호출
         forecast_map = {}
 
-        if is_within_5_days(date_time):
+        if is_within_5_days(scheduled_date_time):
             for stn_id in unique_stn_ids:
                 try:
                     forecast_map[stn_id] = weather_collector.collect_forecast_by_stn(
                         stn_id=stn_id,
-                        target_dt=date_time,
+                        target_dt=scheduled_date_time,
                     )
                 except Exception as e:
                     print(f"[날씨 API 실패] stn={stn_id}, 오류={e}")
@@ -513,6 +620,9 @@ def predict_service2(request):
         result["weather_fetched"] = weather_fetched
         result["weather_used"] = weather_used
         result["weather_info"] = weather_info
+        result["input_datetime"] = target_datetime.strftime("%Y-%m-%d %H:%M")
+        result["scheduled_arrival_time"] = scheduled_arrival_time.strftime("%Y-%m-%d %H:%M")
+        result["cumulative_travel_min"] = round(cumulative_travel_sec / 60)
         
         return JsonResponse(
             {

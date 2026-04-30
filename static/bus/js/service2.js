@@ -68,6 +68,18 @@ predictForm.addEventListener("submit", async function (e) {
         ]);
 
         const predictResult = await predictResponse.json();
+
+        if (!predictResult.success && predictResult.reason === "OUT_OF_OPERATION_TIME") {
+            resultSummary.textContent = "운행 시간 외 예측 불가";
+            routeList.innerHTML = `
+                <li class="text-center py-4 soft-note">
+                    <strong>운행 시간 외 예측 불가</strong><br>
+                    ${predictResult.message}
+                </li>
+            `;
+            return;
+        }
+
         const mapResult = await mapResponse.json();
 
         if (!predictResponse.ok || !predictResult.success) {
@@ -189,23 +201,29 @@ function renderRouteResult(routeName, stationName, data) {
         }
     }
 
-    const formattedDate = formatDateTime(rideDateTime.value);
-    // const predictions = Array.isArray(data) ? data : [];
+    const inputDateTime = data.input_datetime || rideDateTime.value;
+    const scheduledDateTime = data.scheduled_arrival_time || rideDateTime.value;
 
-    resultSummary.textContent = `${routeName} · ${stationName} · ${formattedDate}`;
+    const formattedInputDate = formatDateTime(inputDateTime);
+    const formattedScheduledDate = formatDateTime(scheduledDateTime);
+
+    resultSummary.innerHTML =
+        `${routeName} · ${stationName}<br>
+        입력 시각: ${formattedInputDate}<br>
+        예측 기준 도착 예정 시각: ${formattedScheduledDate}`;
 
     if (selectedStopName) {
         selectedStopName.textContent = stationName;
     }
 
     if (selectedDateTime) {
-        selectedDateTime.textContent = formattedDate;
+        selectedDateTime.textContent = formattedScheduledDate;
     }
 
     const { minStaOrd, maxStaOrd } = getBoundaryStaOrd(data.stops);
 
     if (summaryTotalStops) {
-        summaryTotalStops.textContent = predictions.length;
+        summaryTotalStops.textContent = data.stops.length;
     }
 
     const selectedStop = data.stops.find((stop) => stop.is_selected);
@@ -243,10 +261,11 @@ function renderRouteResult(routeName, stationName, data) {
         summaryVirtualStops.textContent = virtualCount;
     }
 
+    routeList.setAttribute("data-loaded", "true");
     routeList.classList.remove("route-list-empty");
     routeList.innerHTML = "";
 
-    if (data.length === 0) {
+    if (!data.stops || data.stops.length === 0) {
         routeList.innerHTML = `
             <li class="text-center py-4 soft-note">표시할 예측 결과가 없습니다.</li>
         `;
