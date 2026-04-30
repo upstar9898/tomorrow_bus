@@ -6,9 +6,7 @@
 {% block extra_style %}
 <style>
     .fav-page {
-        padding: 28px 5% 48px;
-        max-width: 800px;
-        margin: 0 auto;
+        padding: 28px 5% 48px 5.8%;
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -51,9 +49,10 @@
     }
 
     .fav-desc {
-        font-size: 13px;
+        font-size: 14px;
         color: #64748b;
         line-height: 1.7;
+        font-weight: 500;
     }
 
     /* ── 섹션 카드 ── */
@@ -66,17 +65,18 @@
     }
 
     .fav-section-title {
-        font-size: 14px;
-        font-weight: 800;
+        font-size: 16px;
+        font-weight: 700;
         color: #1a2340;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
 
     .fav-section-desc {
-        font-size: 12px;
+        font-size: 14px;
         color: #64748b;
         margin-bottom: 16px;
         line-height: 1.6;
+        font-weight: 500;
     }
 
     /* ── 목록 ── */
@@ -91,10 +91,9 @@
 
     .fav-list li {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        gap: 14px;
-        padding: 14px 16px;
+        gap: 12px;
+        padding: 14px 18px;
         border-radius: 14px;
         background: #f8faff;
         border: 1px solid #e2e8f4;
@@ -115,68 +114,6 @@
         flex-shrink: 0;
     }
 
-    .btn-clear {
-        background: var(--primary);
-        color: #ffffff;
-        border: 1px solid var(--primary);
-    }
-
-    .btn-clear:hover {
-        background: var(--primary-deep);
-        border-color: var(--primary-deep);
-        color: #ffffff;
-    }
-
-    .btn-secondary {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        color: #334155;
-    }
-
-    .btn-secondary:hover {
-        background: #f8fafc;
-        border-color: #94a3b8;
-        color: #0f172a;
-    }
-
-    .manage-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,251,255,0.96) 100%);
-    }
-
-    @media (max-width: 767px) {
-        .favorite-hero .card-body,
-        .favorite-card .card-body {
-            padding: 18px;
-        }
-
-        .favorite-list li {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .btn-row {
-            flex-direction: column;
-        }
-
-        .btn-row .btn,
-        .favorite-list li .btn {
-            width: 100%;
-        }
-
-        .favorite-action-wrap {
-            width: 100%;
-            margin-left: 0;
-        }
-
-        .favorite-action-wrap .btn {
-            flex: 1;
-        }
-    }
-
-    .favorite-item-wrap {
-        flex: 1;
-        min-width: 0;
-    }
     .fav-item-body {
         flex: 1;
         min-width: 0;
@@ -186,7 +123,7 @@
     }
 
     .fav-item-name {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
         color: #1a2340;
         white-space: nowrap;
@@ -195,8 +132,9 @@
     }
 
     .fav-item-sub {
-        font-size: 11px;
+        font-size: 13px;
         color: #64748b;
+        font-weight: 500;
     }
 
     .fav-link-badge {
@@ -207,7 +145,7 @@
         background: #eff6ff;
         color: #2563eb;
         border: 1px solid #bfdbfe;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
         white-space: nowrap;
         cursor: pointer;
@@ -223,7 +161,7 @@
         border: 1px solid #fecaca;
         border-radius: 9px;
         padding: 6px 12px;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
@@ -241,11 +179,60 @@
         padding: 32px 20px;
         text-align: center;
         color: #94a3b8;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
         border: 1.5px dashed #e2e8f4;
         border-radius: 12px;
         background: #fafcff;
         display: none;
+    }
+
+    /* ── 액션 버튼 그룹 ── */
+    .fav-action-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .fav-action-btn {
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s;
+        font-family: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 서비스 버튼 — secondary (연한 블루 outline) */
+    .fav-action-btn--service {
+        background: #eff6ff;
+        color: #2563eb;
+        border: 1.5px solid #bfdbfe;
+    }
+    .fav-action-btn--service:hover {
+        background: #dbeafe;
+        border-color: #93c5fd;
+    }
+
+    /* 삭제 버튼 — danger text style */
+    .fav-action-btn--delete {
+        background: transparent;
+        color: #94a3b8;
+        border: 1.5px solid #e2e8f4;
+        margin-left: 4px;
+    }
+    .fav-action-btn--delete:hover {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
     }
 
     /* ── 관리 카드 ── */
@@ -262,7 +249,7 @@
         border: none;
         border-radius: 11px;
         padding: 11px 20px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
         cursor: pointer;
         box-shadow: 0 4px 14px rgba(37,99,235,0.24);
@@ -303,13 +290,6 @@
             width: 100%;
             justify-content: center;
         }
-    }
-
-    .favorite-action-wrap {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-left: auto;
     }
 </style>
 {% endblock %}
