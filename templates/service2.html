@@ -1,433 +1,418 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}서비스2 | Tomorrow Bus{% endblock %}
 
 {% block extra_style %}
+<link rel="stylesheet" href="{% static 'bus/css/datepicker.css' %}">
 <style>
-    .route-list-empty::before {
-        display: none;
+    /* ── 페이지 레이아웃 ── */
+    .s2-wrapper {
+        padding: 28px 5% 28px 5%;
     }
-
-    .route-empty-message {
-        padding: 72px 20px;
-        text-align: center;
-        color: var(--text-sub);
-        font-size: 0.98rem;
-        border: 1px dashed #dbe4f0;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.72);
-    }
-
-    .stop-dot {
-        width: 22px;
-        height: 22px;
-        margin-top: 12px;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 0 0 2px #cbd5e1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 0.78rem;
-        font-weight: 700;
-        line-height: 1;
-        z-index: 1;
-        transform: translateX(-6px);
-    }
-
-
-    .stop-dot::before {
-        content: "V";
-    }
-
-    .stop-dot.status-green {
-        background: #22c55e;
-    }
-
-    .stop-dot.status-yellow {
-        background: #f59e0b;
-    }
-
-    .stop-dot.status-red {
-        background: #ef4444;
-    }
-
-    .stop-dot.status-gray {
-        background: #94a3b8;
-        box-shadow: 0 0 0 2px #cbd5e1;
-    }
-
-    .stop-card.virtual {
-        background: #f8fafc;
-        border-color: #e2e8f0;
-    }
-
-    .stop-dot.status-orange {
-        background: #f97316;
-    }
-
-    .stop-card.virtual .stop-name,
-    .stop-card.virtual .stop-meta,
-    .stop-card.virtual .stop-bottom {
-        color: #94a3b8;
-    }
-
-    .state-badge.state-gray {
-        background: rgba(148, 163, 184, 0.14);
-        color: #64748b;
-    }
-
-
-    .route-page {
+    .s2-page {
         display: grid;
-        grid-template-columns: 340px minmax(0, 1fr);
+        grid-template-columns: 260px 1fr;
         gap: 20px;
         align-items: start;
     }
 
-    .route-sidebar,
-    .route-main {
-        border-radius: var(--radius-xl);
+    /* ── 공통 카드 ── */
+    .s2-card {
+        background: #fff;
+        border: 1px solid #e2e8f4;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 4px 20px rgba(59,130,246,0.06);
     }
 
-    .summary-card {
-        padding: 24px;
-    }
-
-    .summary-label {
-        font-size: 0.82rem;
+    .s2-card-title {
+        font-size: 13px;
         font-weight: 700;
-        color: var(--text-sub);
+        color: #94a3b8;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.5px;
+        margin-bottom: 14px;
     }
 
-    .route-number {
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: var(--primary);
-        line-height: 1.1;
+    /* ── 사이드바 ── */
+    .s2-header { margin-top: 0; margin-bottom: 20px; }
+    .s2-sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+    .s2-page-title {
+        font-size: clamp(20px, 2.2vw, 28px);
+        font-weight: 900;
+        color: #1a2340;
+        letter-spacing: -0.5px;
+        margin-bottom: 4px;
+        margin-top: 0;
+
     }
 
-    .summary-title {
-        font-size: 1.1rem;
-        font-weight: 800;
+    .s2-page-sub { font-size: 15px; color: #94a3b8; font-weight: 500; }
+
+    /* ── 폼 ── */
+    .s2-form-group { margin-bottom: 12px; }
+
+    .s2-form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
         margin-bottom: 6px;
     }
 
-    .summary-meta {
-        color: var(--text-sub);
-        font-size: 0.95rem;
+    .s2-select,
+    .s2-input {
+        width: 100%;
+        height: 40px;
+        border: 1.5px solid #e2e8f4;
+        border-radius: 10px;
+        background: #fafcff;
+        padding: 0 12px;
+        font-size: 14px;
+        color: #1a2340;
+        appearance: none;
+        -webkit-appearance: none;
+        outline: none;
+        transition: border-color 0.15s;
     }
 
-    .summary-section+.summary-section {
-        margin-top: 22px;
-        padding-top: 22px;
-        border-top: 1px solid var(--line);
+    .s2-select:focus,
+    .s2-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
     }
 
-    .mini-stat-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
+    .s2-btn-predict {
+        width: 100%;
+        height: 44px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #fff;
+        border: none;
+        border-radius: 11px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 4px;
+        box-shadow: 0 4px 14px rgba(37,99,235,0.28);
+        transition: opacity 0.15s;
     }
 
-    .mini-stat {
-        padding: 14px;
-        border: 1px solid #e8eef7;
-        border-radius: 16px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    }
+    .s2-btn-predict:hover { opacity: 0.88; }
 
-    .mini-stat-label {
-        font-size: 0.82rem;
-        color: var(--text-sub);
-        margin-bottom: 6px;
+    .s2-fav-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
     }
-
-    .mini-stat-value {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: var(--text-main);
+    .s2-btn-fav {
+        flex: 1;
+        height: 34px;
+        border: 1.5px solid #bfdbfe;
+        border-radius: 9px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
     }
+    .s2-btn-fav:hover { background: #dbeafe; }
+    .s2-btn-fav:disabled { opacity: 0.4; cursor: default; }
 
-    .route-main-card {
-        padding: 20px;
-    }
-
-    .route-main-head {
+    /* 기준 정보 */
+    .s2-info-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 18px;
+        padding: 7px 0;
+        border-bottom: 1px solid #f0f4ff;
+        font-size: 14px;
     }
 
-    .route-main-title {
-        margin: 0;
-        font-size: 1.2rem;
-        font-weight: 800;
+    .s2-info-row:last-child { border-bottom: none; }
+    .s2-info-lbl { color: #94a3b8; }
+    .s2-info-val { font-weight: 700; color: #1a2340; }
+
+    /* ── 메인 영역 ── */
+    .s2-main { display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── 정류소 카드 그리드 ── */
+    .s2-stops-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 8px;
     }
 
-    .route-main-sub {
-        margin-top: 4px;
-        color: var(--text-sub);
-        font-size: 0.95rem;
+    .s2-stop-card {
+        background: #fff;
+        border: 1px solid #e2e8f4;
+        border-radius: 12px;
+        padding: 10px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 90px;
+        transition: box-shadow 0.15s;
     }
 
-    .route-list-wrap {
-        position: relative;
-        max-height: 72vh;
-        overflow-y: auto;
-        padding-right: 6px;
+    .s2-stop-card:hover { box-shadow: 0 4px 16px rgba(59,130,246,0.10); }
+
+    .s2-stop-card.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+    }
+
+    .s2-stop-name {
+        font-size: 9px;
+        color: #94a3b8;
+        margin-bottom: 5px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .s2-stop-seats {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 4px;
+    }
+
+    .s2-stop-badge {
+        font-size: 8px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+    }
+
+    /* 혼잡도 4단계 색상 */
+    .s2-여유    { color: #059669; background: #ecfdf5; }
+    .s2-보통    { color: #ca8a04; background: #fefce8; }
+    .s2-혼잡    { color: #f472b6; background: #fff5f8; }
+    .s2-만차    { color: #dc2626; background: #fef2f2; }
+    .s2-default { color: #2563eb; background: #eff6ff; }
+
+    /* 빈 상태 */
+    .s2-empty {
+        padding: 48px 20px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 15px;
+        font-weight: 500;
+        border: 1.5px dashed #e2e8f4;
+        border-radius: 14px;
+    }
+
+    /* ── 지도 ── */
+    #routeMap {
+        width: 100%;
+        height: 420px;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid #e2e8f4;
+        background: linear-gradient(180deg, #f0f4ff 0%, #e8eeff 100%);
+    }
+
+    /* ── stop-card ── */
+    .stop-dot {
+        width: 20px; height: 20px;
+        margin-top: 10px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #cbd5e1;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 0.72rem; font-weight: 700;
+        z-index: 1; transform: translateX(-5px);
+    }
+    .stop-dot.status-green  { background: #22c55e; }
+    .stop-dot.status-yellow { background: #f59e0b; }
+    .stop-dot.status-red    { background: #ef4444; }
+    .stop-dot.status-orange { background: #f97316; }
+    .stop-dot.status-gray   { background: #94a3b8; }
+
+    .stop-card {
+        border: 1px solid #e2e8f4;
+        border-radius: 14px;
+        background: #fff;
+        padding: 14px 16px;
+        box-shadow: 0 4px 16px rgba(59,130,246,0.06);
+        min-height: 90px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .stop-card.selected {
+        background: #f0f4ff;
+        border-color: #bfdbfe;
+    }
+    .stop-card.virtual { background: #fafaf9; border-color: #f0f0ee; }
+
+    .stop-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .stop-name {
+        font-size: 15px; font-weight: 700;
+        line-height: 1.3; margin-bottom: 4px;
+        color: #1a2340;
+    }
+    .stop-meta { color: #94a3b8; font-size: 13px; font-weight: 500; }
+    .stop-badges {
+        display: flex; gap: 6px; flex-wrap: wrap;
+        justify-content: flex-end; align-items: center;
+    }
+    .seat-badge, .state-badge, .selected-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 28px; min-width: 56px;
+        padding: 4px 10px; border-radius: 999px;
+        font-size: 13px; font-weight: 800; white-space: nowrap;
+    }
+    .seat-badge      { background: rgba(59,130,246,0.10); color: #2563eb; }
+    .state-badge.state-green  { background: rgba(34,197,94,0.12); color: #15803d; }
+    .state-badge.state-yellow { background: rgba(245,158,11,0.14); color: #b45309; }
+    .state-badge.state-red    { background: rgba(239,68,68,0.12); color: #b91c1c; }
+    .state-badge.state-orange { background: rgba(249,115,22,0.12); color: #c2410c; }
+    .state-badge.state-gray   { background: rgba(148,163,184,0.14); color: #64748b; }
+    .selected-badge  { background: rgba(59,130,246,0.10); color: #2563eb; }
+
+    .stop-bottom {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 10px; margin-top: 10px; padding-top: 10px;
+        border-top: 1px solid #f0f4ff;
+        color: #94a3b8; font-size: 11px;
     }
 
     .route-list {
-        position: relative;
-        margin: 0;
-        padding: 8px 0 8px 0;
-        list-style: none;
+        position: relative; margin: 0; padding: 8px 0; list-style: none;
     }
-
+    .route-list:not([data-loaded])::before {
+        display: none !important;
+    }
     .route-list::before {
-        content: "";
-        position: absolute;
-        left: 18px;
-        top: 0;
-        bottom: 0;
-        width: 4px;
+        content: ""; position: absolute;
+        left: 16px; top: 0; bottom: 0; width: 3px;
         border-radius: 999px;
-        background: linear-gradient(180deg, #93c5fd 0%, #60a5fa 100%);
-        opacity: 0.55;
+        background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+        opacity: 0.5;
     }
-
     .stop-item {
         position: relative;
         display: grid;
-        grid-template-columns: 52px minmax(0, 1fr);
-        gap: 14px;
-        padding: 10px 0;
+        grid-template-columns: 46px minmax(0, 1fr);
+        gap: 12px;
+        padding: 8px 0;
     }
-
     .stop-marker {
         position: relative;
         display: flex;
         justify-content: center;
     }
 
-
-    .stop-card {
-        border: 1px solid #e8eef7;
-        border-radius: 20px;
-        background: #fff;
-        padding: 16px 18px;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    .route-list-wrap {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding-right: 4px;
     }
 
-    .stop-card.selected {
-        background: linear-gradient(180deg, #f5f9ff 0%, #edf5ff 100%);
-        border-color: #bfdbfe;
-        box-shadow: 0 16px 34px rgba(37, 99, 235, 0.10);
+    .route-empty-message {
+        padding: 48px 20px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 15px;
+        font-weight: 500;
+        border: 1.5px dashed #e2e8f4;
+        border-radius: 14px;
     }
 
-    .stop-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 14px;
-    }
-
-    .stop-name {
-        font-size: 1.08rem;
-        font-weight: 800;
-        line-height: 1.35;
-        margin-bottom: 6px;
-    }
-
-    .stop-meta {
-        color: var(--text-sub);
-        font-size: 0.92rem;
-    }
-
-    .stop-badges {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-    }
-
-    .seat-badge,
-    .state-badge,
-    .selected-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 32px;
-        padding: 6px 12px;
-        border-radius: 999px;
-        font-size: 0.86rem;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-
-    .seat-badge {
-        background: rgba(37, 99, 235, 0.10);
-        color: var(--primary-deep);
-    }
-
-    .state-badge.state-green {
-        background: rgba(34, 197, 94, 0.12);
-        color: #15803d;
-    }
-
-    .state-badge.state-yellow {
-        background: rgba(245, 158, 11, 0.14);
-        color: #b45309;
-    }
-
-    .state-badge.state-red {
-        background: rgba(239, 68, 68, 0.12);
-        color: #b91c1c;
-    }
-
-    .state-badge.state-orange {
-        background: rgba(249, 115, 22, 0.12);
-        color: #c2410c;
-    }
-
-    .selected-badge {
-        background: rgba(37, 99, 235, 0.12);
-        color: var(--primary-deep);
-    }
-
-    .stop-bottom {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 14px;
-        margin-top: 14px;
-        padding-top: 12px;
-        border-top: 1px solid #eef2f7;
-        color: var(--text-sub);
-        font-size: 0.9rem;
-    }
-
+    /* ── 반응형 ── */
     @media (max-width: 991px) {
-        .route-page {
-            grid-template-columns: 1fr;
-        }
-
-        .route-list-wrap {
-            max-height: none;
-        }
-    }
-
-    @media (max-width: 575px) {
-
-        .route-main-head,
-        .stop-top,
-        .stop-bottom {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .stop-badges {
-            justify-content: flex-start;
-        }
-    }
-
-    .route-map-card {
-        padding: 20px;
-    }
-
-    #routeMap {
-        width: 100%;
-        height: 520px;
-        border-radius: 20px;
-        overflow: hidden;
-        border: 1px solid #e8eef7;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    }
-
-    @media (max-width: 768px) {
-        #routeMap {
-            height: 360px;
-        }
+        .s2-page { grid-template-columns: 1fr; }
+        .route-list-wrap { max-height: none; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="route-page">
-    <aside class="route-sidebar">
-        <section class="glass-card summary-card">
-            <div class="summary-section">
-                <h2 class="h5 fw-bold mb-3">입력 조건</h2>
+<div class="s2-wrapper">
+    <div class="s2-header">
+        <div class="s2-page-title">노선 전체 예측</div>
+        <div class="s2-page-sub">노선, 기준 정류소, 승차 일시 선택 후 예측</div>
+    </div>
+<div class="s2-page">
 
-                <form id="predictForm" class="row g-3">
-                    {% csrf_token %}
+    <!-- 사이드바 -->
+    <aside class="s2-sidebar">
 
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">노선 선택</label>
-                        <select id="routeSelect" class="form-select">
-                            <option value="">노선을 선택하세요</option>
-                            {% for route in routes %}
-                            <option value="{{ route.routeId }}">{{ route.routeName }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+        <div class="s2-card">
+            <div class="s2-card-title">입력 조건</div>
+            <form id="predictForm">
+                {% csrf_token %}
 
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">정류장 선택</label>
-                        <select id="stationSelect" class="form-select" disabled>
-                            <option value="">먼저 노선을 선택하세요</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12">
-                        <label for="rideDateTime" class="form-label fw-semibold">승차 일시</label>
-                        <input id="rideDateTime" type="datetime-local" class="form-control">
-                    </div>
-
-                    <div class="col-12 d-grid pt-2">
-                        <button type="submit" class="btn btn-primary">
-                            예측하기
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-
-            <div class="summary-section">
-                <div class="summary-label mb-2">기준 정보</div>
-
-                <div class="summary-meta mb-2">기준 정류소</div>
-                <div id="selectedStopName" class="fw-bold">-</div>
-
-                <div class="summary-meta mt-3 mb-2">기준 정류소 승차 일시</div>
-                <div id="selectedDateTime" class="fw-bold">-</div>
-            </div>
-
-        </section>
-    </aside>
-
-    <section class="route-main">
-        <div class="glass-card route-main-card">
-            <div class="route-main-head d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="route-main-title">정류소별 예측 좌석수</h2>
-                    <div id="resultSummary" class="route-main-sub">
-                        노선, 기준 정류소, 승차 일시를 선택한 뒤 예측을 실행하세요.
-                    </div>
+                <div class="s2-form-group">
+                    <label class="s2-form-label">노선 선택</label>
+                    <select id="routeSelect" class="s2-select">
+                        <option value="">노선을 선택하세요</option>
+                        {% for route in routes %}
+                        <option value="{{ route.routeId }}">{{ route.routeName }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div id="weatherUsedBadge2" class="badge d-none"></div>
-            </div>
+                <div class="s2-form-group">
+                    <label class="s2-form-label">정류장 선택</label>
+                    <select id="stationSelect" class="s2-select" disabled>
+                        <option value="">먼저 노선을 선택하세요</option>
+                    </select>
+                </div>
 
+                <div class="s2-form-group">
+                    <label class="s2-form-label">승차 일시</label>
+                    <input id="rideDateTime" type="datetime-local" class="s2-input" data-tb-dtp>
+                </div>
+
+                <button type="submit" class="s2-btn-predict">예측하기</button>
+            </form>
+
+            <div class="s2-fav-row">
+                <button type="button" class="s2-btn-fav" id="favoriteRouteBtn" disabled>♡ 노선 즐겨찾기</button>
+                <button type="button" class="s2-btn-fav" id="favoriteStationBtn" disabled>♡ 정류장 즐갈찾기</button>
+            </div>
+        </div>
+
+        <div class="s2-card">
+            <div class="s2-card-title">기준 정보</div>
+            <div class="s2-info-row">
+                <span class="s2-info-lbl">기준 정류소</span>
+                <span class="s2-info-val" id="selectedStopName">-</span>
+            </div>
+            <div class="s2-info-row">
+                <span class="s2-info-lbl">승차 일시</span>
+                <span class="s2-info-val" id="selectedDateTime">-</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 메인 -->
+    <section class="s2-main">
+
+        <!-- 정류소별 예측 좌석수 -->
+        <div class="s2-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div class="s2-card-title" style="margin-bottom:0;">정류소별 예측 좌석수</div>
+                <span id="resultSummary" style="font-size:11px;color:#94a3b8;">
+                    노선, 기준 정류소, 승차 일시를 선택한 뒤 예측을 실행하세요.
+                </span>
+            </div>
             <div class="route-list-wrap">
-                <ul id="routeList" class="route-list route-list-empty">
+                <ul id="routeList" class="route-list">
                     <li class="route-empty-message">
                         아직 예측 결과가 없습니다. 입력 조건을 선택하고 예측하기 버튼을 눌러주세요.
                     </li>
@@ -435,23 +420,24 @@
             </div>
         </div>
 
-        <div class="glass-card route-main-card route-map-card mt-4">
-            <div class="route-main-head mb-3">
-                <div>
-                    <h2 class="route-main-title">노선 지도</h2>
-                    <div id="mapSummary" class="route-main-sub">
-                        예측 실행 후 선택한 노선의 정류소 위치와 연결선을 표시합니다.
-                    </div>
-                </div>
+        <!-- 노선 지도 -->
+        <div class="s2-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div class="s2-card-title" style="margin-bottom:0;">노선 지도</div>
+                <span id="mapSummary" style="font-size:11px;color:#94a3b8;">
+                    예측 실행 후 정류소 위치와 연결선을 표시합니다.
+                </span>
             </div>
-
             <div id="routeMap"></div>
         </div>
+
     </section>
-</main>
+</div>
+</div>
 {% endblock %}
 
 {% block extra_script %}
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey={{ KAKAO_JS_KEY }}&autoload=false"></script>
+<script src="{% static 'bus/js/datepicker.js' %}"></script>
 <script type="module" src="{% static 'bus/js/service2.js' %}"></script>
 {% endblock %}
