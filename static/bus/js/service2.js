@@ -261,6 +261,7 @@ function renderRouteResult(routeName, stationName, data) {
         summaryVirtualStops.textContent = virtualCount;
     }
 
+    routeList.setAttribute("data-loaded", "true");
     routeList.classList.remove("route-list-empty");
     routeList.innerHTML = "";
 
