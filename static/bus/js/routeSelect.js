@@ -1,7 +1,7 @@
 async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId = "", selectedArsId = "") {
     const routeId = routeSelect.value;
 
-    stationSelect.innerHTML = `<option value="">정류장을 불러오는 중...</option>`;
+    stationSelect.innerHTML = `<option value="">정류소 불러오는 중...</option>`;
     stationSelect.disabled = true;
 
     if (!routeId) {
@@ -16,7 +16,7 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-            stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
+            stationSelect.innerHTML = `<option value="">정류소 조회 실패</option>`;
             return;
         }
 
@@ -24,7 +24,7 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
         const stations = resultData.stations;
 
         if (!stations || stations.length === 0) {
-            stationSelect.innerHTML = `<option value="">정류장이 없습니다</option>`;
+            stationSelect.innerHTML = `<option value="">정류소가 없습니다</option>`;
             return;
         }
 
@@ -35,7 +35,7 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
         const minStaOrd = staOrdList.length ? Math.min(...staOrdList) : null;
         const maxStaOrd = staOrdList.length ? Math.max(...staOrdList) : null;
 
-        let options = `<option value="">정류장을 선택하세요</option>`;
+        let options = `<option value="">정류소를 선택하세요</option>`;
 
         for (const station of stations) {
             const staOrd = Number(station.staOrd);
@@ -88,8 +88,8 @@ async function loadStationsByRoute(routeSelect, stationSelect, selectedStationId
             }
         }
     } catch (error) {
-        console.error("정류장 조회 실패:", error);
-        stationSelect.innerHTML = `<option value="">정류장 조회 실패</option>`;
+        console.error("정류소 조회 실패:", error);
+        stationSelect.innerHTML = `<option value="">정류소 조회 실패</option>`;
         stationSelect.disabled = true;
     }
 }
