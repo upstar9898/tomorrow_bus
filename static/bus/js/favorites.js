@@ -107,7 +107,7 @@ async function renderFavorites() {
             const actionWrap = document.createElement("div");
             actionWrap.className = "fav-action-wrap";
 
-            actionWrap.appendChild(createBtn("정류장 단위 예측", "service", () => goToService1ByBus(bus)));
+            actionWrap.appendChild(createBtn("정류소 단위 예측", "service", () => goToService1ByBus(bus)));
             actionWrap.appendChild(createBtn("노선 전체 예측", "service", () => goToService2ByBus(bus)));
             actionWrap.appendChild(createBtn("삭제", "delete", () => removeFavorite("bus", bus)));
 
