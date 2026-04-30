@@ -100,6 +100,27 @@
 
     .s2-btn-predict:hover { opacity: 0.88; }
 
+    .s2-fav-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+    .s2-btn-fav {
+        flex: 1;
+        height: 34px;
+        border: 1.5px solid #bfdbfe;
+        border-radius: 9px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+    }
+    .s2-btn-fav:hover { background: #dbeafe; }
+    .s2-btn-fav:disabled { opacity: 0.4; cursor: default; }
+
     /* 기준 정보 */
     .s2-info-row {
         display: flex;
@@ -359,6 +380,11 @@
 
                 <button type="submit" class="s2-btn-predict">예측하기</button>
             </form>
+
+            <div class="s2-fav-row">
+                <button type="button" class="s2-btn-fav" id="favoriteRouteBtn" disabled>♡ 노선 즐겨찾기</button>
+                <button type="button" class="s2-btn-fav" id="favoriteStationBtn" disabled>♡ 정류장 즐갈찾기</button>
+            </div>
         </div>
 
         <div class="s2-card">
