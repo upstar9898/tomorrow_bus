@@ -140,7 +140,7 @@ def plot_seat_drain_speed(df: pd.DataFrame):
 # MAIN
 # ================================================================
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     plot_trip_total_boarding(df)
     plot_seat_drain_speed(df)

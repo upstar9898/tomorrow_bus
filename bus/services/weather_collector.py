@@ -3,6 +3,7 @@ import glob
 import requests
 import pandas as pd
 from datetime import datetime
+from bus.models import Bus_station, Weather_station
 
 
 def download_file(file_url, save_path):
@@ -127,28 +128,60 @@ def get_station_info_by_id(station_id, csv_path):
         "arsId": row.get("arsId"),
     }
 
-
 def collect_forecast(station_id="", target_dt=None):
     """
-    stationId로 위경도 찾고 OpenWeather 호출 후 결과 반환
+    station_id → stn → weather_station → OpenWeather
     """
 
-    base_dir = os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    station = Bus_station.objects.filter(stationId=station_id).first()
+    if not station:
+        raise ValueError("station_id 없음")
+
+    if station.stn_id is None or str(station.stn_id).strip() == "":
+        raise ValueError("해당 정류소에 stn 없음")
+
+    stn_id = station.stn_id
+
+    result = collect_forecast_by_stn(stn_id, target_dt=target_dt)
+
+    return {
+        "stationId": station.stationId,
+        "stationName": station.stationName,
+        "arsId": station.arsId,
+        "regId": getattr(station, "regId", None),
+        "lat": result["lat"],
+        "lon": result["lon"],
+        "forecast": result["forecast"],
+    }
+
+
+def collect_forecast_by_stn(stn_id, target_dt=None):
+    """
+    stn → Weather_station → OpenWeather
+    """
+
+    ws = Weather_station.objects.filter(stnId=stn_id).first()
+    if not ws:
+        raise ValueError(f"stn_id {stn_id} 없음")
+
+    forecast = fetch_openweather_forecast(
+        ws.locationY,  # 위도(lat)
+        ws.locationX,  # 경도(lon)
+        target_dt,
     )
 
-    csv_path = get_latest_station_file(base_dir)
+    return {
+        "stn_id": stn_id,
+        "lat": ws.locationY,
+        "lon": ws.locationX,
+        "forecast": forecast,
+    }
 
-    station_info = get_station_info_by_id(station_id, csv_path)
-    if not station_info:
-        raise ValueError("해당 station_id의 정류소 정보를 찾을 수 없습니다.")
 
-    lat = station_info["lat"]
-    lon = station_info["lon"]
-
+def fetch_openweather_forecast(lat, lon, target_dt=None):
     api_key = os.environ.get("OPEN_WEATHER_API_KEY")
     if not api_key:
-        raise ValueError("환경변수 OPEN_WEATHER_API_KEY가 설정되지 않았습니다.")
+        raise ValueError("OPEN_WEATHER_API_KEY 없음")
 
     url = "https://api.openweathermap.org/data/2.5/forecast"
 
@@ -182,23 +215,6 @@ def collect_forecast(station_id="", target_dt=None):
             ),
         )
 
-        return {
-            "stationId": station_info["stationId"],
-            "stationName": station_info["stationName"],
-            "lat": lat,
-            "lon": lon,
-            "regId": station_info["regId"],
-            "arsId": station_info["arsId"],
-            "target_dt": target_dt.strftime("%Y-%m-%d %H:%M:%S"),
-            "forecast": closest_item,
-        }
+        return closest_item
 
-    return {
-        "stationId": station_info["stationId"],
-        "stationName": station_info["stationName"],
-        "lat": lat,
-        "lon": lon,
-        "regId": station_info["regId"],
-        "arsId": station_info["arsId"],
-        "forecast_list": data["list"],
-    }
+    return data["list"]

@@ -148,7 +148,7 @@ def overview_daily(df: pd.DataFrame):
 
 
 def main():
-    df = load_data(version="v1")
+    df = load_data(version="all")
 
     overview_summary(df)
     overview_by_route(df)
