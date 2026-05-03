@@ -31,8 +31,9 @@ media/
 
 # ----------------------
 # 정적 파일 (collectstatic 결과)
+# js 등의 정적 파일은 gitignore 해제 필요, 따라서 일단 해제
 # ----------------------
-static/
+# static/
 
 # ----------------------
 # 환경 변수 파일 (중요 - 보안)
@@ -79,3 +80,38 @@ htmlcov/
 # ----------------------
 *.bak
 *.tmp
+
+# ----------
+# 버스 앱 마이그레이션 폴더
+#-----------
+bus/migrations/*
+
+# data 폴더
+data/
+# ----------
+# .zip
+# ----------
+
+*.zip
+
+# ---------
+# /*.csv
+# /*.txt
+# 루트 폴더에 있는 csv만 무시
+# ---------
+
+/*.csv
+/*.txt
+training/artifacts/
+
+# 모델 결과 / 로그
+outputs_peak_v2/
+*.csv
+*.log
+*.pkl
+
+# 모델
+models/
+# initdb 폴더
+initdb/*
+catboost_info/

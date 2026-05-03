@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools %}
+  <div style="margin-bottom: 10px;">
+    <a href="{% url 'admin:route_station_upload_csv' %}" class="button">
+      CSV 업로드
+    </a>
+  </div>
+  {{ block.super }}
+{% endblock %}
