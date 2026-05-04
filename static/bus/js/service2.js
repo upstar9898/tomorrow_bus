@@ -499,7 +499,8 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
             !Number.isNaN(Number(st.latitude)) &&
             !Number.isNaN(Number(st.longitude)) &&
             Number(st.latitude) !== 0 &&
-            Number(st.longitude) !== 0,
+            Number(st.longitude) !== 0 &&
+            st.is_virtual != 1,
     );
 
     if (validStations.length === 0) {
