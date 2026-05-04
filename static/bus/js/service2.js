@@ -1,27 +1,40 @@
-import { getCookie, getNowForDateTimeLocal, formatDateTime } from "./utils.js";
-import { routeSelectChangeEvent } from "./routeSelect.js";
-import { loadStationsByRoute } from "./routeSelect.js";
+import {
+    getCookie,
+    getNowForDateTimeLocal,
+    formatDateTime,
+    showToast,
+} from "./utils.js";
+import { addFavorite } from "./favorite.js";
+import { routeSelectChangeEvent, loadStationsByRoute } from "./routeSelect.js";
 
 const routeSelect = document.getElementById("routeSelect");
 const stationSelect = document.getElementById("stationSelect");
 const predictForm = document.getElementById("predictForm");
 const rideDateTime = document.getElementById("rideDateTime");
 
+const favoriteRouteBtn = document.getElementById("favoriteRouteBtn");
+const favoriteStationBtn = document.getElementById("favoriteStationBtn");
+
+let currentPrediction = {
+    routeId: "",
+    routeName: "",
+    stationId: "",
+    stationName: "",
+    arsId: "",
+};
+
 const resultSummary = document.getElementById("resultSummary");
 const routeList = document.getElementById("routeList");
 
 const selectedStopName = document.getElementById("selectedStopName");
 const selectedDateTime = document.getElementById("selectedDateTime");
-const selectedSeatPrediction = document.getElementById(
-    "selectedSeatPrediction",
-);
+const selectedSeatPrediction = document.getElementById("selectedSeatPrediction");
 const summaryTotalStops = document.getElementById("summaryTotalStops");
 const summaryBusyStops = document.getElementById("summaryBusyStops");
 
 rideDateTime.min = getNowForDateTimeLocal();
 rideDateTime.value = getNowForDateTimeLocal();
 
-// 노선을 선택하면 정류장 목록을 불러오는 이벤트
 routeSelectChangeEvent(routeSelect, stationSelect);
 
 predictForm.addEventListener("submit", async function (e) {
@@ -37,7 +50,11 @@ predictForm.addEventListener("submit", async function (e) {
     }
 
     const routeName = routeSelect.options[routeSelect.selectedIndex].text;
-    const stationName = stationSelect.options[stationSelect.selectedIndex].text;
+    const stationLabel = stationSelect.options[stationSelect.selectedIndex].text;
+
+    const stationMatch = stationLabel.match(/^(.*?)(?:\s*\(([^)]+)\))?$/);
+    const stationName = stationMatch ? stationMatch[1].trim() : stationLabel;
+    const arsId = stationMatch && stationMatch[2] ? stationMatch[2].trim() : "";
 
     resultSummary.textContent = "예측 중...";
     routeList.innerHTML = `
@@ -87,7 +104,7 @@ predictForm.addEventListener("submit", async function (e) {
             return;
         }
 
-        renderRouteResult(routeName, stationName, predictResult.data);
+        renderRouteResult(routeName, stationName, arsId, predictResult.data);
 
         if (!mapResponse.ok || !mapResult.success) {
             document.getElementById("mapSummary").textContent =
@@ -103,6 +120,35 @@ predictForm.addEventListener("submit", async function (e) {
         console.error(error);
         alert("서버 요청 중 오류가 발생했습니다.");
     }
+});
+
+favoriteRouteBtn.addEventListener("click", function () {
+    if (!currentPrediction.routeId) {
+        showToast("먼저 예측을 실행하세요.");
+        return;
+    }
+
+    addFavorite("bus", currentPrediction.routeId);
+});
+
+favoriteStationBtn.addEventListener("click", function () {
+    if (
+        !currentPrediction.stationName ||
+        !currentPrediction.arsId ||
+        !currentPrediction.routeId ||
+        !currentPrediction.routeName
+    ) {
+        showToast("먼저 예측을 실행하세요.");
+        return;
+    }
+
+    addFavorite("station", {
+        stationName: currentPrediction.stationName,
+        arsId: currentPrediction.arsId,
+        routeId: currentPrediction.routeId,
+        routeName: currentPrediction.routeName,
+        stationId: currentPrediction.stationId,
+    });
 });
 
 function getBoundaryStaOrd(stops = []) {
@@ -131,10 +177,9 @@ function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
 
     if (isBoundary) {
         return {
-            text:
-                Number(stop.staOrd) === Number(minStaOrd)
-                    ? "첫 정류장"
-                    : "마지막 정류장",
+            text: Number(stop.staOrd) === Number(minStaOrd)
+                ? "첫 정류장"
+                : "마지막 정류장",
             dotClass: "status-gray",
             badgeClass: "state-gray",
         };
@@ -181,15 +226,11 @@ function getSeatState(stop, minStaOrd = null, maxStaOrd = null) {
     };
 }
 
-// result가 주어졌을 때, result를 바탕으로 예측 결과를 표시해주는 함수
-function renderRouteResult(routeName, stationName, data) {
-
+function renderRouteResult(routeName, stationName, arsId, data) {
     const weatherBadge = document.getElementById("weatherUsedBadge2");
 
     if (weatherBadge) {
         weatherBadge.classList.remove("d-none");
-
-        // 기존 색상 제거
         weatherBadge.classList.remove("bg-success", "bg-secondary");
 
         if (data.weather_fetched) {
@@ -212,6 +253,15 @@ function renderRouteResult(routeName, stationName, data) {
         입력 시각: ${formattedInputDate}<br>
         예측 기준 도착 예정 시각: ${formattedScheduledDate}`;
 
+    currentPrediction.routeId = routeSelect.value;
+    currentPrediction.routeName = routeName;
+    currentPrediction.stationId = stationSelect.value;
+    currentPrediction.stationName = stationName;
+    currentPrediction.arsId = arsId;
+
+    favoriteRouteBtn.disabled = false;
+    favoriteStationBtn.disabled = false;
+
     if (selectedStopName) {
         selectedStopName.textContent = stationName;
     }
@@ -231,11 +281,7 @@ function renderRouteResult(routeName, stationName, data) {
         selectedStop && isBoundaryStop(selectedStop, minStaOrd, maxStaOrd);
 
     if (selectedSeatPrediction) {
-        if (
-            !selectedStop ||
-            selectedStop.is_virtual === 1 ||
-            selectedIsBoundary
-        ) {
+        if (!selectedStop || selectedStop.is_virtual === 1 || selectedIsBoundary) {
             selectedSeatPrediction.textContent = "-";
         } else {
             selectedSeatPrediction.textContent = `${selectedStop.remaining_seat}석`;
@@ -245,9 +291,7 @@ function renderRouteResult(routeName, stationName, data) {
     if (summaryBusyStops) {
         const busyCount = data.stops.filter((stop) => {
             const boundary = isBoundaryStop(stop, minStaOrd, maxStaOrd);
-            return (
-                !boundary && stop.is_virtual !== 1 && stop.remaining_seat <= 10
-            );
+            return !boundary && stop.is_virtual !== 1 && stop.remaining_seat <= 10;
         }).length;
 
         summaryBusyStops.textContent = busyCount;
@@ -278,14 +322,12 @@ function renderRouteResult(routeName, stationName, data) {
         const isVirtual = stop.is_virtual === 1;
         const isSelected =
             String(stop.station_id) === String(stationSelect.value);
+
         const predictedTimeText = stop.predicted_arrival_time
             ? stop.predicted_arrival_time.slice(11, 16)
             : "";
         const relativeTimeText = stop.relative_time_label || "";
 
-        const li = document.createElement("li");
-        li.className = "stop-item";
-        
         let probText = "";
 
         if (stop.full_probability < 0.001) {
@@ -295,6 +337,9 @@ function renderRouteResult(routeName, stationName, data) {
         } else {
             probText = `${(stop.full_probability * 100).toFixed(1)}%`;
         }
+
+        const li = document.createElement("li");
+        li.className = "stop-item";
 
         li.innerHTML = `
             <div class="stop-marker">
@@ -454,7 +499,8 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
             !Number.isNaN(Number(st.latitude)) &&
             !Number.isNaN(Number(st.longitude)) &&
             Number(st.latitude) !== 0 &&
-            Number(st.longitude) !== 0,
+            Number(st.longitude) !== 0 &&
+            st.is_virtual != 1,
     );
 
     if (validStations.length === 0) {
@@ -544,7 +590,6 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
         const remainingSeat = predicted ? predicted.remaining_seat : null;
         const isVirtual = predicted ? predicted.is_virtual === 1 : false;
 
-        // 첫/마지막 정류장 및 가상 정류장은 숫자 오버레이 표시 안 함
         if (!boundary && !isVirtual && remainingSeat != null) {
             const seatOverlay = createSeatOverlay(
                 latlng,
@@ -621,7 +666,6 @@ function drawRouteMap(stations, selectedStationId, predictedStops = []) {
     updateMarkerVisibilityByLevel();
 }
 
-// 카카오맵 초기화 -> 아래 변경 예정
 if (window.kakao && window.kakao.maps) {
     window.kakao.maps.load(function () {
         const mapContainer = document.getElementById("routeMap");
@@ -636,34 +680,33 @@ if (window.kakao && window.kakao.maps) {
             updateMarkerVisibilityByLevel();
         });
     });
-
 }
 
-    function createSeatOverlay(latlng, seatText, isSelected = false) {
-        const content = document.createElement("div");
-        content.style.position = "relative";
-        content.style.transform = "translateY(-38px)";
-        content.style.padding = "2px 6px";
-        content.style.borderRadius = "999px";
-        content.style.background = isSelected ? "#facc15" : "#ffffff";
-        content.style.color = isSelected ? "#1f2937" : "#111827";
-        content.style.border = isSelected
-            ? "1px solid #eab308"
-            : "1px solid #cbd5e1";
-        content.style.fontSize = "11px";
-        content.style.fontWeight = "700";
-        content.style.lineHeight = "1.2";
-        content.style.boxShadow = "0 1px 4px rgba(0,0,0,0.15)";
-        content.style.whiteSpace = "nowrap";
-        content.textContent = seatText;
+function createSeatOverlay(latlng, seatText, isSelected = false) {
+    const content = document.createElement("div");
+    content.style.position = "relative";
+    content.style.transform = "translateY(-38px)";
+    content.style.padding = "2px 6px";
+    content.style.borderRadius = "999px";
+    content.style.background = isSelected ? "#facc15" : "#ffffff";
+    content.style.color = isSelected ? "#1f2937" : "#111827";
+    content.style.border = isSelected
+        ? "1px solid #eab308"
+        : "1px solid #cbd5e1";
+    content.style.fontSize = "11px";
+    content.style.fontWeight = "700";
+    content.style.lineHeight = "1.2";
+    content.style.boxShadow = "0 1px 4px rgba(0,0,0,0.15)";
+    content.style.whiteSpace = "nowrap";
+    content.textContent = seatText;
 
-        return new kakao.maps.CustomOverlay({
-            position: latlng,
-            content: content,
-            yAnchor: 1,
-            zIndex: isSelected ? 4 : 3,
-        });
-    }
+    return new kakao.maps.CustomOverlay({
+        position: latlng,
+        content: content,
+        yAnchor: 1,
+        zIndex: isSelected ? 4 : 3,
+    });
+}
 
 async function applyQueryStringToForm() {
     const params = new URLSearchParams(window.location.search);
@@ -677,7 +720,6 @@ async function applyQueryStringToForm() {
 
     routeSelect.value = String(routeId);
 
-    // 정류장 목록 불러오고 선택까지
     await loadStationsByRoute(routeSelect, stationSelect, stationId, arsId);
 
     if (dateTime) {
