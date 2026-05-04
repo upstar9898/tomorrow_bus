@@ -235,5 +235,3 @@ API 데이터 수집 → DB 저장 → 데이터 전처리 → EDA → 모델 �
 👉 [https://github.com/upstar9898/tomorrow_bus](https://github.com/upstar9898/tomorrow_bus) 
 
 ---
-👉 **README를 더 “개발자 친화형(설치/실행 포함)”으로 바꿔줄 수도 있고**
-👉 **포트폴리오용으로 더 임팩트 있게 다듬어줄 수도 있음**
