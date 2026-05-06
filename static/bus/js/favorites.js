@@ -148,7 +148,7 @@ async function renderFavorites() {
             const actionWrap = document.createElement("div");
             actionWrap.className = "fav-action-wrap";
 
-            actionWrap.appendChild(createBtn("정류장 단위 예측", "service", () => goToService1ByStation({
+            actionWrap.appendChild(createBtn("정류소 단위 예측", "service", () => goToService1ByStation({
                 routeId: station.routeId,
                 stationId: station.stationId,
                 arsId: station.arsId,
